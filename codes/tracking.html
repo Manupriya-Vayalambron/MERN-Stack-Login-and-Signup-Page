@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Yathrika - Order Tracking</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#68f91a",
+              "background-light": "#f6f8f5",
+              "background-dark": "#16230f",
+            },
+            fontFamily: {
+              display: ["Space Grotesk"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+              lg: "1rem",
+              xl: "1.5rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+<style>
+      .glow-effect {
+        box-shadow: 0 0 10px theme("colors.primary"), 0 0 20px theme("colors.primary / 50%"), 0 0 30px theme("colors.primary / 20%");
+      }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-white/90 dark:text-white/90">
+<div class="relative flex h-auto min-h-screen w-full flex-col justify-between overflow-x-hidden">
+<div class="flex-grow">
+<header class="flex items-center p-4">
+<button class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-background-light dark:bg-primary/20 text-black dark:text-white">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<h1 class="flex-1 text-center text-lg font-bold text-black dark:text-white pr-10">Order Tracking</h1>
+</header>
+<main class="p-4">
+<div class="rounded-xl bg-primary/10 dark:bg-primary/20 p-6 space-y-6">
+<div class="space-y-4">
+<div class="flex justify-between items-center text-xs font-bold text-black dark:text-white">
+<span class="text-primary">CONFIRMED</span>
+<span>PACKED</span>
+<span>PARTNER AT STOP</span>
+<span>HANDOVER</span>
+</div>
+<div class="relative h-2 rounded-full bg-primary/20">
+<div class="absolute h-2 rounded-full bg-primary glow-effect" style="width: 25%"></div>
+</div>
+</div>
+<div class="text-center space-y-2">
+<h2 class="text-2xl font-bold text-black dark:text-white">Order Confirmed</h2>
+<p class="text-sm text-black/60 dark:text-white/60">Your order has been confirmed and is being prepared.</p>
+</div>
+</div>
+<div class="py-8">
+<p class="text-center mb-4 text-sm text-black/60 dark:text-white/60">Your order will arrive at the bus stop in:</p>
+<div class="flex justify-center gap-4">
+<div class="flex flex-col items-center">
+<div class="flex h-24 w-24 items-center justify-center rounded-xl bg-primary/10 dark:bg-primary/20 border border-primary/20">
+<p class="text-5xl font-bold text-primary">15</p>
+</div>
+<p class="mt-2 text-sm font-medium text-black/80 dark:text-white/80">Minutes</p>
+</div>
+<div class="flex flex-col items-center">
+<div class="flex h-24 w-24 items-center justify-center rounded-xl bg-primary/10 dark:bg-primary/20 border border-primary/20">
+<p class="text-5xl font-bold text-primary">30</p>
+</div>
+<p class="mt-2 text-sm font-medium text-black/80 dark:text-white/80">Seconds</p>
+</div>
+</div>
+</div>
+<div class="space-y-4">
+<h3 class="text-lg font-bold text-black dark:text-white">Order Details</h3>
+<div class="rounded-lg bg-background-light dark:bg-primary/10 p-4 space-y-4">
+<div class="flex justify-between">
+<p class="text-sm text-black/60 dark:text-white/60">Order ID</p>
+<p class="text-sm font-medium text-black dark:text-white">#1234567890</p>
+</div>
+<div class="flex justify-between">
+<p class="text-sm text-black/60 dark:text-white/60">Items</p>
+<p class="text-sm font-medium text-black dark:text-white">2 items</p>
+</div>
+<div class="flex justify-between">
+<p class="text-sm text-black/60 dark:text-white/60">Total</p>
+<p class="text-sm font-medium text-black dark:text-white">₹ 250</p>
+</div>
+</div>
+</div>
+<div class="space-y-4 mt-6">
+<h3 class="text-lg font-bold text-black dark:text-white">Delivery</h3>
+<div class="rounded-lg bg-background-light dark:bg-primary/10 p-4">
+<div class="flex justify-between">
+<p class="text-sm text-black/60 dark:text-white/60">Delivery Location</p>
+<p class="text-sm font-medium text-black dark:text-white">Kochi Bus Stop</p>
+</div>
+</div>
+</div>
+</main>
+</div>
+<footer class="sticky bottom-0 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm border-t border-primary/20">
+<div class="flex justify-around items-center h-20 px-4 pb-3 pt-2">
+<a class="flex flex-col items-center justify-center gap-1 text-black/60 dark:text-white/60" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="text-xs">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="text-xs">Orders</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-1 text-black/60 dark:text-white/60" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-xs">Profile</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-1 text-black/60 dark:text-white/60" href="#">
+<span class="material-symbols-outlined">notifications</span>
+<span class="text-xs">Notifications</span>
+</a>
+</div>
+</footer>
+</div>
+
+</body></html>

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Yathrika - Product Listings</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#68f91a",
+              "background-light": "#f6f8f5",
+              "background-dark": "#16230f",
+            },
+            fontFamily: {
+              "display": ["Space Grotesk", "sans-serif"]
+            },
+            borderRadius: {
+              "DEFAULT": "0.5rem",
+              "lg": "1rem",
+              "xl": "1.5rem",
+              "full": "9999px"
+            },
+          },
+        },
+      }
+    </script>
+<style>
+      .glow-shadow {
+        box-shadow: 0 0 15px 0px rgba(104, 249, 26, 0.4);
+      }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-white">
+<div class="relative min-h-screen">
+<div class="pb-28">
+<header class="sticky top-0 z-10 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm">
+<div class="flex items-center p-4">
+<h1 class="flex-1 text-center text-2xl font-bold text-primary">Yathrika</h1>
+<button class="relative rounded-full p-2">
+<span class="material-symbols-outlined text-white">
+                shopping_cart
+              </span>
+<span class="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-xs font-bold text-black">3</span>
+</button>
+</div>
+<div class="px-4 pb-4">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-primary">
+                search
+              </span>
+<input class="w-full rounded-full border-2 border-primary/20 bg-background-light/50 dark:bg-background-dark/50 py-3 pl-10 pr-4 text-base text-white placeholder-white/60 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Search for products" type="text"/>
+</div>
+</div>
+</header>
+<main class="px-4">
+<div class="mb-4 flex items-center justify-between">
+<h2 class="text-xl font-bold text-white">Shop By Category</h2>
+<div class="flex gap-2">
+<button class="rounded-full bg-primary/20 p-2 text-white">
+<span class="material-symbols-outlined">
+                  grid_view
+                </span>
+</button>
+<button class="rounded-full bg-primary/20 p-2 text-white/50">
+<span class="material-symbols-outlined">
+                  view_list
+                </span>
+</button>
+</div>
+</div>
+<div class="mb-6 flex gap-2 overflow-x-auto pb-2">
+<button class="whitespace-nowrap rounded-full bg-primary px-4 py-2 text-sm font-bold text-black">All</button>
+<button class="whitespace-nowrap rounded-full border border-primary/50 bg-transparent px-4 py-2 text-sm font-medium text-white/80">Veg/Non-Veg</button>
+<button class="whitespace-nowrap rounded-full border border-primary/50 bg-transparent px-4 py-2 text-sm font-medium text-white/80">Snacks</button>
+<button class="whitespace-nowrap rounded-full border border-primary/50 bg-transparent px-4 py-2 text-sm font-medium text-white/80">Essentials</button>
+<button class="whitespace-nowrap rounded-full border border-primary/50 bg-transparent px-4 py-2 text-sm font-medium text-white/80">Pharmacy</button>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="flex flex-col gap-3 rounded-xl bg-background-light/5 dark:bg-background-dark/50 p-3">
+<div class="aspect-square w-full rounded-lg bg-cover bg-center" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBEKTFnOFahdp4MEIF6tvk1AQar29GFzItRPmYFTSkKp9CWXeaL94YqIpZKyVNa9uJItLfqYVavLIyfgUk4NGici-46S3TXVcvfJpSSPKQ1UrYVxqzEENEIh2YPbS0ELGgV_dUN8BAKwCZD1Z1guwLGRB67cimRcJ680ayuNUocNGFgqnbqGxaSQFHx61OdlweoHttrK608E1ASy48CNViaalG7KB7jCtNqsJNBZ5poGo2Yql7gI6YKVpET8Pc9iEB877IrtjZbNkM");'></div>
+<h3 class="font-bold text-white">Fresh Mangoes</h3>
+<div class="flex items-center justify-between">
+<p class="text-lg font-bold text-primary">₹120</p>
+<button class="flex items-center justify-center rounded-full bg-primary p-2 text-black glow-shadow">
+<span class="material-symbols-outlined text-lg">add</span>
+</button>
+</div>
+</div>
+<div class="flex flex-col gap-3 rounded-xl bg-background-light/5 dark:bg-background-dark/50 p-3">
+<div class="aspect-square w-full rounded-lg bg-cover bg-center" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCYHtCFK4nI6zE_Clavh58ONQAVXBKPFxG0OUPR_QBSMsQj2d6daLPy7n4xJpp2T-Ox32pf_2yxuXB6c8_8yWPIn40LG3TxV5fa8qbwoeNaSkmuokX6aox-al76EBkEKn8dJ0Q77JGYKMgSC18owTx3YtKAqbuOefvmX2PNt51SJlX_GPMg_9589CKlfXFb9vo6DpcAgxJflvkV5exgfayrNHneLoWaj6u34rfi_I8reePE4bzCRGvLMPW6REtpNCNK67-1yHePaBI");'></div>
+<h3 class="font-bold text-white">Organic Veggies</h3>
+<div class="flex items-center justify-between">
+<p class="text-lg font-bold text-primary">₹250</p>
+<button class="flex items-center justify-center rounded-full bg-primary p-2 text-black glow-shadow">
+<span class="material-symbols-outlined text-lg">add</span>
+</button>
+</div>
+</div>
+<div class="flex flex-col gap-3 rounded-xl bg-background-light/5 dark:bg-background-dark/50 p-3">
+<div class="aspect-square w-full rounded-lg bg-cover bg-center" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDqlJKl5fAbJocSt7uh22rPDmKDJc8G-M0Ltd3I-Leqrl3IpFkNTZULcl0jthRtX0j4eAVBh1LKokor5LH70x4fYgPfmy8cs9qC305rSDv0zJadqUrgy84WH9tLCWZ_Um-7gv3P1PwqyeurCjPaE1yiWalQ8hzTRqrneGoMkZqP5V3mJN0rjdhcwUya9d0qK5oCRuLsDbQt2HmGu0VIPNYGSiEPVTg1hnZzZfTflssVVFEIYr1bE8OhC1Mxs_PiwOhASTPegSuQE60");'></div>
+<h3 class="font-bold text-white">Ayurvedic Meds</h3>
+<div class="flex items-center justify-between">
+<p class="text-lg font-bold text-primary">₹300</p>
+<button class="flex items-center justify-center rounded-full bg-primary p-2 text-black glow-shadow">
+<span class="material-symbols-outlined text-lg">add</span>
+</button>
+</div>
+</div>
+<div class="flex flex-col gap-3 rounded-xl bg-background-light/5 dark:bg-background-dark/50 p-3">
+<div class="aspect-square w-full rounded-lg bg-gray-700 bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuASQOMgXBgWQa0gPDmLsoM9VhBi7xSqT91217WbFNxxNY1Jk2op7VA1SFmVt4yG906jElGcKCLrOtuHAcF0YGzunwAF9quxWYSdzDFDLQCnPh3ZG4tS9TGNa9aZxNfxXyyAJ03ji7I5TvI1bAQTqeiDSvACCDTeVPoegI4922bYvD7DazfbJkQDvJArcDIaI2BbOugM1dIC6zw6ILgg37mbrjCHq6QBgY5vZh00R22YRKkGLiFHNG8O4-qATx670H-LVhqLFc3j37M');"></div>
+<h3 class="font-bold text-white">Fresh Bread</h3>
+<div class="flex items-center justify-between">
+<p class="text-lg font-bold text-primary">₹50</p>
+<button class="flex items-center justify-center rounded-full bg-primary p-2 text-black glow-shadow">
+<span class="material-symbols-outlined text-lg">add</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+</div>
+<nav class="fixed bottom-0 left-0 right-0 border-t border-primary/20 bg-background-light/80 dark:bg-background-dark/80 px-4 pb-3 pt-2 backdrop-blur-sm">
+<div class="flex justify-around">
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="text-xs font-bold">Home</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-white/50" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="text-xs font-medium">Orders</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-white/50" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-xs font-medium">Profile</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-white/50" href="#">
+<span class="material-symbols-outlined">notifications</span>
+<span class="text-xs font-medium">Alerts</span>
+</a>
+</div>
+</nav>
+</div>
+
+</body></html>

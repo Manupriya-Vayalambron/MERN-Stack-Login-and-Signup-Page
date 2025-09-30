@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Stitch Design</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#68f91a",
+              "background-light": "#f6f8f5",
+              "background-dark": "#16230f",
+            },
+            fontFamily: {
+              "display": ["Space Grotesk"]
+            },
+            borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-gray-800 dark:text-gray-200">
+<div class="relative flex h-auto min-h-screen w-full flex-col justify-between">
+<div>
+<header class="sticky top-0 z-10 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm">
+<div class="flex items-center p-4">
+<button class="text-gray-600 dark:text-gray-400">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<h1 class="flex-1 text-center text-lg font-bold text-gray-900 dark:text-white pr-6">Orders</h1>
+</div>
+<div class="border-b border-gray-200/20 dark:border-gray-700/50 px-4">
+<nav class="flex -mb-px">
+<a class="flex-1 whitespace-nowrap border-b-2 border-primary py-3 text-center text-sm font-bold text-primary" href="#">Food</a>
+<a class="flex-1 whitespace-nowrap border-b-2 border-transparent py-3 text-center text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary hover:border-primary/50" href="#">Medicines</a>
+<a class="flex-1 whitespace-nowrap border-b-2 border-transparent py-3 text-center text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary hover:border-primary/50" href="#">Essentials</a>
+</nav>
+</div>
+</header>
+<main class="p-4 space-y-4">
+<div class="bg-background-light dark:bg-primary/10 rounded-xl p-4 shadow-sm">
+<div class="flex items-start gap-4">
+<div class="flex-1">
+<p class="text-xs font-medium text-gray-500 dark:text-gray-400">Delivered</p>
+<p class="font-bold text-gray-900 dark:text-white mt-1">Order #1234567890</p>
+<p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">2 items • 12/12/2023</p>
+<button class="mt-4 flex items-center justify-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-bold text-white shadow-[0_4px_14px_rgba(127,6,249,0.3)] hover:bg-primary/90 transition-all duration-300">
+                  Reorder
+                  <span class="material-symbols-outlined text-base">refresh</span>
+</button>
+</div>
+<div class="w-24 h-24 flex-shrink-0">
+<img alt="Order Image" class="w-full h-full object-cover rounded-lg" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAgJYPfYx4Qswfa1xEunByEnbMtxCizy6P42YwzwbX9atn2LIkn_a-3y_om_C2OglA3KRb3SfHgQJvKAts3wgU9ePGTqJ_uC-scHxIGwEQfvNJwizh61PppsKJSlVKvI_ECvl_44J8ldHLvvJOQ7irLskzcDqs6Kk0B2RCK1i621fCQJO2niUPoIDyUb2zBucHYc5xqPSFMSEyDXjBDch4Pxvb1C_9Cdf6Uclqy3Zr_r4x9VdIKNk2qDjbnY1LKT5A1DvviHbKNKl8"/>
+</div>
+</div>
+</div>
+<div class="bg-background-light dark:bg-primary/10 rounded-xl p-4 shadow-sm">
+<div class="flex items-start gap-4">
+<div class="flex-1">
+<p class="text-xs font-medium text-gray-500 dark:text-gray-400">Delivered</p>
+<p class="font-bold text-gray-900 dark:text-white mt-1">Order #9876543210</p>
+<p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">3 items • 11/25/2023</p>
+<button class="mt-4 flex items-center justify-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-bold text-white shadow-[0_4px_14px_rgba(127,6,249,0.3)] hover:bg-primary/90 transition-all duration-300">
+                  Reorder
+                  <span class="material-symbols-outlined text-base">refresh</span>
+</button>
+</div>
+<div class="w-24 h-24 flex-shrink-0">
+<img alt="Order Image" class="w-full h-full object-cover rounded-lg" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBOu7ZvODDIrGOMlo8mNQDKEayQn-92dhtGYhh0WsOJBrlxaQAXhLWkoyJ16y4aU-rcD65LUmt95BswB8oOMK-nQ3JjN9fQrbQh_jtqJRRYyKxsvEOgt7_Pk9UB-mHUShmBslsNWgMthshPTxquN1NbHm6Qy9Nr5HuAQ3ryXmxeLl93KMmLY3n8TtI4d7FQpTaQJ6BR-yWrIjErMSo7eRf-PtO_T95AKg_f6i3bEdL2bnRfVdqVqKeQVDBCWLqY4z2SnVPFMK_L754"/>
+</div>
+</div>
+</div>
+<div class="bg-background-light dark:bg-primary/10 rounded-xl p-4 shadow-sm">
+<div class="flex items-start gap-4">
+<div class="flex-1">
+<p class="text-xs font-medium text-gray-500 dark:text-gray-400">Delivered</p>
+<p class="font-bold text-gray-900 dark:text-white mt-1">Order #5678901234</p>
+<p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">1 item • 11/10/2023</p>
+<button class="mt-4 flex items-center justify-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-bold text-white shadow-[0_4px_14px_rgba(127,6,249,0.3)] hover:bg-primary/90 transition-all duration-300">
+                  Reorder
+                  <span class="material-symbols-outlined text-base">refresh</span>
+</button>
+</div>
+<div class="w-24 h-24 flex-shrink-0">
+<img alt="Order Image" class="w-full h-full object-cover rounded-lg" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDSk7QubbQdxzfXCA0rcOID1JID1YXVM232WuwHx5rqw4fH0hPWK7-mHybaihVBBokYl234hlZr5ku5pmvcJC0oYWwjnHbz712E0FSQ3kWokA-W4_gGNfG5xfg2dxVi65NRtchMGrb8ZXIRhiV97jPMuNx-WeeJ6ATB24AY3eVs6MS0G_z1D2rUToKBMlsmN3rSOfnw_jZlzMkbQDfuM8VpxbmwMxFTi3DSAmBzI_reekblpRCwA2fhhm2KPkaNL1wXWQpsVF4B3mI"/>
+</div>
+</div>
+</div>
+</main>
+</div>
+<footer class="sticky bottom-0 z-10 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-sm border-t border-gray-200/20 dark:border-gray-700/50 pb-safe">
+<nav class="flex justify-around p-2">
+<a class="flex flex-col items-center gap-1 p-2 text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="text-xs font-medium">Home</span>
+</a>
+<a class="flex flex-col items-center gap-1 p-2 text-primary dark:text-primary transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="text-xs font-bold">Orders</span>
+</a>
+<a class="flex flex-col items-center gap-1 p-2 text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-xs font-medium">Profile</span>
+</a>
+<a class="flex flex-col items-center gap-1 p-2 text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">notifications</span>
+<span class="text-xs font-medium">Notifications</span>
+</a>
+</nav>
+</footer>
+</div>
+
+</body></html>
