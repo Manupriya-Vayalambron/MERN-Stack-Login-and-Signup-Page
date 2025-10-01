@@ -1,8 +1,9 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import '../index.css';
 
 const YathrikaHome = () => {
+  const navigate = useNavigate();
   return (
     <div className="main-wrapper bg-background-light dark:bg-background-dark text-black dark:text-white">
       <div className="flex-grow">
@@ -10,7 +11,7 @@ const YathrikaHome = () => {
           <div className="w-12"></div>
           <h1 className="header-title">Yathrika</h1>
           <div className="flex w-12 items-center justify-end">
-            <button className="cart-button">
+            <button className="cart-button" onClick={() => navigate('/cart')}>
               <span className="material-symbols-outlined cart-icon">shopping_cart</span>
             </button>
           </div>

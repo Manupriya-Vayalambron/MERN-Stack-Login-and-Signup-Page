@@ -32,25 +32,26 @@ const OrderHistory = () => {
   const tabs = ['Food', 'Medicines', 'Essentials'];
 
   return (
-    <div className="main-wrapper">
-      <div>
-        <header className="header">
-          <div className="flex items-center p-4">
-            <Link to="/yathrika-home" className="text-gray-600 dark:text-gray-400">
+    <div className="order-history-page-container">
+      <div className="order-history-content-wrapper">
+        <header className="order-history-header">
+          <div className="order-history-header-inner">
+            <Link to="/yathrika-home" className="order-history-back-button">
               <span className="material-symbols-outlined">arrow_back</span>
             </Link>
-            <h1 className="header-title pr-6">Orders</h1>
+            <h1 className="order-history-page-title">Orders</h1>
+            <div className="order-history-header-spacer"></div>
           </div>
-          <div className="border-b border-gray-200/20 dark:border-gray-700/50 px-4">
-            <nav className="flex -mb-px">
+          <div className="order-history-tabs-section">
+            <nav className="order-history-tabs-nav">
               {tabs.map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`flex-1 whitespace-nowrap border-b-2 py-3 text-center text-sm font-medium transition-colors ${
+                  className={`order-history-tab ${
                     activeTab === tab
-                      ? 'border-primary font-bold text-primary'
-                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary hover:border-primary/50'
+                      ? 'order-history-tab-active'
+                      : 'order-history-tab-inactive'
                   }`}
                 >
                   {tab}
@@ -60,23 +61,23 @@ const OrderHistory = () => {
           </div>
         </header>
 
-        <main className="p-4 space-y-4">
+        <main className="order-history-main-content">
           {orders.map((order) => (
-            <div key={order.id} className="bg-background-light dark:bg-primary/10 rounded-xl p-4 shadow-sm">
-              <div className="flex items-start gap-4">
-                <div className="flex-1">
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">{order.status}</p>
-                  <p className="font-bold text-gray-900 dark:text-white mt-1">Order #{order.id}</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{order.items} items • {order.date}</p>
-                  <button className="mt-4 flex items-center justify-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-bold text-white glow-effect hover:bg-primary/90 transition-all duration-300">
+            <div key={order.id} className="order-history-card">
+              <div className="order-history-card-content">
+                <div className="order-history-details">
+                  <p className="order-history-status">{order.status}</p>
+                  <p className="order-history-order-number">Order #{order.id}</p>
+                  <p className="order-history-meta">{order.items} items • {order.date}</p>
+                  <button className="order-history-reorder-button">
                     Reorder
-                    <span className="material-symbols-outlined text-base">refresh</span>
+                    <span className="material-symbols-outlined">refresh</span>
                   </button>
                 </div>
-                <div className="w-24 h-24 flex-shrink-0">
+                <div className="order-history-image-container">
                   <img 
                     alt="Order Image" 
-                    className="w-full h-full object-cover rounded-lg" 
+                    className="order-history-image" 
                     src={order.image}
                   />
                 </div>
@@ -86,23 +87,23 @@ const OrderHistory = () => {
         </main>
       </div>
 
-      <footer className="footer-nav">
-        <nav className="nav-container">
-          <Link className="nav-item" to="/yathrika-home">
-            <span className="material-symbols-outlined nav-icon">home</span>
-            <span className="nav-text">Home</span>
+      <footer className="order-history-footer-nav">
+        <nav className="order-history-nav-container">
+          <Link className="order-history-nav-item" to="/yathrika-home">
+            <span className="material-symbols-outlined">home</span>
+            <span className="order-history-nav-text">Home</span>
           </Link>
-          <Link className="nav-item active" to="/order-history">
-            <span className="material-symbols-outlined nav-icon">receipt_long</span>
-            <span className="nav-text">Orders</span>
+          <Link className="order-history-nav-item order-history-nav-active" to="/order-history">
+            <span className="material-symbols-outlined">receipt_long</span>
+            <span className="order-history-nav-text">Orders</span>
           </Link>
-          <Link className="nav-item" to="/user-profile">
-            <span className="material-symbols-outlined nav-icon">person</span>
-            <span className="nav-text">Profile</span>
+          <Link className="order-history-nav-item" to="/user-profile">
+            <span className="material-symbols-outlined">person</span>
+            <span className="order-history-nav-text">Profile</span>
           </Link>
-          <Link className="nav-item" to="/notifications">
-            <span className="material-symbols-outlined nav-icon">notifications</span>
-            <span className="nav-text">Notifications</span>
+          <Link className="order-history-nav-item" to="/notifications">
+            <span className="material-symbols-outlined">notifications</span>
+            <span className="order-history-nav-text">Notifications</span>
           </Link>
         </nav>
       </footer>

@@ -49,63 +49,63 @@ const Notifications = () => {
   ];
 
   return (
-    <div className="main-wrapper">
-      <div className="flex-grow">
-        <header className="sticky top-0 z-10 flex items-center justify-between bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm p-4 border-b border-primary/20">
-          <div className="w-12"></div>
-          <h1 className="flex-1 text-center text-lg font-bold text-black dark:text-white">Notifications</h1>
-          <button className="flex h-12 w-12 items-center justify-center rounded-full text-black dark:text-white transition-colors hover:bg-primary/20">
+    <div className="notifications-page-container">
+      <div className="notifications-content-wrapper">
+        <header className="notifications-header">
+          <div className="notifications-header-spacer"></div>
+          <h1 className="notifications-page-title">Notifications</h1>
+          <button className="notifications-settings-button">
             <svg fill="currentColor" height="24" viewBox="0 0 256 256" width="24" xmlns="http://www.w3.org/2000/svg">
               <path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm88-29.84q.06-2.16,0-4.32l14.92-18.64a8,8,0,0,0,1.48-7.06,107.21,107.21,0,0,0-10.88-26.25,8,8,0,0,0-6-3.93l-23.72-2.64q-1.48-1.56-3-3L186,40.54a8,8,0,0,0-3.94-6,107.71,107.71,0,0,0-26.25-10.87,8,8,0,0,0-7.06,1.49L130.16,40Q128,40,125.84,40L107.2,25.11a8,8,0,0,0-7.06-1.48A107.6,107.6,0,0,0,73.89,34.51a8,8,0,0,0-3.93,6L67.32,64.27q-1.56,1.49-3,3L40.54,70a8,8,0,0,0-6,3.94,107.71,107.71,0,0,0-10.87,26.25,8,8,0,0,0,1.49,7.06L40,125.84Q40,128,40,130.16L25.11,148.8a8,8,0,0,0-1.48,7.06,107.21,107.21,0,0,0,10.88,26.25,8,8,0,0,0,6,3.93l23.72,2.64q1.49,1.56,3,3L70,215.46a8,8,0,0,0,3.94,6,107.71,107.71,0,0,0,26.25,10.87,8,8,0,0,0,7.06-1.49L125.84,216q2.16.06,4.32,0l18.64,14.92a8,8,0,0,0,7.06,1.48,107.21,107.21,0,0,0,26.25-10.88,8,8,0,0,0,3.93-6l2.64-23.72q1.56-1.48,3-3L215.46,186a8,8,0,0,0,6-3.94,107.71,107.71,0,0,0,10.87-26.25A8,8,0,0,0,216,151.66Zm-16.1-6.5a73.93,73.93,0,0,1,0,8.68,8,8,0,0,0,1.74,5.48l14.19,17.73a91.57,91.57,0,0,1-6.23,15L187,173.11a8,8,0,0,0-5.1,2.64,74.11,74.11,0,0,1-6.14,6.14,8,8,0,0,0-2.64,5.1l-2.51,22.58a91.32,91.32,0,0,1-15,6.23l-17.74-14.19a8,8,0,0,0-5-1.75h-.48a73.93,73.93,0,0,1-8.68,0,8,8,0,0,0-5.48,1.74L100.45,215.8a91.57,91.57,0,0,1-15-6.23L82.89,187a8,8,0,0,0-2.64-5.1,74.11,74.11,0,0,1-6.14-6.14,8,8,0,0,0-5.1-2.64L46.43,170.6a91.32,91.32,0,0,1-6.23-15l14.19-17.74a8,8,0,0,0,1.74-5.48,73.93,73.93,0,0,1,0-8.68,8,8,0,0,0-1.74-5.48L40.2,100.45a91.57,91.57,0,0,1,6.23-15L69,82.89a8,8,0,0,0,5.1-2.64,74.11,74.11,0,0,1,6.14-6.14A8,8,0,0,0,82.89,69L85.4,46.43a91.32,91.32,0,0,1,15-6.23l17.74,14.19a8,8,0,0,0,5.48,1.74,73.93,73.93,0,0,1,8.68,0,8,8,0,0,0,5.48-1.74L155.55,40.2a91.57,91.57,0,0,1,15,6.23L173.11,69a8,8,0,0,0,2.64,5.1,74.11,74.11,0,0,1,6.14,6.14,8,8,0,0,0,5.1,2.64l22.58,2.51a91.32,91.32,0,0,1,6.23,15l-14.19,17.74A8,8,0,0,0,199.87,123.66Z"></path>
             </svg>
           </button>
         </header>
         
-        <main className="flex flex-col gap-2 p-4">
+        <main className="notifications-main-content">
           {notifications.map((notification) => (
-            <div key={notification.id} className="flex items-center gap-4 rounded-lg bg-background-light p-4 shadow-sm dark:bg-black/30 notification-glow">
-              <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary/20 text-primary">
+            <div key={notification.id} className="notifications-card">
+              <div className="notifications-icon-container">
                 <svg fill="currentColor" height="24" viewBox="0 0 256 256" width="24" xmlns="http://www.w3.org/2000/svg">
                   <path d={notification.svg}></path>
                 </svg>
               </div>
-              <div className="flex-grow">
-                <p className="font-bold text-black dark:text-white">{notification.title}</p>
-                <p className="text-sm text-black/60 dark:text-white/60">{notification.message}</p>
+              <div className="notifications-content">
+                <p className="notifications-title">{notification.title}</p>
+                <p className="notifications-message">{notification.message}</p>
               </div>
             </div>
           ))}
         </main>
       </div>
 
-      <footer className="footer-nav">
-        <nav className="flex justify-around p-2">
-          <Link className="flex flex-1 flex-col items-center justify-center gap-1 rounded-lg py-2 text-black/60 dark:text-white/60 transition-colors hover:bg-primary/10" to="/yathrika-home">
+      <footer className="notifications-footer-nav">
+        <nav className="notifications-nav-container">
+          <Link className="notifications-nav-item" to="/yathrika-home">
             <svg fill="currentColor" height="24" viewBox="0 0 256 256" width="24" xmlns="http://www.w3.org/2000/svg">
-              <path d="M218.83,103.77l-80-75.48a1.14,1.14,0,0,1-.11-.11,16,16,0,0,0-21.53,0l-.11.11L37.17,103.77A16,16,0,0,0,32,115.55V208a16,16,0,0,0,16,16H96a16,16,0,0,0,16-16V160h32v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V115.55A16,16,0,0,0,218.83,103.77ZM208,208H160V160a16,16,0,0,0-16-16H112a16,16,0,0,0-16,16v48H48V115.55l.11-.1L128,40l79.9,75.43.11.1Z"></path>
+              <path d="M218.83,103.77l-80-75.48a1.14,1.14,0,0,1-.11-.11,16,16,0,0,0-21.53,0l-.11.11L37.17,103.77A16,16,0,0,0,32,115.55V208a16,16,0,0,0,16,16H96a16,16,0,0,0,16-16V160h32v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V115.55A16,16,0,0,0,218.83,103.77ZM208,208H160V160a16,16,0,0,0-16-16H112a16,16,0,0,0-16,16v48H48V115.55l.11-.1L128,40l79.9,75.43.11.10Z"></path>
             </svg>
-            <span className="text-xs font-medium">Home</span>
+            <span className="notifications-nav-text">Home</span>
           </Link>
-          <Link className="flex flex-1 flex-col items-center justify-center gap-1 rounded-lg py-2 text-black/60 dark:text-white/60 transition-colors hover:bg-primary/10" to="/order-history">
+          <Link className="notifications-nav-item" to="/order-history">
             <svg fill="currentColor" height="24" viewBox="0 0 256 256" width="24" xmlns="http://www.w3.org/2000/svg">
               <path d="M72,104a8,8,0,0,1,8-8h96a8,8,0,0,1,0,16H80A8,8,0,0,1,72,104Zm8,40h96a8,8,0,0,0,0-16H80a8,8,0,0,0,0,16ZM232,56V208a8,8,0,0,1-11.58,7.15L192,200.94l-28.42,14.21a8,8,0,0,1-7.16,0L128,200.94,99.58,215.15a8,8,0,0,1-7.16,0L64,200.94,35.58,215.15A8,8,0,0,1,24,208V56A16,16,0,0,1,40,40H216A16,16,0,0,1,232,56Zm-16,0H40V195.06l20.42-10.22a8,8,0,0,1,7.16,0L96,199.06l28.42-14.22a8,8,0,0,1,7.16,0L160,199.06l28.42-14.22a8,8,0,0,1,7.16,0L216,195.06Z"></path>
             </svg>
-            <span className="text-xs font-medium">Orders</span>
+            <span className="notifications-nav-text">Orders</span>
           </Link>
-          <Link className="flex flex-1 flex-col items-center justify-center gap-1 rounded-lg py-2 text-black/60 dark:text-white/60 transition-colors hover:bg-primary/10" to="/user-profile">
+          <Link className="notifications-nav-item" to="/user-profile">
             <svg fill="currentColor" height="24" viewBox="0 0 256 256" width="24" xmlns="http://www.w3.org/2000/svg">
               <path d="M230.92,212c-15.23-26.33-38.7-45.21-66.09-54.16a72,72,0,1,0-73.66,0C63.78,166.78,40.31,185.66,25.08,212a8,8,0,1,0,13.85,8c18.84-32.56,52.14-52,89.07-52s70.23,19.44,89.07,52a8,8,0,1,0,13.85-8ZM72,96a56,56,0,1,1,56,56A56.06,56.06,0,0,1,72,96Z"></path>
             </svg>
-            <span className="text-xs font-medium">Profile</span>
+            <span className="notifications-nav-text">Profile</span>
           </Link>
-          <Link className="relative flex flex-1 flex-col items-center justify-center gap-1 rounded-lg py-2 text-primary" to="/notifications">
-            <div className="relative">
+          <Link className="notifications-nav-item notifications-nav-active" to="/notifications">
+            <div className="notifications-icon-wrapper">
               <svg fill="currentColor" height="24" viewBox="0 0 256 256" width="24" xmlns="http://www.w3.org/2000/svg">
                 <path d="M221.8,175.94C216.25,166.38,208,139.33,208,104a80,80,0,1,0-160,0c0,35.34-8.26,62.38-13.81,71.94A16,16,0,0,0,48,200H88.81a40,40,0,0,0,78.38,0H208a16,16,0,0,0,13.8-24.06ZM128,216a24,24,0,0,1-22.62-16h45.24A24,24,0,0,1,128,216Z"></path>
               </svg>
-              <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full border-2 border-background-light dark:border-background-dark bg-primary glow-effect"></div>
+              <div className="notifications-badge"></div>
             </div>
-            <span className="text-xs font-bold">Notifications</span>
+            <span className="notifications-nav-text notifications-nav-text-active">Notifications</span>
           </Link>
         </nav>
       </footer>

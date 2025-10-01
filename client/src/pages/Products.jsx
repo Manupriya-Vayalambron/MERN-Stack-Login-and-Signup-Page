@@ -1,8 +1,10 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import '../index.css';
 
 const Products = () => {
+  const navigate = useNavigate();
+  
   const products = [
     {
       id: 1,
@@ -31,25 +33,25 @@ const Products = () => {
   ];
 
   return (
-    <div className="main-wrapper">
-      <div className="pb-28">
-        <header className="header">
-          <div className="flex items-center p-4">
-            <h1 className="header-title">Yathrika</h1>
-            <button className="relative rounded-full p-2">
-              <span className="material-symbols-outlined text-white">
+    <div className="products-page-container">
+      <div className="products-content-wrapper">
+        <header className="products-header">
+          <div className="products-header-inner">
+            <h1 className="products-brand-title">Yathrika</h1>
+            <button className="products-cart-button" onClick={() => navigate('/cart')}>
+              <span className="material-symbols-outlined">
                 shopping_cart
               </span>
-              <span className="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-xs font-bold text-black">3</span>
+              <span className="products-cart-badge">3</span>
             </button>
           </div>
-          <div className="search-container">
-            <div className="search-wrapper">
-              <span className="material-symbols-outlined search-icon">
+          <div className="products-search-container">
+            <div className="products-search-wrapper">
+              <span className="material-symbols-outlined products-search-icon">
                 search
               </span>
               <input 
-                className="search-input" 
+                className="products-search-input" 
                 placeholder="Search for products" 
                 type="text"
               />
@@ -57,16 +59,16 @@ const Products = () => {
           </div>
         </header>
         
-        <main className="px-4">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-xl font-bold text-white">Shop By Category</h2>
-            <div className="flex gap-2">
-              <button className="rounded-full bg-primary/20 p-2 text-white">
+        <main className="products-main-content">
+          <div className="products-category-header">
+            <h2 className="products-category-title">Shop By Category</h2>
+            <div className="products-view-controls">
+              <button className="products-view-button products-view-active">
                 <span className="material-symbols-outlined">
                   grid_view
                 </span>
               </button>
-              <button className="rounded-full bg-primary/20 p-2 text-white/50">
+              <button className="products-view-button products-view-inactive">
                 <span className="material-symbols-outlined">
                   view_list
                 </span>
@@ -74,26 +76,26 @@ const Products = () => {
             </div>
           </div>
           
-          <div className="mb-6 flex gap-2 overflow-x-auto pb-2">
-            <button className="whitespace-nowrap rounded-full bg-primary px-4 py-2 text-sm font-bold text-black">All</button>
-            <button className="whitespace-nowrap rounded-full border border-primary/50 bg-transparent px-4 py-2 text-sm font-medium text-white/80">Veg/Non-Veg</button>
-            <button className="whitespace-nowrap rounded-full border border-primary/50 bg-transparent px-4 py-2 text-sm font-medium text-white/80">Snacks</button>
-            <button className="whitespace-nowrap rounded-full border border-primary/50 bg-transparent px-4 py-2 text-sm font-medium text-white/80">Essentials</button>
-            <button className="whitespace-nowrap rounded-full border border-primary/50 bg-transparent px-4 py-2 text-sm font-medium text-white/80">Pharmacy</button>
+          <div className="products-filter-section">
+            <button className="products-filter-button products-filter-active">All</button>
+            <button className="products-filter-button products-filter-inactive">Veg/Non-Veg</button>
+            <button className="products-filter-button products-filter-inactive">Snacks</button>
+            <button className="products-filter-button products-filter-inactive">Essentials</button>
+            <button className="products-filter-button products-filter-inactive">Pharmacy</button>
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
+          <div className="products-grid">
             {products.map((product) => (
-              <div key={product.id} className="flex flex-col gap-3 rounded-xl bg-background-light/5 dark:bg-background-dark/50 p-3">
+              <div key={product.id} className="products-card">
                 <div 
-                  className="aspect-square w-full rounded-lg bg-cover bg-center" 
+                  className="products-image" 
                   style={{backgroundImage: `url("${product.image}")`}}
                 ></div>
-                <h3 className="font-bold text-white">{product.name}</h3>
-                <div className="flex items-center justify-between">
-                  <p className="text-lg font-bold text-primary">₹{product.price}</p>
-                  <button className="flex items-center justify-center rounded-full bg-primary p-2 text-black glow-shadow">
-                    <span className="material-symbols-outlined text-lg">add</span>
+                <h3 className="products-name">{product.name}</h3>
+                <div className="products-footer">
+                  <p className="products-price">₹{product.price}</p>
+                  <button className="products-add-button">
+                    <span className="material-symbols-outlined">add</span>
                   </button>
                 </div>
               </div>
@@ -102,23 +104,23 @@ const Products = () => {
         </main>
       </div>
 
-      <footer className="footer-nav">
-        <div className="nav-container">
-          <Link className="nav-item" to="/yathrika-home">
-            <span className="material-symbols-outlined nav-icon">home</span>
-            <span className="nav-text">Home</span>
+      <footer className="products-footer-nav">
+        <div className="products-nav-container">
+          <Link className="products-nav-item products-nav-active" to="/yathrika-home">
+            <span className="material-symbols-outlined">home</span>
+            <span className="products-nav-text products-nav-text-active">Home</span>
           </Link>
-          <Link className="nav-item" to="/order-history">
-            <span className="material-symbols-outlined nav-icon">receipt_long</span>
-            <span className="nav-text">Orders</span>
+          <Link className="products-nav-item" to="/order-history">
+            <span className="material-symbols-outlined">receipt_long</span>
+            <span className="products-nav-text">Orders</span>
           </Link>
-          <Link className="nav-item" to="/user-profile">
-            <span className="material-symbols-outlined nav-icon">person</span>
-            <span className="nav-text">Profile</span>
+          <Link className="products-nav-item" to="/user-profile">
+            <span className="material-symbols-outlined">person</span>
+            <span className="products-nav-text">Profile</span>
           </Link>
-          <Link className="nav-item" to="/notifications">
-            <span className="material-symbols-outlined nav-icon">notifications</span>
-            <span className="nav-text">Alerts</span>
+          <Link className="products-nav-item" to="/notifications">
+            <span className="material-symbols-outlined">notifications</span>
+            <span className="products-nav-text">Alerts</span>
           </Link>
         </div>
       </footer>

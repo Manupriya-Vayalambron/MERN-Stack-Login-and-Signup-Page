@@ -39,101 +39,102 @@ const Tracking = () => {
   ];
 
   return (
-    <div className="main-wrapper">
-      <div className="flex-grow">
-        <header className="flex items-center p-4">
-          <Link to="/order-history" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-background-light dark:bg-primary/20 text-black dark:text-white">
+    <div className="tracking-page-container">
+      <div className="tracking-content-wrapper">
+        <header className="tracking-header">
+          <Link to="/order-history" className="tracking-back-button">
             <span className="material-symbols-outlined">arrow_back</span>
           </Link>
-          <h1 className="flex-1 text-center text-lg font-bold text-black dark:text-white pr-10">Order Tracking</h1>
+          <h1 className="tracking-page-title">Order Tracking</h1>
+          <div className="tracking-header-spacer"></div>
         </header>
         
-        <main className="p-4">
-          <div className="rounded-xl bg-primary/10 dark:bg-primary/20 p-6 space-y-6 glow-shadow">
-            <div className="space-y-4">
-              <div className="flex justify-between items-center text-xs font-bold text-black dark:text-white">
+        <main className="tracking-main-content">
+          <div className="tracking-progress-card">
+            <div className="tracking-stages-section">
+              <div className="tracking-stages-labels">
                 {trackingStages.map((stage, index) => (
-                  <span key={index} className={stage.active ? 'text-primary' : 'text-black/60 dark:text-white/60'}>
+                  <span key={index} className={stage.active ? 'tracking-stage-active' : 'tracking-stage-inactive'}>
                     {stage.name}
                   </span>
                 ))}
               </div>
-              <div className="relative h-2 rounded-full bg-primary/20">
-                <div className="absolute h-2 rounded-full bg-primary glow-effect" style={{width: '25%'}}></div>
+              <div className="tracking-progress-bar-container">
+                <div className="tracking-progress-bar" style={{width: '25%'}}></div>
               </div>
             </div>
             
-            <div className="text-center space-y-2">
-              <h2 className="text-2xl font-bold text-black dark:text-white">Order Confirmed</h2>
-              <p className="text-sm text-black/60 dark:text-white/60">Your order has been confirmed and is being prepared.</p>
+            <div className="tracking-status-section">
+              <h2 className="tracking-status-title">Order Confirmed</h2>
+              <p className="tracking-status-description">Your order has been confirmed and is being prepared.</p>
             </div>
           </div>
           
-          <div className="py-8">
-            <p className="text-center mb-4 text-sm text-black/60 dark:text-white/60">Your order will arrive at the bus stop in:</p>
-            <div className="flex justify-center gap-4">
-              <div className="flex flex-col items-center">
-                <div className="flex h-24 w-24 items-center justify-center rounded-xl bg-primary/10 dark:bg-primary/20 border border-primary/20 glow-shadow">
-                  <p className="text-5xl font-bold text-primary">{timeRemaining.minutes}</p>
+          <div className="tracking-countdown-section">
+            <p className="tracking-countdown-label">Your order will arrive at the bus stop in:</p>
+            <div className="tracking-timer-container">
+              <div className="tracking-timer-item">
+                <div className="tracking-timer-box">
+                  <p className="tracking-timer-value">{timeRemaining.minutes}</p>
                 </div>
-                <p className="mt-2 text-sm font-medium text-black/80 dark:text-white/80">Minutes</p>
+                <p className="tracking-timer-text">Minutes</p>
               </div>
-              <div className="flex flex-col items-center">
-                <div className="flex h-24 w-24 items-center justify-center rounded-xl bg-primary/10 dark:bg-primary/20 border border-primary/20 glow-shadow">
-                  <p className="text-5xl font-bold text-primary">{timeRemaining.seconds}</p>
+              <div className="tracking-timer-item">
+                <div className="tracking-timer-box">
+                  <p className="tracking-timer-value">{timeRemaining.seconds}</p>
                 </div>
-                <p className="mt-2 text-sm font-medium text-black/80 dark:text-white/80">Seconds</p>
+                <p className="tracking-timer-text">Seconds</p>
               </div>
             </div>
           </div>
           
-          <div className="space-y-4">
-            <h3 className="text-lg font-bold text-black dark:text-white">Order Details</h3>
-            <div className="rounded-lg bg-background-light dark:bg-primary/10 p-4 space-y-4 glow-shadow">
-              <div className="flex justify-between">
-                <p className="text-sm text-black/60 dark:text-white/60">Order ID</p>
-                <p className="text-sm font-medium text-black dark:text-white">{orderDetails.id}</p>
+          <div className="tracking-details-section">
+            <h3 className="tracking-section-title">Order Details</h3>
+            <div className="tracking-details-card">
+              <div className="tracking-detail-row">
+                <p className="tracking-detail-label">Order ID</p>
+                <p className="tracking-detail-value">{orderDetails.id}</p>
               </div>
-              <div className="flex justify-between">
-                <p className="text-sm text-black/60 dark:text-white/60">Items</p>
-                <p className="text-sm font-medium text-black dark:text-white">{orderDetails.items} items</p>
+              <div className="tracking-detail-row">
+                <p className="tracking-detail-label">Items</p>
+                <p className="tracking-detail-value">{orderDetails.items} items</p>
               </div>
-              <div className="flex justify-between">
-                <p className="text-sm text-black/60 dark:text-white/60">Total</p>
-                <p className="text-sm font-medium text-black dark:text-white">₹ {orderDetails.total}</p>
+              <div className="tracking-detail-row">
+                <p className="tracking-detail-label">Total</p>
+                <p className="tracking-detail-value">₹ {orderDetails.total}</p>
               </div>
             </div>
           </div>
           
-          <div className="space-y-4 mt-6">
-            <h3 className="text-lg font-bold text-black dark:text-white">Delivery</h3>
-            <div className="rounded-lg bg-background-light dark:bg-primary/10 p-4 glow-shadow">
-              <div className="flex justify-between">
-                <p className="text-sm text-black/60 dark:text-white/60">Delivery Location</p>
-                <p className="text-sm font-medium text-black dark:text-white">{orderDetails.deliveryLocation}</p>
+          <div className="tracking-delivery-section">
+            <h3 className="tracking-section-title">Delivery</h3>
+            <div className="tracking-delivery-card">
+              <div className="tracking-detail-row">
+                <p className="tracking-detail-label">Delivery Location</p>
+                <p className="tracking-detail-value">{orderDetails.deliveryLocation}</p>
               </div>
             </div>
           </div>
         </main>
       </div>
       
-      <footer className="footer-nav">
-        <div className="flex justify-around items-center h-20 px-4 pb-3 pt-2">
-          <Link className="flex flex-col items-center justify-center gap-1 text-black/60 dark:text-white/60" to="/yathrika-home">
+      <footer className="tracking-footer-nav">
+        <div className="tracking-nav-container">
+          <Link className="tracking-nav-item" to="/yathrika-home">
             <span className="material-symbols-outlined">home</span>
-            <span className="text-xs">Home</span>
+            <span className="tracking-nav-text">Home</span>
           </Link>
-          <Link className="flex flex-col items-center justify-center gap-1 text-primary" to="/order-history">
+          <Link className="tracking-nav-item tracking-nav-active" to="/order-history">
             <span className="material-symbols-outlined">receipt_long</span>
-            <span className="text-xs">Orders</span>
+            <span className="tracking-nav-text">Orders</span>
           </Link>
-          <Link className="flex flex-col items-center justify-center gap-1 text-black/60 dark:text-white/60" to="/user-profile">
+          <Link className="tracking-nav-item" to="/user-profile">
             <span className="material-symbols-outlined">person</span>
-            <span className="text-xs">Profile</span>
+            <span className="tracking-nav-text">Profile</span>
           </Link>
-          <Link className="flex flex-col items-center justify-center gap-1 text-black/60 dark:text-white/60" to="/notifications">
+          <Link className="tracking-nav-item" to="/notifications">
             <span className="material-symbols-outlined">notifications</span>
-            <span className="text-xs">Notifications</span>
+            <span className="tracking-nav-text">Notifications</span>
           </Link>
         </div>
       </footer>

@@ -30,25 +30,7 @@ function App() {
         <Routes>
           {/* Landing Page */}
           <Route path="/" element={
-            <div className="min-h-screen bg-background-light dark:bg-background-dark text-black dark:text-white flex flex-col items-center justify-center p-8">
-              <h1 className="text-4xl font-bold mb-8 text-center">Welcome to the MERN App Collection</h1>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl w-full">
-                <div className="bg-white/10 p-6 rounded-xl border border-white/20">
-                  <h2 className="text-2xl font-bold mb-4">Original Login System</h2>
-                  <p className="text-gray-300 mb-4">Basic MERN stack authentication with login and signup</p>
-                  <a href="/login" className="inline-block bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors">
-                    Go to Login System
-                  </a>
-                </div>
-                <div className="bg-white/10 p-6 rounded-xl border border-white/20">
-                  <h2 className="text-2xl font-bold mb-4 text-primary">Yathrika Delivery App</h2>
-                  <p className="text-gray-300 mb-4">Complete delivery application with beautiful UI in Malayalam and English</p>
-                  <a href="/yathrika-home" className="inline-block bg-primary text-background-dark px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors font-bold">
-                    Enter Yathrika App
-                  </a>
-                </div>
-              </div>
-            </div>
+            <Navigate to="/splash" />
           } />
           
           {/* Original MERN Auth Routes */}

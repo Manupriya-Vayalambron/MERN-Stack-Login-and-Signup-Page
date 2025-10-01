@@ -52,25 +52,25 @@ const Vendors = () => {
   };
 
   return (
-    <div className="main-wrapper">
-      <div className="flex-grow">
-        <header className="flex items-center justify-between p-4">
-          <Link to="/admin" className="rounded-full p-2 text-white/80 transition-colors hover:text-white">
-            <svg className="h-6 w-6" fill="none" height="24" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">
+    <div className="vendors-page-container">
+      <div className="vendors-content-wrapper">
+        <header className="vendors-header">
+          <Link to="/admin" className="vendors-back-button">
+            <svg className="vendors-back-icon" fill="none" height="24" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">
               <path d="M19 12H5"></path>
               <path d="M12 19l-7-7 7-7"></path>
             </svg>
           </Link>
-          <h1 className="text-xl font-bold">Vendor Management</h1>
-          <div className="w-8"></div>
+          <h1 className="vendors-page-title">Vendor Management</h1>
+          <div className="vendors-header-spacer"></div>
         </header>
         
-        <main className="px-4 pb-24">
-          <section className="mb-8">
-            <h2 className="mb-4 text-2xl font-bold">Add New Vendor</h2>
-            <form className="space-y-4" onSubmit={handleSubmit}>
+        <main className="vendors-main-content">
+          <section className="vendors-add-section">
+            <h2 className="vendors-section-title">Add New Vendor</h2>
+            <form className="vendors-form" onSubmit={handleSubmit}>
               <input 
-                className="glow-input w-full rounded-lg border-none bg-primary/20 p-4 text-white placeholder-white/50 focus:bg-primary/30 focus:ring-2 focus:ring-primary" 
+                className="vendors-form-input" 
                 placeholder="Vendor Name" 
                 type="text"
                 name="name"
@@ -78,7 +78,7 @@ const Vendors = () => {
                 onChange={handleInputChange}
               />
               <input 
-                className="glow-input w-full rounded-lg border-none bg-primary/20 p-4 text-white placeholder-white/50 focus:bg-primary/30 focus:ring-2 focus:ring-primary" 
+                className="vendors-form-input" 
                 placeholder="Contact Number" 
                 type="tel"
                 name="contact"
@@ -86,7 +86,7 @@ const Vendors = () => {
                 onChange={handleInputChange}
               />
               <input 
-                className="glow-input w-full rounded-lg border-none bg-primary/20 p-4 text-white placeholder-white/50 focus:bg-primary/30 focus:ring-2 focus:ring-primary" 
+                className="vendors-form-input" 
                 placeholder="Email Address" 
                 type="email"
                 name="email"
@@ -94,7 +94,7 @@ const Vendors = () => {
                 onChange={handleInputChange}
               />
               <input 
-                className="glow-input w-full rounded-lg border-none bg-primary/20 p-4 text-white placeholder-white/50 focus:bg-primary/30 focus:ring-2 focus:ring-primary" 
+                className="vendors-form-input" 
                 placeholder="Address" 
                 type="text"
                 name="address"
@@ -102,7 +102,7 @@ const Vendors = () => {
                 onChange={handleInputChange}
               />
               <button 
-                className="w-full rounded-lg bg-primary py-4 font-bold text-background-dark transition-transform hover:scale-105 glow-effect" 
+                className="vendors-submit-button" 
                 type="submit"
               >
                 Add Vendor
@@ -110,18 +110,18 @@ const Vendors = () => {
             </form>
           </section>
           
-          <section>
-            <h2 className="mb-4 text-2xl font-bold">Existing Vendors</h2>
-            <div className="space-y-3">
+          <section className="vendors-list-section">
+            <h2 className="vendors-section-title">Existing Vendors</h2>
+            <div className="vendors-list">
               {existingVendors.map((vendor) => (
-                <div key={vendor.id} className="flex items-center gap-4 rounded-lg bg-primary/10 p-3 glow-shadow">
+                <div key={vendor.id} className="vendors-card">
                   <div 
-                    className="h-14 w-14 shrink-0 rounded-lg bg-cover bg-center" 
+                    className="vendors-card-image" 
                     style={{backgroundImage: `url("${vendor.image}")`}}
                   ></div>
-                  <div className="flex-grow">
-                    <p className="font-semibold text-white">{vendor.name}</p>
-                    <p className="text-sm text-white/60">Contact: {vendor.contact}</p>
+                  <div className="vendors-card-info">
+                    <p className="vendors-card-name">{vendor.name}</p>
+                    <p className="vendors-card-contact">Contact: {vendor.contact}</p>
                   </div>
                 </div>
               ))}
@@ -130,9 +130,9 @@ const Vendors = () => {
         </main>
       </div>
       
-      <div className="fixed bottom-4 right-4">
-        <button className="glow-effect flex h-16 w-16 items-center justify-center rounded-full bg-primary text-background-dark shadow-lg transition-transform hover:scale-110">
-          <svg className="h-8 w-8" fill="none" height="32" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" viewBox="0 0 24 24" width="32" xmlns="http://www.w3.org/2000/svg">
+      <div className="vendors-floating-button-container">
+        <button className="vendors-floating-button">
+          <svg className="vendors-plus-icon" fill="none" height="32" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" viewBox="0 0 24 24" width="32" xmlns="http://www.w3.org/2000/svg">
             <path d="M12 5v14"></path>
             <path d="M5 12h14"></path>
           </svg>

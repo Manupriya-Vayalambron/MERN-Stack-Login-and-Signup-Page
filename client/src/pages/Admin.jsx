@@ -32,15 +32,15 @@ const Admin = () => {
   ];
 
   return (
-    <div className="main-wrapper">
-      <div className="flex-grow">
-        <header className="sticky top-0 z-10 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm">
-          <div className="flex items-center justify-between p-4">
-            <div className="w-12"></div>
-            <h1 className="text-xl font-bold text-white text-center flex-1">Yathrika Admin</h1>
-            <div className="flex w-12 items-center justify-end">
-              <button className="p-2 rounded-full hover:bg-primary/20 transition-colors">
-                <svg className="text-white" fill="currentColor" height="24" viewBox="0 0 256 256" width="24" xmlns="http://www.w3.org/2000/svg">
+    <div className="admin-page-container">
+      <div className="admin-content-wrapper">
+        <header className="admin-header">
+          <div className="admin-header-inner">
+            <div className="admin-header-spacer"></div>
+            <h1 className="admin-page-title">Yathrika Admin</h1>
+            <div className="admin-settings-container">
+              <button className="admin-settings-button">
+                <svg className="admin-settings-icon" fill="currentColor" height="24" viewBox="0 0 256 256" width="24" xmlns="http://www.w3.org/2000/svg">
                   <path d="M216.7,132.7,199.11,154a8,8,0,0,0-2,5.85,75.46,75.46,0,0,1,0,12.3,8,8,0,0,0,2,5.85l17.59,21.3a8,8,0,0,1-1.39,11.83l-19.45,16a8,8,0,0,0-6.14,1,75.43,75.43,0,0,1-10.66,10.66,8,8,0,0,0-1,6.14l-2.82,21.75a8,8,0,0,1-10.42,7.3l-21-5.61a8,8,0,0,0-6.4,0,76.5,76.5,0,0,1-12.3,0,8,8,0,0,0-6.4,0l-21,5.61a8,8,0,0,1-10.42-7.3l-2.82-21.75a8,8,0,0,0-1-6.14,75.43,75.43,0,0,1-10.66-10.66,8,8,0,0,0-6.14-1l-19.45-16a8,8,0,0,1-1.39-11.83l17.59-21.3a8,8,0,0,0,2-5.85,75.46,75.46,0,0,1,0-12.3,8,8,0,0,0-2-5.85L39.3,123.3a8,8,0,0,1,1.39-11.83l19.45-16a8,8,0,0,0,6.14-1,75.43,75.43,0,0,1,10.66-10.66,8,8,0,0,0,1-6.14l2.82-21.75a8,8,0,0,1,10.42-7.3l21,5.61a8,8,0,0,0,6.4,0,76.5,76.5,0,0,1,12.3,0,8,8,0,0,0,6.4,0l21-5.61a8,8,0,0,1,10.42,7.3l2.82,21.75a8,8,0,0,0,1,6.14,75.43,75.43,0,0,1,10.66,10.66,8,8,0,0,0,6.14,1l19.45,16A8,8,0,0,1,216.7,132.7ZM128,88a40,40,0,1,0,40,40A40,40,0,0,0,128,88Zm0,64a24,24,0,1,1,24-24A24,24,0,0,1,128,152Z"></path>
                 </svg>
               </button>
@@ -48,23 +48,23 @@ const Admin = () => {
           </div>
         </header>
 
-        <main className="p-4 space-y-8">
-          <section>
-            <h2 className="text-2xl font-bold text-white px-0 pb-4">Live Orders</h2>
-            <div className="space-y-4">
+        <main className="admin-main-content">
+          <section className="admin-live-orders-section">
+            <h2 className="admin-section-title">Live Orders</h2>
+            <div className="admin-orders-list">
               {liveOrders.map((order) => (
-                <div key={order.id} className="bg-background-light/50 dark:bg-background-dark/50 rounded-xl p-4 flex items-center gap-4 border border-primary/20">
-                  <div className="flex-1 space-y-3">
-                    <div className="space-y-1">
-                      <p className="text-lg font-bold text-white">Order #{order.id}</p>
-                      <p className="text-sm text-primary">Bus Stop: {order.busStop}</p>
+                <div key={order.id} className="admin-order-card">
+                  <div className="admin-order-details">
+                    <div className="admin-order-info">
+                      <p className="admin-order-number">Order #{order.id}</p>
+                      <p className="admin-bus-stop">Bus Stop: {order.busStop}</p>
                     </div>
-                    <button className="px-5 py-2 text-sm font-bold text-black bg-primary rounded-full hover:opacity-90 transition-opacity glow-effect">
+                    <button className="admin-track-button">
                       Track
                     </button>
                   </div>
                   <div 
-                    className="w-28 h-28 rounded-lg bg-cover bg-center" 
+                    className="admin-order-image" 
                     style={{backgroundImage: `url("${order.image}")`}}
                   ></div>
                 </div>
@@ -72,18 +72,18 @@ const Admin = () => {
             </div>
           </section>
 
-          <section>
-            <h2 className="text-2xl font-bold text-white px-0 pb-4">Delivery Partners</h2>
-            <div className="space-y-2">
+          <section className="admin-partners-section">
+            <h2 className="admin-section-title">Delivery Partners</h2>
+            <div className="admin-partners-list">
               {deliveryPartners.map((partner, index) => (
-                <div key={index} className="bg-background-light/50 dark:bg-background-dark/50 rounded-xl p-4 flex items-center gap-4 border border-primary/20">
+                <div key={index} className="admin-partner-card">
                   <div 
-                    className="w-14 h-14 rounded-full bg-cover bg-center" 
+                    className="admin-partner-avatar" 
                     style={{backgroundImage: `url("${partner.image}")`}}
                   ></div>
-                  <div className="flex-1">
-                    <p className="text-base font-bold text-white">{partner.name}</p>
-                    <p className={`text-sm ${partner.isAvailable ? 'text-primary' : 'text-white/70'}`}>
+                  <div className="admin-partner-info">
+                    <p className="admin-partner-name">{partner.name}</p>
+                    <p className={`admin-partner-status ${partner.isAvailable ? 'admin-status-available' : 'admin-status-busy'}`}>
                       {partner.status}
                     </p>
                   </div>
@@ -92,34 +92,34 @@ const Admin = () => {
             </div>
           </section>
 
-          <section>
-            <h2 className="text-2xl font-bold text-white px-0 pb-4">Revenue</h2>
-            <div className="bg-primary/20 rounded-xl p-6 border border-primary/30">
-              <p className="text-base font-medium text-primary">Total Today</p>
-              <p className="text-4xl font-bold text-white mt-1">$5,432</p>
+          <section className="admin-revenue-section">
+            <h2 className="admin-section-title">Revenue</h2>
+            <div className="admin-revenue-card">
+              <p className="admin-revenue-label">Total Today</p>
+              <p className="admin-revenue-amount">$5,432</p>
             </div>
           </section>
         </main>
       </div>
 
-      <footer className="footer-nav">
-        <div className="flex justify-around p-2">
-          <Link className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg text-primary" to="/admin">
+      <footer className="admin-footer-nav">
+        <div className="admin-nav-container">
+          <Link className="admin-nav-item admin-nav-active" to="/admin">
             <svg fill="currentColor" height="28" viewBox="0 0 256 256" width="28" xmlns="http://www.w3.org/2000/svg">
               <path d="M224,115.55V208a16,16,0,0,1-16,16H168a16,16,0,0,1-16-16V168a8,8,0,0,0-8-8H112a8,8,0,0,0-8,8v40a16,16,0,0,1-16,16H48a16,16,0,0,1-16-16V115.55a16,16,0,0,1,5.17-11.78l80-75.48.11-.11a16,16,0,0,1,21.53,0l.11.11,80,75.48A16,16,0,0,1,224,115.55Z"></path>
             </svg>
           </Link>
-          <Link className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg text-white/70 hover:text-primary transition-colors" to="/analytics">
+          <Link className="admin-nav-item" to="/analytics">
             <svg fill="currentColor" height="28" viewBox="0 0 256 256" width="28" xmlns="http://www.w3.org/2000/svg">
               <path d="M232,208a8,8,0,0,1-8,8H32a8,8,0,0,1-8-8V48a8,8,0,0,1,16,0v94.37L90.73,98a8,8,0,0,1,10.07-.38l58.81,44.11L218.73,90a8,8,0,1,1,10.54,12l-64,56a8,8,0,0,1-10.07.38L96.39,114.29,40,163.63V200H224A8,8,0,0,1,232,208Z"></path>
             </svg>
           </Link>
-          <Link className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg text-white/70 hover:text-primary transition-colors" to="/users">
+          <Link className="admin-nav-item" to="/users">
             <svg fill="currentColor" height="28" viewBox="0 0 256 256" width="28" xmlns="http://www.w3.org/2000/svg">
               <path d="M117.25,157.92a60,60,0,1,0-66.5,0A95.83,95.83,0,0,0,3.53,195.63a8,8,0,1,0,13.4,8.74,80,80,0,0,1,134.14,0,8,8,0,0,0,13.4-8.74A95.83,95.83,0,0,0,117.25,157.92ZM40,108a44,44,0,1,1,44,44A44.05,44.05,0,0,1,40,108Zm210.14,98.7a8,8,0,0,1-11.07-2.33A79.83,79.83,0,0,0,172,168a8,8,0,0,1,0-16,44,44,0,1,0-16.34-84.87,8,8,0,1,1-5.94-14.85,60,60,0,0,1,55.53,105.64,95.83,95.83,0,0,1,47.22,37.71A8,8,0,0,1,250.14,206.7Z"></path>
             </svg>
           </Link>
-          <Link className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg text-white/70 hover:text-primary transition-colors" to="/routes">
+          <Link className="admin-nav-item" to="/routes">
             <svg fill="currentColor" height="28" viewBox="0 0 256 256" width="28" xmlns="http://www.w3.org/2000/svg">
               <path d="M228.92,49.69a8,8,0,0,0-6.86-1.45L160.93,63.52,99.58,32.84a8,8,0,0,0-5.52-.6l-64,16A8,8,0,0,0,24,56V200a8,8,0,0,0,9.94,7.76l61.13-15.28,61.35,30.68A8.15,8.15,0,0,0,160,224a8,8,0,0,0,1.94-.24l64-16A8,8,0,0,0,232,200V56A8,8,0,0,0,228.92,49.69ZM104,52.94l48,24V203.06l-48-24ZM40,62.25l48-12v127.5l-48,12Zm176,131.5-48,12V78.25l48-12Z"></path>
             </svg>

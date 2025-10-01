@@ -1,8 +1,9 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import '../index.css';
 
 const OrderSummary = () => {
+  const navigate = useNavigate();
   const orderItems = [
     {
       name: 'Organic Vegetables',
@@ -25,72 +26,106 @@ const OrderSummary = () => {
   const total = subtotal + deliveryFee;
 
   return (
-    <div className="main-wrapper">
-      <div className="flex-grow">
-        <header className="sticky top-0 z-10 flex items-center justify-between bg-background-light/80 p-4 backdrop-blur-sm dark:bg-background-dark/80">
-          <Link to="/cart" className="flex size-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-white">
+    <div className="order-summary-container">
+      <div className="order-content-wrapper">
+        <header className="order-header">
+          <Link to="/cart" className="order-back-button">
             <svg fill="currentColor" height="24" viewBox="0 0 256 256" width="24" xmlns="http://www.w3.org/2000/svg">
               <path d="M224,128a8,8,0,0,1-8,8H59.31l58.35,58.34a8,8,0,0,1-11.32,11.32l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L59.31,120H216A8,8,0,0,1,224,128Z"></path>
             </svg>
           </Link>
-          <h1 className="text-xl font-bold text-white">Order Summary</h1>
-          <div className="size-10"></div>
+          <h1 className="order-page-title">Order Summary</h1>
+          <div className="order-header-spacer"></div>
         </header>
 
-        <main className="p-4 space-y-6">
-          <div className="bg-white/5 rounded-xl p-4">
-            <h2 className="text-lg font-bold text-white mb-4">Items</h2>
-            <div className="space-y-4">
-              {orderItems.map((item, index) => (
-                <div key={index} className="flex items-center gap-4">
+        <main className="order-main-content">
+          <h2 className="order-id-title">Order ID: #1234567890</h2>
+          
+          <div className="order-items-section">
+            {orderItems.map((item, index) => (
+              <div key={index} className="order-item-card">
+                <div className="order-items-wrapper">
                   <div 
-                    className="w-16 h-16 rounded-lg bg-cover bg-center" 
+                    className="order-item-image" 
                     style={{backgroundImage: `url("${item.image}")`}}
                   ></div>
-                  <div className="flex-grow">
-                    <p className="font-bold text-white">{item.name}</p>
-                    <p className="text-sm text-white/70">{item.malayalamName}</p>
-                    <p className="text-sm text-white/60">Qty: {item.quantity}</p>
+                  <div className="order-item-info">
+                    <p className="order-item-name">{item.name}</p>
+                    <p className="order-item-quantity">Quantity: {item.quantity}</p>
                   </div>
-                  <p className="font-bold text-primary">₹{item.price * item.quantity}</p>
                 </div>
-              ))}
+              </div>
+            ))}
+          </div>
+
+          <h3 className="delivery-section-title">Delivery Details</h3>
+          <div className="delivery-details-section">
+            <div className="delivery-detail-item">
+              <div className="delivery-icon-wrapper">
+                <svg fill="currentColor" height="24" viewBox="0 0 256 256" width="24" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M128,16a88.1,88.1,0,0,0-88,88c0,31.4,14.51,64.68,42,96.25a254.19,254.19,0,0,0,41.45,38.3,8,8,0,0,0,9.18,0A254.19,254.19,0,0,0,174,200.25c27.45-31.57,42-64.85,42-96.25A88.1,88.1,0,0,0,128,16Zm0,120a32,32,0,1,1,32-32A32,32,0,0,1,128,136Z"></path>
+                </svg>
+              </div>
+              <div className="delivery-detail-text">
+                <p className="delivery-detail-label">Bus Stop</p>
+                <p className="delivery-detail-value">Kochi Bus Stop</p>
+              </div>
+            </div>
+            
+            <div className="delivery-detail-item">
+              <div className="delivery-icon-wrapper">
+                <svg fill="currentColor" height="24" viewBox="0 0 256 256" width="24" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M224,48H32A16,16,0,0,0,16,64V192a16,16,0,0,0,16,16H224a16,16,0,0,0,16-16V64A16,16,0,0,0,224,48Zm0,144H32V104H224v88ZM32,88V64H224V88Z"></path>
+                </svg>
+              </div>
+              <div className="delivery-detail-text">
+                <p className="delivery-detail-label">Payment Method</p>
+                <p className="delivery-detail-value">Credit Card</p>
+              </div>
             </div>
           </div>
 
-          <div className="bg-white/5 rounded-xl p-4">
-            <h2 className="text-lg font-bold text-white mb-4">Delivery Details</h2>
-            <div className="space-y-2 text-sm">
-              <p className="text-white/70">Delivery to: <span className="text-white">Home</span></p>
-              <p className="text-white/70">Address: <span className="text-white">123 Main Street, Kochi</span></p>
-              <p className="text-white/70">Estimated Time: <span className="text-white">30-45 minutes</span></p>
-            </div>
+          <div className="order-action-buttons">
+            <button className="order-secondary-button">Download</button>
+            <button className="order-secondary-button">Share</button>
           </div>
 
-          <div className="bg-white/5 rounded-xl p-4">
-            <h2 className="text-lg font-bold text-white mb-4">Payment Summary</h2>
-            <div className="space-y-2">
-              <div className="flex justify-between text-white/70">
-                <span>Subtotal</span>
-                <span>₹{subtotal}</span>
-              </div>
-              <div className="flex justify-between text-white/70">
-                <span>Delivery Fee</span>
-                <span>₹{deliveryFee}</span>
-              </div>
-              <div className="border-t border-white/20 pt-2 flex justify-between text-lg font-bold text-white">
-                <span>Total</span>
-                <span>₹{total}</span>
-              </div>
-            </div>
+          <div className="order-track-section">
+            <button className="order-track-button" onClick={() => navigate('/tracking')}>Track Order</button>
           </div>
         </main>
       </div>
 
-      <footer className="footer-nav p-4">
-        <button className="w-full h-14 bg-primary text-background-dark font-bold rounded-lg glow-effect hover:bg-primary/90 transition-all duration-300 flex items-center justify-center">
-          Place Order - ₹{total}
-        </button>
+      <footer className="order-footer-nav">
+        <nav className="order-nav-container">
+          <Link className="order-nav-item" to="/yathrika-home">
+            <svg fill="currentColor" height="24" viewBox="0 0 256 256" width="24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M218.83,103.77l-80-75.48a1.14,1.14,0,0,1-.11-.11,16,16,0,0,0-21.53,0l-.11.11L37.17,103.77A16,16,0,0,0,32,115.55V208a16,16,0,0,0,16,16H96a16,16,0,0,0,16-16V160h32v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V115.55A16,16,0,0,0,218.83,103.77ZM208,208H160V160a16,16,0,0,0-16-16H112a16,16,0,0,0-16,16v48H48V115.55l.11-.1L128,40l79.9,75.43.11.1Z"></path>
+            </svg>
+            <p className="order-nav-text">Home</p>
+          </Link>
+          <Link className="order-nav-item order-nav-active" to="/order-history">
+            <div className="order-nav-badge-wrapper">
+              <svg fill="currentColor" height="24" viewBox="0 0 256 256" width="24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M247.43,117l-14-35A15.93,15.93,0,0,0,218.58,72H184V64a8,8,0,0,0-8-8H24A16,16,0,0,0,8,72V184a16,16,0,0,0,16,16H41a32,32,0,0,0,62,0h50a32,32,0,0,0,62,0h17a16,16,0,0,0,16-16V120A8.13,8.13,0,0,0,247.43,117ZM72,208a16,16,0,1,1,16-16A16,16,0,0,1,72,208ZM24,136V72H168v64Zm160,72a16,16,0,1,1,16-16A16,16,0,0,1,184,208Zm0-96V88h34.58l9.6,24Z"></path>
+              </svg>
+              <div className="order-nav-badge"></div>
+            </div>
+            <p className="order-nav-text">Orders</p>
+          </Link>
+          <Link className="order-nav-item" to="/user-profile">
+            <svg fill="currentColor" height="24" viewBox="0 0 256 256" width="24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M230.92,212c-15.23-26.33-38.7-45.21-66.09-54.16a72,72,0,1,0-73.66,0C63.78,166.78,40.31,185.66,25.08,212a8,8,0,1,0,13.85,8c18.84-32.56,52.14-52,89.07-52s70.23,19.44,89.07,52a8,8,0,1,0,13.85-8ZM72,96a56,56,0,1,1,56,56A56.06,56.06,0,0,1,72,96Z"></path>
+            </svg>
+            <p className="order-nav-text">Profile</p>
+          </Link>
+          <Link className="order-nav-item" to="/notifications">
+            <svg fill="currentColor" height="24" viewBox="0 0 256 256" width="24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M221.8,175.94C216.25,166.38,208,139.33,208,104a80,80,0,1,0-160,0c0,35.34-8.26,62.38-13.81,71.94A16,16,0,0,0,48,200H88.81a40,40,0,0,0,78.38,0H208a16,16,0,0,0,13.8-24.06ZM128,216a24,24,0,0,1-22.62-16h45.24A24,24,0,0,1,128,216ZM48,184c7.7-13.24,16-43.92,16-80a64,64,0,1,1,128,0c0,36.05,8.28,66.73,16,80Z"></path>
+            </svg>
+            <p className="order-nav-text">Notifications</p>
+          </Link>
+        </nav>
       </footer>
     </div>
   );

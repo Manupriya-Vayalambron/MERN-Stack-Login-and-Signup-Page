@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import '../index.css';
 
 const OTP = () => {
   const [otp, setOtp] = useState(['', '', '', '']);
+  const navigate = useNavigate();
   
   const handleOtpChange = (index, value) => {
     if (value.length <= 1) {
@@ -21,33 +22,106 @@ const OTP = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     console.log('OTP:', otp.join(''));
+
+    // Navigate to Order Summary page after OTP verification
+    navigate('/order-summary');
   };
 
   return (
-    <div className="flex flex-col min-h-screen justify-between p-4 bg-background-light dark:bg-background-dark font-display text-white">
-      <header className="flex items-center justify-between">
-        <Link to="/yathrika-signin" className="text-gray-900 dark:text-white">
-          <svg fill="currentColor" height="24" viewBox="0 0 256 256" width="24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M224,128a8,8,0,0,1-8,8H59.31l58.35,58.34a8,8,0,0,1-11.32,11.32l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L59.31,120H216A8,8,0,0,1,224,128Z"></path>
-          </svg>
-        </Link>
-        <h1 className="text-2xl font-bold text-center flex-grow text-gray-900 dark:text-white">OTP Verification</h1>
-        <div className="w-6"></div>
-      </header>
+    <div className="otp-page-container">
+      <div className="otp-content-wrapper">
+        <header className="otp-header">
+          <Link to="/yathrika-signin" className="otp-back-button">
+            <span className="material-symbols-outlined">arrow_back</span>
+          </Link>
+          <h1 className="otp-page-title">Checkout</h1>
+          <div className="otp-header-spacer"></div>
+        </header>
 
-      <main className="flex-grow flex flex-col justify-center items-center text-center -mt-16">
-        <div className="w-full max-w-sm p-6 bg-background-light dark:bg-background-dark/50 backdrop-blur-sm border border-white/10 dark:border-white/10 rounded-xl">
-          <div className="mb-8">
-            <div className="w-20 h-20 mx-auto mb-6 bg-primary/20 rounded-full flex items-center justify-center">
-              <span className="material-symbols-outlined text-3xl text-primary">sms</span>
+        <main className="otp-main-content">
+          <section className="otp-delivery-section">
+            <h2 className="otp-section-title">Delivery</h2>
+            <div className="otp-delivery-card">
+              <div className="otp-delivery-item">
+                <div className="otp-delivery-icon">
+                  <span className="material-symbols-outlined">directions_bus</span>
+                </div>
+                <div className="otp-delivery-info">
+                  <p className="otp-delivery-label">Bus Stop</p>
+                  <p className="otp-delivery-value">Kochi Bus Stop - Yalikkulam</p>
+                </div>
+              </div>
+              <div className="otp-divider"></div>
+              <div className="otp-delivery-item">
+                <div className="otp-delivery-icon">
+                  <span className="material-symbols-outlined">schedule</span>
+                </div>
+                <div className="otp-delivery-info">
+                  <p className="otp-delivery-label">Estimated Arrival</p>
+                  <p className="otp-delivery-value">10:30 AM</p>
+                </div>
+              </div>
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Enter OTP</h2>
-            <p className="text-gray-600 dark:text-gray-300">We sent a code to your phone</p>
-            <p className="text-gray-600 dark:text-gray-300 mt-1">+91 98765 43210</p>
-          </div>
+          </section>
 
-          <form className="space-y-6" onSubmit={handleSubmit}>
-            <div className="flex justify-center gap-3">
+          <section className="otp-items-section">
+            <h2 className="otp-section-title">Items</h2>
+            <div className="otp-items-list">
+              <div className="otp-item-card">
+                <div className="otp-item-image" style={{backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuDDq8HU-vY7PJuIU4yF6LG7Kco41BiIQSLiMCFplZz9yw_RTavdczSdaL4HOeALt-Pm9nbnoCKpJRen1mBivTi5Tf0T5owgZe1ncc76jyWp5iEbZSxtsPRX6B2qeZwIsPa0Szo5qi2dve_ID8PjsPndVywdWD3nmNPRaGtaYI7wbwmhlGvcrqfznmWqeY-6V5wMJlJIwE1EYi3woMrR3-yO_OrZ2wh12SJPGYFAVdUm5dz2t3BlLi7gRwz_NyKwY7nA5UeySeQXn4w")'}}></div>
+                <div className="otp-item-details">
+                  <p className="otp-item-name">Futuristic Gadget</p>
+                  <p className="otp-item-quantity">Quantity: 2</p>
+                </div>
+                <p className="otp-item-price">₹1998</p>
+              </div>
+              <div className="otp-item-card">
+                <div className="otp-item-image" style={{backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuCg6Z698cJvnsZJpUxbm6hPaXArq9e7KQyI5vP5HWxqpoci8G53N6a7Y3_Ahbt3xKgwbR1kJe1rf9M7Eu2N5ZoCwhFaPDMV8i7c9_AALE_KPcNDS5Akqy6KHlFmq7adL9m11SjxJUXxcCJhjrqs3CO89SPi2xXRzH8tGXhyYBekhHj5mdy8Uzv5ZBv5v1JqIMX7DFMVFASGd7dtrkwF61eGXFWzbS8qklH3wQaPHHiiL1QOFPRmZ_kBWWid6j-r5-nG-IdUAnys1xg")'}}></div>
+                <div className="otp-item-details">
+                  <p className="otp-item-name">Cyberpunk Headset</p>
+                  <p className="otp-item-quantity">Quantity: 1</p>
+                </div>
+                <p className="otp-item-price">₹2499</p>
+              </div>
+            </div>
+          </section>
+
+          <section className="otp-payment-section">
+            <h2 className="otp-section-title">Payment Method</h2>
+            <div className="otp-payment-options">
+              <label className="otp-payment-option otp-payment-selected">
+                <span className="otp-payment-label">UPI</span>
+                <input type="radio" name="payment_method" defaultChecked className="otp-payment-radio" />
+              </label>
+              <label className="otp-payment-option">
+                <span className="otp-payment-label">Credit/Debit Card</span>
+                <input type="radio" name="payment_method" className="otp-payment-radio" />
+              </label>
+              <label className="otp-payment-option">
+                <span className="otp-payment-label">Wallets</span>
+                <input type="radio" name="payment_method" className="otp-payment-radio" />
+              </label>
+              <label className="otp-payment-option">
+                <span className="otp-payment-label">Cash on Delivery (COD)</span>
+                <input type="radio" name="payment_method" className="otp-payment-radio" />
+              </label>
+            </div>
+          </section>
+
+          <div className="otp-pay-button-container">
+            <button className="otp-pay-button">Pay ₹4497 Now</button>
+          </div>
+        </main>
+      </div>
+
+      <div className="otp-modal-overlay">
+        <div className="otp-modal-container">
+          <div className="otp-modal-handle"></div>
+          <h2 className="otp-modal-title">Enter OTP</h2>
+          <p className="otp-modal-description">An OTP has been sent to your registered mobile number.</p>
+          
+          <form className="otp-form" onSubmit={handleSubmit}>
+            <div className="otp-inputs-container">
               {otp.map((digit, index) => (
                 <input
                   key={index}
@@ -56,36 +130,41 @@ const OTP = () => {
                   maxLength="1"
                   value={digit}
                   onChange={(e) => handleOtpChange(index, e.target.value)}
-                  className="w-14 h-14 text-center text-2xl font-bold bg-background-dark/50 dark:bg-background-dark/70 border-2 border-white/20 dark:border-white/10 focus:outline-none focus:border-primary focus:ring-0 rounded-lg text-white transition-colors"
+                  className="otp-input-field"
                 />
               ))}
             </div>
             
-            <button 
-              className="w-full h-14 bg-primary text-background-dark font-bold rounded-lg glow-effect hover:bg-primary/90 transition-all duration-300" 
-              type="submit"
-            >
-              Verify OTP
+            <button type="submit" className="otp-confirm-button">
+              Confirm Payment
             </button>
 
-            <div className="text-center">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Didn't receive the code?{' '}
-                <button className="text-primary hover:text-primary/80 font-semibold">
-                  Resend
-                </button>
-              </p>
-            </div>
+            <button type="button" className="otp-resend-button">
+              Resend OTP
+            </button>
           </form>
         </div>
-      </main>
+      </div>
 
-      <footer className="text-center pb-4">
-        <p className="text-xs text-gray-500 dark:text-gray-400">
-          By continuing, you agree to our{' '}
-          <Link className="text-primary/80 hover:text-primary" to="/terms">Terms of Service</Link> and{' '}
-          <Link className="text-primary/80 hover:text-primary" to="/privacy">Privacy Policy</Link>.
-        </p>
+      <footer className="otp-footer-nav">
+        <nav className="otp-nav-container">
+          <Link className="otp-nav-item otp-nav-active" to="/yathrika-home">
+            <span className="material-symbols-outlined otp-nav-icon-filled">home</span>
+            <span className="otp-nav-text otp-nav-text-active">Home</span>
+          </Link>
+          <Link className="otp-nav-item" to="/order-history">
+            <span className="material-symbols-outlined">receipt_long</span>
+            <span className="otp-nav-text">Orders</span>
+          </Link>
+          <Link className="otp-nav-item" to="/user-profile">
+            <span className="material-symbols-outlined">person</span>
+            <span className="otp-nav-text">Profile</span>
+          </Link>
+          <Link className="otp-nav-item" to="/notifications">
+            <span className="material-symbols-outlined">notifications</span>
+            <span className="otp-nav-text">Notifications</span>
+          </Link>
+        </nav>
       </footer>
     </div>
   );
