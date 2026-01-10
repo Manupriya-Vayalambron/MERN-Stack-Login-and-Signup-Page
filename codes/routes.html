@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Yathrika - Select Route</title>
+<link crossorigin="" href="https://fonts.gstatic.com/" rel="preconnect"/>
+<link as="style" href="https://fonts.googleapis.com/css2?display=swap&amp;family=Space+Grotesk:wght@400;500;700" onload="this.rel='stylesheet'" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#68f91a",
+              "background-light": "#f6f8f5",
+              "background-dark": "#16230f",
+            },
+            fontFamily: {
+              "display": ["Space Grotesk", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .form-select {
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2368f91a' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+        background-position: right 0.5rem center;
+        background-repeat: no-repeat;
+        background-size: 1.5em 1.5em;
+        padding-right: 2.5rem;
+        -webkit-print-color-adjust: exact;
+        color-adjust: exact;
+      }
+    </style>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-gray-800 dark:text-gray-200">
+<div class="flex flex-col min-h-screen">
+<header class="sticky top-0 z-10 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm">
+<div class="flex items-center p-4">
+<button class="p-2 text-gray-800 dark:text-gray-200">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<h1 class="flex-1 text-center text-xl font-bold text-gray-900 dark:text-white pr-10">Select Route</h1>
+</div>
+</header>
+<main class="flex-grow p-4 space-y-6">
+<div class="relative">
+<label class="sr-only" for="route-select">Select a route</label>
+<select class="form-select w-full appearance-none rounded-lg border-2 border-primary/30 bg-background-light dark:bg-black/20 px-4 py-3 text-lg font-medium text-gray-900 dark:text-white focus:border-primary focus:ring-primary/50" id="route-select">
+<option selected="">Kakkanad - Ernakulam</option>
+<option>Aluva - Fort Kochi</option>
+<option>Vyttila - Edappally</option>
+</select>
+</div>
+<div class="aspect-video w-full rounded-xl bg-cover bg-center shadow-lg shadow-primary/10" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAacbt3jIVg0JReJvjlyezhOgy0xC9KQHc1MtkmY4KhlVzWZo8DCFxDMzxg1xqLiXcCXLa8FuylCQtmHt9feyYXjygNRDIc6uuMqaBtW6HaBsLpbp58JzNd7wPM4WGN2tqF8ciZv6ptxSL34sODaDAe_DdHRKLBqrohMoxkXvSbPk0IRfBbu-j4JIqs-lO_WEMZkiUwkC_a9umpg9V6rNYcvoiZRcmu72zauuRXQYhKyuWtG3EML48E7ZFgkTFs3byFsgkQTrm0GhU");'></div>
+<div>
+<h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Available Stops</h2>
+<div class="space-y-2">
+<div class="flex items-center justify-between rounded-lg bg-background-light dark:bg-black/20 p-4">
+<div>
+<p class="font-bold text-gray-900 dark:text-white">Main Street Stop</p>
+<p class="text-sm text-gray-600 dark:text-gray-400">ഏകദേശ സമയം: 15 മിനിറ്റ്</p>
+</div>
+<button class="rounded-full bg-primary/20 dark:bg-primary/30 px-4 py-2 text-sm font-bold text-primary hover:bg-primary/30 dark:hover:bg-primary/40">
+                Set Preferred
+              </button>
+</div>
+<div class="flex items-center justify-between rounded-lg bg-primary/10 dark:bg-primary/20 p-4 ring-2 ring-primary">
+<div>
+<p class="font-bold text-gray-900 dark:text-white">University Gate <span class="text-xs font-medium text-primary">(Preferred)</span></p>
+<p class="text-sm text-gray-600 dark:text-gray-400">ഏകദേശ സമയം: 25 മിനിറ്റ്</p>
+</div>
+<div class="flex items-center gap-2 text-primary">
+<span class="material-symbols-outlined">star</span>
+</div>
+</div>
+<div class="flex items-center justify-between rounded-lg bg-background-light dark:bg-black/20 p-4">
+<div>
+<p class="font-bold text-gray-900 dark:text-white">Library Corner</p>
+<p class="text-sm text-gray-600 dark:text-gray-400">ഏകദേശ സമയം: 35 മിനിറ്റ്</p>
+</div>
+<button class="rounded-full bg-primary/20 dark:bg-primary/30 px-4 py-2 text-sm font-bold text-primary hover:bg-primary/30 dark:hover:bg-primary/40">
+                Set Preferred
+              </button>
+</div>
+</div>
+</div>
+</main>
+<footer class="sticky bottom-0 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm border-t border-primary/20 dark:border-primary/30">
+<nav class="flex justify-around p-2">
+<a class="flex flex-col items-center justify-center gap-1 p-2 rounded-lg text-primary" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="text-xs font-medium">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-1 p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="text-xs font-medium">Orders</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-1 p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-xs font-medium">Profile</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-1 p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">notifications</span>
+<span class="text-xs font-medium">Notifications</span>
+</a>
+</nav>
+</footer>
+</div>
+
+</body></html>

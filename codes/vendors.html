@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Vendor Management</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#06f906",
+              "background-light": "#f5f8f5",
+              "background-dark": "#0f230f",
+            },
+            fontFamily: {
+              display: ["Space Grotesk", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+              lg: "1rem",
+              xl: "1.5rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+<style>
+      .btn-glow {
+        box-shadow: 0 0 5px theme("colors.primary"),
+          0 0 10px theme("colors.primary"), 0 0 15px theme("colors.primary");
+      }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-white">
+<div class="relative flex min-h-screen w-full flex-col justify-between overflow-x-hidden">
+<div class="flex-grow">
+<header class="flex items-center justify-between p-4">
+<button class="rounded-full p-2 text-white/80 transition-colors hover:text-white">
+<svg class="h-6 w-6" fill="none" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">
+<path d="M19 12H5"></path>
+<path d="M12 19l-7-7 7-7"></path>
+</svg>
+</button>
+<h1 class="text-xl font-bold">Vendor Management</h1>
+<div class="w-8"></div>
+</header>
+<main class="px-4 pb-24">
+<section class="mb-8">
+<h2 class="mb-4 text-2xl font-bold">Add New Vendor</h2>
+<form class="space-y-4">
+<input class="form-input w-full rounded-lg border-none bg-primary/20 p-4 text-white placeholder-white/50 focus:bg-primary/30 focus:ring-2 focus:ring-primary" placeholder="Vendor Name" type="text"/>
+<input class="form-input w-full rounded-lg border-none bg-primary/20 p-4 text-white placeholder-white/50 focus:bg-primary/30 focus:ring-2 focus:ring-primary" placeholder="Contact Number" type="tel"/>
+<input class="form-input w-full rounded-lg border-none bg-primary/20 p-4 text-white placeholder-white/50 focus:bg-primary/30 focus:ring-2 focus:ring-primary" placeholder="Email Address" type="email"/>
+<input class="form-input w-full rounded-lg border-none bg-primary/20 p-4 text-white placeholder-white/50 focus:bg-primary/30 focus:ring-2 focus:ring-primary" placeholder="Address" type="text"/>
+<button class="w-full rounded-lg bg-primary py-4 font-bold text-background-dark transition-transform hover:scale-105" type="submit">
+                Add Vendor
+              </button>
+</form>
+</section>
+<section>
+<h2 class="mb-4 text-2xl font-bold">Existing Vendors</h2>
+<div class="space-y-3">
+<div class="flex items-center gap-4 rounded-lg bg-primary/10 p-3">
+<div class="h-14 w-14 shrink-0 rounded-lg bg-cover bg-center" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB7pT3IfPvo9nmOUL60kySlrYyTGXRJLlW87dsqKLkF-5EgoBDlk53aiAJliTnnUJJtUGH8npZWCFv7c6z92aMFeqpEqia82FI2sgAYMg8w3yhdz2-l-txmHyJ8_z6lwNRJZMWy6h1r7IffD60oS0TfMpvcqTYxH_Fu7xWACb2dzAY3HzXAeDlmWWxcgsVhmZMWc9lPZxpZAXvZAo_pW03n17gvqkzP1O7PB3ggF4uhKg-WiajmXrbKHvpWT9U1_NvrC-a3rm7uHGY");'></div>
+<div class="flex-grow">
+<p class="font-semibold text-white">Green Leaf Organics</p>
+<p class="text-sm text-white/60">Contact: 987-654-3210</p>
+</div>
+</div>
+<div class="flex items-center gap-4 rounded-lg bg-primary/10 p-3">
+<div class="h-14 w-14 shrink-0 rounded-lg bg-cover bg-center" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCuHrnKzz9sSAkkBEBJT1NLu-acho7Wi2FBiUreD0tZuycOFW7X-IBnwZ3J3mr_3Y671HgwGDkgVXRHaT0gq3PIoHZwHBA9x6Gos3rjcneHQKXlQE9iuipH9dITV0o2EAz4bPBWrPYwpOk6_aWt3BqxAKW4y4c3nJwTO4owW8RVOI5vY4Uvptd9yU3lb8_YRhkOGLDwFbkBqGQ-4GzpPv86UyiPbdoD-WKCPsnxqruLNInb6xVFvhZ8aL5tfin1TA8xeuXm5MtnZe4");'></div>
+<div class="flex-grow">
+<p class="font-semibold text-white">Fresh Foods Market</p>
+<p class="text-sm text-white/60">Contact: 123-456-7890</p>
+</div>
+</div>
+<div class="flex items-center gap-4 rounded-lg bg-primary/10 p-3">
+<div class="h-14 w-14 shrink-0 rounded-lg bg-cover bg-center" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBrY3JZ1nHms37Wtp3Ktc09updOqdCerZqM58POa6Oa0Su85v8HwUMDW7M-gcxiILlKAFdFvc1zqgZOm2sTOp8aitIOc9VzYx9RzTSIruD6aBK0Vvek-7G7BGiw0uMLsjMvsSv4IulA7lam8ebP6sgEqab2lRkg28WoOpYbWFtsUFMigRfFeaUrAvFNPVMiwB5Or4BmCIvaYOb7mKQV10YawNM8gqCO_CCxMDK6F42z7OK9366tZ8s8ILL-Mw6wOSody2khJBISIHw");'></div>
+<div class="flex-grow">
+<p class="font-semibold text-white">Healthy Harvest</p>
+<p class="text-sm text-white/60">Contact: 456-789-0123</p>
+</div>
+</div>
+</div>
+</section>
+</main>
+</div>
+<div class="fixed bottom-4 right-4">
+<button class="btn-glow flex h-16 w-16 items-center justify-center rounded-full bg-primary text-background-dark shadow-lg transition-transform hover:scale-110">
+<svg class="h-8 w-8" fill="none" height="32" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" viewBox="0 0 24 24" width="32" xmlns="http://www.w3.org/2000/svg">
+<path d="M12 5v14"></path>
+<path d="M5 12h14"></path>
+</svg>
+</button>
+</div>
+</div>
+
+</body></html>

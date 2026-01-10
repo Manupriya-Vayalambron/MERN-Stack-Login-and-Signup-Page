@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Yathrika Checkout</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#68f91a",
+              "background-light": "#f6f8f5",
+              "background-dark": "#16230f",
+            },
+            fontFamily: {
+              display: ["Space Grotesk"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+              lg: "1rem",
+              xl: "1.5rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+      }
+    </style>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-gray-800 dark:text-gray-200">
+<div class="relative flex min-h-screen flex-col">
+<div class="flex-grow pb-32">
+<header class="sticky top-0 z-10 flex items-center justify-between bg-background-light/80 p-4 backdrop-blur-sm dark:bg-background-dark/80">
+<button class="flex h-10 w-10 items-center justify-center rounded-full text-gray-900 dark:text-white">
+<span class="material-symbols-outlined"> arrow_back </span>
+</button>
+<h1 class="flex-1 text-center text-lg font-bold text-gray-900 dark:text-white">Checkout</h1>
+<div class="h-10 w-10"></div>
+</header>
+<main class="p-4">
+<section class="space-y-4">
+<h2 class="text-xl font-bold text-gray-900 dark:text-white">Delivery</h2>
+<div class="rounded-lg bg-background-light p-4 shadow-sm dark:bg-primary/10">
+<div class="flex items-center gap-4">
+<div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/20 text-primary">
+<span class="material-symbols-outlined text-3xl"> directions_bus </span>
+</div>
+<div>
+<p class="font-semibold text-gray-900 dark:text-white">Bus Stop</p>
+<p class="text-sm text-gray-600 dark:text-gray-400">Kochi Bus Stop - Yalikkulam</p>
+</div>
+</div>
+<div class="my-4 h-px bg-gray-200 dark:bg-white/10"></div>
+<div class="flex items-center gap-4">
+<div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/20 text-primary">
+<span class="material-symbols-outlined text-3xl"> schedule </span>
+</div>
+<div>
+<p class="font-semibold text-gray-900 dark:text-white">Estimated Arrival</p>
+<p class="text-sm text-gray-600 dark:text-gray-400">10:30 AM</p>
+</div>
+</div>
+</div>
+</section>
+<section class="mt-8 space-y-4">
+<h2 class="text-xl font-bold text-gray-900 dark:text-white">Items</h2>
+<div class="space-y-4">
+<div class="flex items-center gap-4">
+<div class="h-16 w-16 shrink-0 rounded-lg bg-cover bg-center" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDDq8HU-vY7PJuIU4yF6LG7Kco41BiIQSLiMCFplZz9yw_RTavdczSdaL4HOeALt-Pm9nbnoCKpJRen1mBivTi5Tf0T5owgZe1ncc76jyWp5iEbZSxtsPRX6B2qeZwIsPa0Szo5qi2dve_ID8PjsPndVywdWD3nmNPRaGtaYI7wbwmhlGvcrqfznmWqeY-6V5wMJlJIwE1EYi3woMrR3-yO_OrZ2wh12SJPGYFAVdUm5dz2t3BlLi7gRwz_NyKwY7nA5UeySeQXn4w");'></div>
+<div class="flex-grow">
+<p class="font-semibold text-gray-900 dark:text-white">Futuristic Gadget</p>
+<p class="text-sm text-gray-600 dark:text-gray-400">Quantity: 2</p>
+</div>
+<p class="font-bold text-gray-900 dark:text-white">₹1998</p>
+</div>
+<div class="flex items-center gap-4">
+<div class="h-16 w-16 shrink-0 rounded-lg bg-cover bg-center" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCg6Z698cJvnsZJpUxbm6hPaXArq9e7KQyI5vP5HWxqpoci8G53N6a7Y3_Ahbt3xKgwbR1kJe1rf9M7Eu2N5ZoCwhFaPDMV8i7c9_AALE_KPcNDS5Akqy6KHlFmq7adL9m11SjxJUXxcCJhjrqs3CO89SPi2xXRzH8tGXhyYBekhHj5mdy8Uzv5ZBv5v1JqIMX7DFMVFASGd7dtrkwF61eGXFWzbS8qklH3wQaPHHiiL1QOFPRmZ_kBWWid6j-r5-nG-IdUAnys1xg");'></div>
+<div class="flex-grow">
+<p class="font-semibold text-gray-900 dark:text-white">Cyberpunk Headset</p>
+<p class="text-sm text-gray-600 dark:text-gray-400">Quantity: 1</p>
+</div>
+<p class="font-bold text-gray-900 dark:text-white">₹2499</p>
+</div>
+</div>
+</section>
+<section class="mt-8">
+<h2 class="text-xl font-bold text-gray-900 dark:text-white">Payment Method</h2>
+<div class="mt-4 space-y-3">
+<label class="flex cursor-pointer items-center justify-between rounded-lg border-2 border-transparent bg-background-light p-4 has-[:checked]:border-primary dark:bg-primary/10 has-[:checked]:dark:border-primary">
+<span class="font-semibold text-gray-900 dark:text-white">UPI</span>
+<input checked="" class="h-5 w-5 border-gray-300 bg-transparent text-primary focus:ring-primary dark:border-gray-600" name="payment_method" type="radio"/>
+</label>
+<label class="flex cursor-pointer items-center justify-between rounded-lg border-2 border-transparent bg-background-light p-4 has-[:checked]:border-primary dark:bg-primary/10 has-[:checked]:dark:border-primary">
+<span class="font-semibold text-gray-900 dark:text-white">Credit/Debit Card</span>
+<input class="h-5 w-5 border-gray-300 bg-transparent text-primary focus:ring-primary dark:border-gray-600" name="payment_method" type="radio"/>
+</label>
+<label class="flex cursor-pointer items-center justify-between rounded-lg border-2 border-transparent bg-background-light p-4 has-[:checked]:border-primary dark:bg-primary/10 has-[:checked]:dark:border-primary">
+<span class="font-semibold text-gray-900 dark:text-white">Wallets</span>
+<input class="h-5 w-5 border-gray-300 bg-transparent text-primary focus:ring-primary dark:border-gray-600" name="payment_method" type="radio"/>
+</label>
+<label class="flex cursor-pointer items-center justify-between rounded-lg border-2 border-transparent bg-background-light p-4 has-[:checked]:border-primary dark:bg-primary/10 has-[:checked]:dark:border-primary">
+<span class="font-semibold text-gray-900 dark:text-white">Cash on Delivery (COD)</span>
+<input class="h-5 w-5 border-gray-300 bg-transparent text-primary focus:ring-primary dark:border-gray-600" name="payment_method" type="radio"/>
+</label>
+</div>
+</section>
+<div class="mt-8 flex justify-center">
+<button class="w-full rounded-full bg-primary px-8 py-4 text-center font-bold text-white shadow-lg shadow-primary/30 transition-transform duration-200 hover:scale-105">Pay ₹4497 Now</button>
+</div>
+</main>
+</div>
+<div class="fixed inset-0 z-20 flex flex-col justify-end bg-black/60 backdrop-blur-sm">
+<div class="rounded-t-xl bg-background-light p-4 dark:bg-background-dark">
+<div class="mx-auto h-1.5 w-12 rounded-full bg-gray-300 dark:bg-gray-700"></div>
+<h2 class="my-6 text-center text-xl font-bold text-gray-900 dark:text-white">Enter OTP</h2>
+<p class="mb-6 text-center text-gray-600 dark:text-gray-400">An OTP has been sent to your registered mobile number.</p>
+<fieldset class="flex justify-center gap-2 sm:gap-4">
+<input class="h-14 w-12 rounded-lg border-2 border-gray-300 bg-transparent text-center text-2xl font-bold text-gray-900 focus:border-primary focus:outline-none focus:ring-0 dark:border-gray-600 dark:text-white dark:focus:border-primary" maxlength="1" pattern="[0-9]" type="text"/>
+<input class="h-14 w-12 rounded-lg border-2 border-gray-300 bg-transparent text-center text-2xl font-bold text-gray-900 focus:border-primary focus:outline-none focus:ring-0 dark:border-gray-600 dark:text-white dark:focus:border-primary" maxlength="1" pattern="[0-9]" type="text"/>
+<input class="h-14 w-12 rounded-lg border-2 border-gray-300 bg-transparent text-center text-2xl font-bold text-gray-900 focus:border-primary focus:outline-none focus:ring-0 dark:border-gray-600 dark:text-white dark:focus:border-primary" maxlength="1" pattern="[0-9]" type="text"/>
+<input class="h-14 w-12 rounded-lg border-2 border-gray-300 bg-transparent text-center text-2xl font-bold text-gray-900 focus:border-primary focus:outline-none focus:ring-0 dark:border-gray-600 dark:text-white dark:focus:border-primary" maxlength="1" pattern="[0-9]" type="text"/>
+<input class="h-14 w-12 rounded-lg border-2 border-gray-300 bg-transparent text-center text-2xl font-bold text-gray-900 focus:border-primary focus:outline-none focus:ring-0 dark:border-gray-600 dark:text-white dark:focus:border-primary" maxlength="1" pattern="[0-9]" type="text"/>
+<input class="h-14 w-12 rounded-lg border-2 border-gray-300 bg-transparent text-center text-2xl font-bold text-gray-900 focus:border-primary focus:outline-none focus:ring-0 dark:border-gray-600 dark:text-white dark:focus:border-primary" maxlength="1" pattern="[0-9]" type="text"/>
+</fieldset>
+<button class="mt-8 w-full rounded-full bg-primary px-8 py-4 text-center font-bold text-white shadow-lg shadow-primary/30 transition-transform duration-200 hover:scale-105">Confirm Payment</button>
+<button class="mt-4 w-full rounded-full py-2 text-center text-sm font-medium text-primary">Resend OTP</button>
+</div>
+</div>
+<footer class="fixed bottom-0 left-0 right-0 border-t border-gray-200 bg-background-light/90 pb-safe backdrop-blur-sm dark:border-white/10 dark:bg-background-dark/90">
+<nav class="flex h-20 items-center justify-around">
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1"> home </span>
+<span class="text-xs font-bold">Home</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-gray-500 dark:text-gray-400" href="#">
+<span class="material-symbols-outlined"> receipt_long </span>
+<span class="text-xs font-medium">Orders</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-gray-500 dark:text-gray-400" href="#">
+<span class="material-symbols-outlined"> person </span>
+<span class="text-xs font-medium">Profile</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-gray-500 dark:text-gray-400" href="#">
+<span class="material-symbols-outlined"> notifications </span>
+<span class="text-xs font-medium">Notifications</span>
+</a>
+</nav>
+</footer>
+</div>
+
+</body></html>
