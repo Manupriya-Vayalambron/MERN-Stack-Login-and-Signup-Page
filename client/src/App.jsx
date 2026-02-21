@@ -60,7 +60,8 @@ function App() {
           <Route path="/otp" element={<OTP />} />
           
           {/* Additional Yathrika App Routes */}
-          <Route path="/tracking" element={<Tracking />} />
+          <Route path="/tracking" element={<Tracking />} />3
+          
           <Route path="/support" element={<Support />} />
           <Route path="/vendors" element={<Vendors />} />
           <Route path="/routes" element={<RoutesPage />} />
