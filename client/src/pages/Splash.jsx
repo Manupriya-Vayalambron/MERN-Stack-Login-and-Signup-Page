@@ -6,7 +6,7 @@ const Splash = () => {
   const navigate = useNavigate();
 
   const handleGetStarted = () => {
-    navigate('/yathrika-signin');
+    navigate('/user-type-selection');
   };
 
   useEffect(() => {

@@ -20,6 +20,11 @@ import Tracking from './pages/Tracking';
 import Vendors from './pages/Vendors';
 import RoutesPage from './pages/Routes';
 import Splash from './pages/Splash';
+import UserTypeSelection from './pages/UserTypeSelection';
+import DeliveryPartner from './pages/DeliveryPartner';
+import DeliveryPartnerAuth from './pages/DeliveryPartnerAuth';
+import DeliveryPartnerDashboard from './pages/DeliveryPartnerDashboard';
+import LiveTrackingDemo from './pages/LiveTrackingDemo';
 import { BrowserRouter, Route, Routes, Navigate } from 'react-router-dom';
 
 function App() {
@@ -60,6 +65,11 @@ function App() {
           <Route path="/vendors" element={<Vendors />} />
           <Route path="/routes" element={<RoutesPage />} />
           <Route path="/splash" element={<Splash />} />
+          <Route path="/user-type-selection" element={<UserTypeSelection />} />
+          <Route path="/delivery-partner" element={<DeliveryPartner />} />
+          <Route path="/delivery-partner-auth" element={<DeliveryPartnerAuth />} />
+          <Route path="/delivery-partner-dashboard" element={<DeliveryPartnerDashboard />} />
+          <Route path="/live-tracking-demo" element={<LiveTrackingDemo />} />
         </Routes>
       </BrowserRouter>
     </div>

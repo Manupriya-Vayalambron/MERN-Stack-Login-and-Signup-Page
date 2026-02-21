@@ -49,6 +49,39 @@ const Admin = () => {
         </header>
 
         <main className="admin-main-content">
+          <section className="admin-live-tracking-section">
+            <div className="admin-section-header">
+              <h2 className="admin-section-title">Live Location Tracking</h2>
+              <Link to="/live-tracking-demo" className="admin-partner-dashboard-button">
+                <svg fill="currentColor" height="20" viewBox="0 0 256 256" width="20" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M240,112H224V96a16,16,0,0,0-16-16H184V64a16,16,0,0,0-16-16H88A16,16,0,0,0,72,64V80H48A16,16,0,0,0,32,96v16H16a8,8,0,0,0,0,16H32v16H16a8,8,0,0,0,0,16H32v16H16a8,8,0,0,0,0,16H32v16a16,16,0,0,0,16,16H72v16a16,16,0,0,0,16,16h80a16,16,0,0,0,16-16V208h24a16,16,0,0,0,16-16V176h16a8,8,0,0,0,0-16H224V144h16a8,8,0,0,0,0-16H224V112ZM184,192H88V80h96V192Z"></path>
+                </svg>
+                View Demo
+              </Link>
+            </div>
+            <div className="admin-tracking-info">
+              <p>Real-time location tracking system using OpenStreetMap (no API fees required)</p>
+              <div className="admin-tracking-features">
+                <div className="admin-feature-item">
+                  <span>📍</span>
+                  <span>Live GPS tracking</span>
+                </div>
+                <div className="admin-feature-item">
+                  <span>🗺️</span>
+                  <span>Free mapping</span>
+                </div>
+                <div className="admin-feature-item">
+                  <span>⚡</span>
+                  <span>Real-time updates</span>
+                </div>
+                <div className="admin-feature-item">
+                  <span>📊</span>
+                  <span>Distance & ETA</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
           <section className="admin-live-orders-section">
             <h2 className="admin-section-title">Live Orders</h2>
             <div className="admin-orders-list">
@@ -59,9 +92,9 @@ const Admin = () => {
                       <p className="admin-order-number">Order #{order.id}</p>
                       <p className="admin-bus-stop">Bus Stop: {order.busStop}</p>
                     </div>
-                    <button className="admin-track-button">
-                      Track
-                    </button>
+                    <Link to="/tracking" className="admin-track-button">
+                      Track Live
+                    </Link>
                   </div>
                   <div 
                     className="admin-order-image" 
@@ -73,7 +106,44 @@ const Admin = () => {
           </section>
 
           <section className="admin-partners-section">
-            <h2 className="admin-section-title">Delivery Partners</h2>
+            <div className="admin-section-header">
+              <h2 className="admin-section-title">Delivery Partners</h2>
+              <div className="admin-partner-actions">
+                <Link to="/delivery-partner" className="admin-partner-dashboard-button">
+                  <svg fill="currentColor" height="20" viewBox="0 0 256 256" width="20" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm32-120v8a8,8,0,0,1-8,8H136v64a8,8,0,0,1-16,0V112a8,8,0,0,1,8-8h24A8,8,0,0,1,160,112ZM112,84a12,12,0,1,1,12,12A12,12,0,0,1,112,84Z"></path>
+                  </svg>
+                  Legacy Dashboard
+                </Link>
+                <Link to="/delivery-partner-auth" className="admin-partner-auth-button">
+                  <svg fill="currentColor" height="20" viewBox="0 0 256 256" width="20" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M230.92,212c-15.23-26.33-38.7-45.21-66.09-54.16a72,72,0,1,0-73.66,0c-27.39,8.94-50.86,27.82-66.09,54.16a8,8,0,1,0,13.85,8c18.84-32.56,52.14-52,89.07-52s70.23,19.44,89.07,52a8,8,0,1,0,13.85-8ZM72,96a56,56,0,1,1,56,56A56.06,56.06,0,0,1,72,96Z"></path>
+                  </svg>
+                  Partner Login
+                </Link>
+              </div>
+            </div>
+            <div className="admin-partners-info">
+              <p>Manage delivery partners with separate authentication system and real-time order management</p>
+              <div className="admin-partner-features">
+                <div className="admin-feature-item">
+                  <span>🔐</span>
+                  <span>Secure partner authentication</span>
+                </div>
+                <div className="admin-feature-item">
+                  <span>📱</span>
+                  <span>Real-time order acceptance</span>
+                </div>
+                <div className="admin-feature-item">
+                  <span>🚀</span>
+                  <span>Status update system</span>
+                </div>
+                <div className="admin-feature-item">
+                  <span>📞</span>
+                  <span>Direct customer communication</span>
+                </div>
+              </div>
+            </div>
             <div className="admin-partners-list">
               {deliveryPartners.map((partner, index) => (
                 <div key={index} className="admin-partner-card">
