@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth } from '../firebase';
 import { RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth';
+import { useLanguage } from '../LanguageContext';
 import '../index.css';
 
 const YathrikaSignin = () => {
@@ -12,6 +13,7 @@ const YathrikaSignin = () => {
   const [loading, setLoading] = useState(false);
   const [confirmationResult, setConfirmationResult] = useState(null);
   const navigate = useNavigate();
+  const { language } = useLanguage();
 
   // Setup reCAPTCHA - create fresh each time
   const setupRecaptcha = () => {
@@ -152,25 +154,25 @@ const YathrikaSignin = () => {
   return (
     <div className="signin-page-container">
       <header className="signin-header">
+        <div className="header-placeholder" />
         <h1 className="signin-brand-title">Yathrika</h1>
-        <button className="signin-language-button">
-          <span className="material-symbols-outlined">language</span>
-        </button>
+        <div className="header-placeholder" />
       </header>
 
       <main className="signin-main-content">
         <div className="signin-card">
           <div className="signin-welcome-section">
-            <h2 className="signin-welcome-title">Welcome</h2>
-            <p className="signin-instruction-text">Enter your phone number to sign in</p>
-            <p className="signin-instruction-text-local">നിങ്ങളുടെ ഫോൺ നമ്പർ നൽകുക</p>
+            <h2 className="signin-welcome-title">{language === 'en' ? 'Welcome' : 'സ്വാഗതം'}</h2>
+            <p className="signin-instruction-text">
+              {language === 'en' ? 'Enter your phone number to sign in' : 'സൈൻ ഇൻ ചെയ്യാൻ നിങ്ങളുടെ ഫോൺ നമ്പർ നൽകുക'}
+            </p>
           </div>
 
           <form className="signin-form" onSubmit={handleSubmit}>
             <div className="signin-input-container">
               <input 
                 className="signin-phone-input" 
-                placeholder="Phone Number" 
+                placeholder={language === 'en' ? "Phone Number" : "ഫോൺ നമ്പർ"} 
                 type="tel"
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}

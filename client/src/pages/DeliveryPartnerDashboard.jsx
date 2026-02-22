@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import LiveMap from '../components/LiveMap';
+import { useLanguage } from '../LanguageContext';
 import socketService from '../services/socketService';
 import { 
   calculateDistance, 

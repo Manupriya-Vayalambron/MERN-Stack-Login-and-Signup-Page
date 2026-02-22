@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useLanguage } from '../LanguageContext';
 import LiveMap from '../components/LiveMap';
 import { 
   BUS_STOPS, 
