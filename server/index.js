@@ -208,6 +208,8 @@ const { Server } = require('socket.io');
 const http = require('http');
 const EmployeeModel = require('./models/Employee');
 const DeliveryPartnerModel = require('./models/DeliveryPartner');
+const Razorpay = require('razorpay');
+const crypto = require('crypto');
 
 const app = express();
 const server = http.createServer(app);
@@ -220,6 +222,12 @@ const io = new Server(server, {
 
 app.use(express.json());
 app.use(cors());
+
+// -------------------- Razorpay Instance --------------------
+const razorpay = new Razorpay({
+    key_id:     process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET,
+});
 
 // Store active tracking sessions
 const trackingSessions = new Map();
@@ -609,6 +617,142 @@ app.post('/register', async (req, res) => {
     } catch (err) {
         res.status(500).json('Error: ' + err);
     }
+});
+
+// -------------------- Razorpay Payment Routes --------------------
+
+// 1. Create Order
+app.post('/api/payment/create-order', async (req, res) => {
+    try {
+        const { amount, cartItems, userId } = req.body;
+
+        const options = {
+            amount:   Math.round(amount * 100), // paise
+            currency: 'INR',
+            receipt:  `rcpt_${Date.now()}`,
+            notes: {
+                userId:       userId || 'guest',
+                itemCount:    cartItems?.length || 0,
+                merchant_vpa: 'manupriyadhanushvayalambron-1@oksbi',
+            },
+        };
+
+        const order = await razorpay.orders.create(options);
+
+        console.log('\n✅ [ORDER CREATED]', {
+            orderId:   order.id,
+            amount:    `₹${amount}`,
+            items:     cartItems?.map(i => `${i.name} x${i.quantity}`) || [],
+            timestamp: new Date().toISOString(),
+        });
+
+        res.json({
+            success:  true,
+            orderId:  order.id,
+            amount:   order.amount,
+            currency: order.currency,
+            keyId:    process.env.RAZORPAY_KEY_ID,
+        });
+    } catch (err) {
+        console.error('\n❌ [ORDER CREATION FAILED]', err.message);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// 2. Verify Payment (called after Razorpay popup success)
+app.post('/api/payment/verify', async (req, res) => {
+    try {
+        const {
+            razorpay_order_id,
+            razorpay_payment_id,
+            razorpay_signature,
+            cartItems,
+            totalAmount,
+            userId,
+        } = req.body;
+
+        // HMAC-SHA256 signature check
+        const body              = `${razorpay_order_id}|${razorpay_payment_id}`;
+        const expectedSignature = crypto
+            .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+            .update(body)
+            .digest('hex');
+
+        const isValid = expectedSignature === razorpay_signature;
+
+        if (isValid) {
+            const paymentRecord = {
+                status:       'SUCCESS',
+                orderId:      razorpay_order_id,
+                paymentId:    razorpay_payment_id,
+                amount:       `₹${totalAmount}`,
+                userId:       userId || 'guest',
+                merchant_vpa: 'manupriyadhanushvayalambron-1@oksbi',
+                items:        cartItems?.map(i => ({
+                                  name:     i.name,
+                                  qty:      i.quantity,
+                                  price:    `₹${i.price}`,
+                                  subtotal: `₹${i.price * i.quantity}`,
+                              })),
+                timestamp:    new Date().toISOString(),
+            };
+
+            console.log('\n✅ ══════════════════════════════════════');
+            console.log('   PAYMENT SUCCESSFUL');
+            console.log('══════════════════════════════════════');
+            console.log(JSON.stringify(paymentRecord, null, 2));
+            console.log('══════════════════════════════════════\n');
+
+            // TODO: await PaymentModel.create(paymentRecord);
+
+            res.json({ success: true, paymentId: razorpay_payment_id });
+        } else {
+            const failRecord = {
+                status:    'FAILED — SIGNATURE MISMATCH',
+                orderId:   razorpay_order_id,
+                paymentId: razorpay_payment_id,
+                userId:    userId || 'guest',
+                timestamp: new Date().toISOString(),
+            };
+
+            console.log('\n❌ ══════════════════════════════════════');
+            console.log('   PAYMENT VERIFICATION FAILED');
+            console.log('══════════════════════════════════════');
+            console.log(JSON.stringify(failRecord, null, 2));
+            console.log('══════════════════════════════════════\n');
+
+            res.status(400).json({ success: false, message: 'Payment verification failed' });
+        }
+    } catch (err) {
+        console.error('\n❌ [VERIFY ERROR]', err.message);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// 3. Payment Failed / Cancelled
+app.post('/api/payment/failed', async (req, res) => {
+    const { orderId, error, cartItems, totalAmount, userId } = req.body;
+
+    const failRecord = {
+        status:    'FAILED',
+        orderId:   orderId || 'unknown',
+        reason:    error?.description || error?.reason || 'User cancelled or payment declined',
+        code:      error?.code || 'N/A',
+        amount:    `₹${totalAmount}`,
+        userId:    userId || 'guest',
+        items:     cartItems?.map(i => `${i.name} x${i.quantity}`) || [],
+        timestamp: new Date().toISOString(),
+    };
+
+    console.log('\n❌ ══════════════════════════════════════');
+    console.log('   PAYMENT FAILED');
+    console.log('══════════════════════════════════════');
+    console.log(JSON.stringify(failRecord, null, 2));
+    console.log('══════════════════════════════════════\n');
+
+    // TODO: await PaymentModel.create(failRecord);
+
+    res.json({ success: true, received: true });
 });
 
 // -------------------- Serve React Frontend --------------------

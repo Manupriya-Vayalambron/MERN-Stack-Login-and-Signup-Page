@@ -1,84 +1,128 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../LanguageContext';
+import { useNotification } from '../NotificationContext';
 import '../index.css';
 
+// SVG paths matching your original icon style
+const TYPE_SVG = {
+  success: 'M173.66,98.34a8,8,0,0,1,0,11.32l-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35A8,8,0,0,1,173.66,98.34ZM232,128A104,104,0,1,1,128,24,104.11,104.11,0,0,1,232,128Zm-16,0a88,88,0,1,0-88,88A88.1,88.1,0,0,0,216,128Z',
+  error:   'M236.8,188.09,149.35,36.22a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM120,104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm8,88a12,12,0,1,1,12-12A12,12,0,0,1,128,192Z',
+  info:    'M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm16-40a8,8,0,0,1-8,8,16,16,0,0,1-16-16V128a8,8,0,0,1,0-16,16,16,0,0,1,16,16v40A8,8,0,0,1,144,176ZM112,84a16,16,0,1,1,16,16A16,16,0,0,1,112,84Z',
+  warning: 'M236.8,188.09,149.35,36.22a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM120,104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm8,88a12,12,0,1,1,12-12A12,12,0,0,1,128,192Z',
+};
+
+const TYPE_COLOR = {
+  success: '#68f91a',
+  error:   '#ff4d4d',
+  info:    '#4da6ff',
+  warning: '#ffb84d',
+};
+
+const formatTime = (date) => {
+  const now = new Date();
+  const diff = Math.floor((now - new Date(date)) / 1000);
+  if (diff < 60)    return 'Just now';
+  if (diff < 3600)  return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return new Date(date).toLocaleDateString('en-IN');
+};
+
 const Notifications = () => {
-  const notifications = [
-    {
-      id: 1,
-      title: 'Your order is on its way',
-      message: 'Order #123456789',
-      icon: 'package',
-      svg: 'M223.68,66.15,135.68,18a15.88,15.88,0,0,0-15.36,0l-88,48.17a16,16,0,0,0-8.32,14v95.64a16,16,0,0,0,8.32,14l88,48.17a15.88,15.88,0,0,0,15.36,0l88-48.17a16,16,0,0,0,8.32-14V80.18A16,16,0,0,0,223.68,66.15ZM128,32l80.34,44-29.77,16.3-80.35-44ZM128,120,47.66,76l33.9-18.56,80.34,44ZM40,90l80,43.78v85.79L40,175.82Zm176,85.78h0l-80,43.79V133.82l32-17.51V152a8,8,0,0,0,16,0V107.55L216,90v85.77Z'
-    },
-    {
-      id: 2,
-      title: 'Special discount on your next ride',
-      message: 'Offer ends in 24 hours',
-      icon: 'percent',
-      svg: 'M205.66,61.64l-144,144a8,8,0,0,1-11.32-11.32l144-144a8,8,0,0,1,11.32,11.31ZM50.54,101.44a36,36,0,0,1,50.92-50.91h0a36,36,0,0,1-50.92,50.91ZM56,76A20,20,0,1,0,90.14,61.84h0A20,20,0,0,0,56,76ZM216,180a36,36,0,1,1-10.54-25.46h0A35.76,35.76,0,0,1,216,180Zm-16,0a20,20,0,1,0-5.86,14.14A19.87,19.87,0,0,0,200,180Z'
-    },
-    {
-      id: 3,
-      title: 'Route 7A now available',
-      message: 'New route added',
-      icon: 'route',
-      svg: 'M228.92,49.69a8,8,0,0,0-6.86-1.45L160.93,63.52,99.58,32.84a8,8,0,0,0-5.52-.6l-64,16A8,8,0,0,0,24,56V200a8,8,0,0,0,9.94,7.76l61.13-15.28,61.35,30.68A8.15,8.15,0,0,0,160,224a8,8,0,0,0,1.94-.24l64-16A8,8,0,0,0,232,200V56A8,8,0,0,0,228.92,49.69ZM104,52.94l48,24V203.06l-48-24ZM40,62.25l48-12v127.5l-48,12Zm176,131.5-48,12V78.25l48-12Z'
-    },
-    {
-      id: 4,
-      title: 'Your order has been delivered',
-      message: 'Order #987654321',
-      icon: 'package',
-      svg: 'M223.68,66.15,135.68,18a15.88,15.88,0,0,0-15.36,0l-88,48.17a16,16,0,0,0-8.32,14v95.64a16,16,0,0,0,8.32,14l88,48.17a15.88,15.88,0,0,0,15.36,0l88-48.17a16,16,0,0,0,8.32-14V80.18A16,16,0,0,0,223.68,66.15ZM128,32l80.34,44-29.77,16.3-80.35-44ZM128,120,47.66,76l33.9-18.56,80.34,44ZM40,90l80,43.78v85.79L40,175.82Zm176,85.78h0l-80,43.79V133.82l32-17.51V152a8,8,0,0,0,16,0V107.55L216,90v85.77Z'
-    },
-    {
-      id: 5,
-      title: 'Exclusive offer for frequent users',
-      message: 'Offer ends in 48 hours',
-      icon: 'percent',
-      svg: 'M205.66,61.64l-144,144a8,8,0,0,1-11.32-11.32l144-144a8,8,0,0,1,11.32,11.31ZM50.54,101.44a36,36,0,0,1,50.92-50.91h0a36,36,0,0,1-50.92,50.91ZM56,76A20,20,0,1,0,90.14,61.84h0A20,20,0,0,0,56,76ZM216,180a36,36,0,1,1-10.54-25.46h0A35.76,35.76,0,0,1,216,180Zm-16,0a20,20,0,1,0-5.86,14.14A19.87,19.87,0,0,0,200,180Z'
-    },
-    {
-      id: 6,
-      title: 'Route 12B now available',
-      message: 'New route added',
-      icon: 'route',
-      svg: 'M228.92,49.69a8,8,0,0,0-6.86-1.45L160.93,63.52,99.58,32.84a8,8,0,0,0-5.52-.6l-64,16A8,8,0,0,0,24,56V200a8,8,0,0,0,9.94,7.76l61.13-15.28,61.35,30.68A8.15,8.15,0,0,0,160,224a8,8,0,0,0,1.94-.24l64-16A8,8,0,0,0,232,200V56A8,8,0,0,0,228.92,49.69ZM104,52.94l48,24V203.06l-48-24ZM40,62.25l48-12v127.5l-48,12Zm176,131.5-48,12V78.25l48-12Z'
-    }
-  ];
+  const { history, markAllRead, unreadCount } = useNotification();
 
   return (
     <div className="notifications-page-container">
       <div className="notifications-content-wrapper">
+
+        {/* Header — exact same structure as your original */}
         <header className="notifications-header">
-          <button className="notifications-settings-button">
+          <button
+            className="notifications-settings-button"
+            onClick={unreadCount > 0 ? markAllRead : undefined}
+            title={unreadCount > 0 ? 'Mark all as read' : 'Settings'}
+          >
+            {/* Settings gear icon — same as your original */}
             <svg fill="currentColor" height="24" viewBox="0 0 256 256" width="24" xmlns="http://www.w3.org/2000/svg">
               <path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm88-29.84q.06-2.16,0-4.32l14.92-18.64a8,8,0,0,0,1.48-7.06,107.21,107.21,0,0,0-10.88-26.25,8,8,0,0,0-6-3.93l-23.72-2.64q-1.48-1.56-3-3L186,40.54a8,8,0,0,0-3.94-6,107.71,107.71,0,0,0-26.25-10.87,8,8,0,0,0-7.06,1.49L130.16,40Q128,40,125.84,40L107.2,25.11a8,8,0,0,0-7.06-1.48A107.6,107.6,0,0,0,73.89,34.51a8,8,0,0,0-3.93,6L67.32,64.27q-1.56,1.49-3,3L40.54,70a8,8,0,0,0-6,3.94,107.71,107.71,0,0,0-10.87,26.25,8,8,0,0,0,1.49,7.06L40,125.84Q40,128,40,130.16L25.11,148.8a8,8,0,0,0-1.48,7.06,107.21,107.21,0,0,0,10.88,26.25,8,8,0,0,0,6,3.93l23.72,2.64q1.49,1.56,3,3L70,215.46a8,8,0,0,0,3.94,6,107.71,107.71,0,0,0,26.25,10.87,8,8,0,0,0,7.06-1.49L125.84,216q2.16.06,4.32,0l18.64,14.92a8,8,0,0,0,7.06,1.48,107.21,107.21,0,0,0,26.25-10.88,8,8,0,0,0,3.93-6l2.64-23.72q1.56-1.48,3-3L215.46,186a8,8,0,0,0,6-3.94,107.71,107.71,0,0,0,10.87-26.25A8,8,0,0,0,216,151.66Zm-16.1-6.5a73.93,73.93,0,0,1,0,8.68,8,8,0,0,0,1.74,5.48l14.19,17.73a91.57,91.57,0,0,1-6.23,15L187,173.11a8,8,0,0,0-5.1,2.64,74.11,74.11,0,0,1-6.14,6.14,8,8,0,0,0-2.64,5.1l-2.51,22.58a91.32,91.32,0,0,1-15,6.23l-17.74-14.19a8,8,0,0,0-5-1.75h-.48a73.93,73.93,0,0,1-8.68,0,8,8,0,0,0-5.48,1.74L100.45,215.8a91.57,91.57,0,0,1-15-6.23L82.89,187a8,8,0,0,0-2.64-5.1,74.11,74.11,0,0,1-6.14-6.14,8,8,0,0,0-5.1-2.64L46.43,170.6a91.32,91.32,0,0,1-6.23-15l14.19-17.74a8,8,0,0,0,1.74-5.48,73.93,73.93,0,0,1,0-8.68,8,8,0,0,0-1.74-5.48L40.2,100.45a91.57,91.57,0,0,1,6.23-15L69,82.89a8,8,0,0,0,5.1-2.64,74.11,74.11,0,0,1,6.14-6.14A8,8,0,0,0,82.89,69L85.4,46.43a91.32,91.32,0,0,1,15-6.23l17.74,14.19a8,8,0,0,0,5.48,1.74,73.93,73.93,0,0,1,8.68,0,8,8,0,0,0,5.48-1.74L155.55,40.2a91.57,91.57,0,0,1,15,6.23L173.11,69a8,8,0,0,0,2.64,5.1,74.11,74.11,0,0,1,6.14,6.14,8,8,0,0,0,5.1,2.64l22.58,2.51a91.32,91.32,0,0,1,6.23,15l-14.19,17.74A8,8,0,0,0,199.87,123.66Z"></path>
             </svg>
+            {/* Red dot on settings icon when there are unread notifications */}
+            {unreadCount > 0 && (
+              <span style={{
+                position: 'absolute', top: '6px', right: '6px',
+                width: '8px', height: '8px', borderRadius: '50%',
+                backgroundColor: '#ff4d4d', display: 'block',
+              }} />
+            )}
           </button>
+
           <div className="notifications-header-spacer"></div>
           <h1 className="notifications-page-title">Notifications</h1>
         </header>
-        
+
         <main className="notifications-main-content">
-          {notifications.map((notification) => (
-            <div key={notification.id} className="notifications-card">
-              <div className="notifications-icon-container">
-                <svg fill="currentColor" height="24" viewBox="0 0 256 256" width="24" xmlns="http://www.w3.org/2000/svg">
-                  <path d={notification.svg}></path>
-                </svg>
-              </div>
-              <div className="notifications-content">
-                <p className="notifications-title">{notification.title}</p>
-                <p className="notifications-message">{notification.message}</p>
-              </div>
+
+          {/* Empty state when no notifications yet */}
+          {history.length === 0 && (
+            <div style={{ display:'flex', flexDirection:'column', alignItems:'center', padding:'60px 20px', textAlign:'center' }}>
+              <svg fill="#444" height="48" viewBox="0 0 256 256" width="48" xmlns="http://www.w3.org/2000/svg" style={{ marginBottom:'12px' }}>
+                <path d="M221.8,175.94C216.25,166.38,208,139.33,208,104a80,80,0,1,0-160,0c0,35.34-8.26,62.38-13.81,71.94A16,16,0,0,0,48,200H88.81a40,40,0,0,0,78.38,0H208a16,16,0,0,0,13.8-24.06ZM128,216a24,24,0,0,1-22.62-16h45.24A24,24,0,0,1,128,216Z" />
+              </svg>
+              <p style={{ color:'#888', fontSize:'14px', margin:0 }}>No notifications yet</p>
+              <p style={{ color:'#555', fontSize:'12px', marginTop:'6px' }}>Payment and delivery updates will appear here</p>
             </div>
-          ))}
+          )}
+
+          {/* Live notifications from context — same card structure as your original */}
+          {history.map((notification) => {
+            const color = TYPE_COLOR[notification.type] || TYPE_COLOR.info;
+            const svg   = TYPE_SVG[notification.type]  || TYPE_SVG.info;
+            return (
+              <div
+                key={notification.id}
+                className="notifications-card"
+                style={{
+                  borderLeft: `3px solid ${notification.read ? '#2a2a2a' : color}`,
+                  position: 'relative',
+                  opacity: notification.read ? 0.7 : 1,
+                  transition: 'all 0.2s',
+                }}
+              >
+                {/* Unread dot */}
+                {!notification.read && (
+                  <span style={{
+                    position:'absolute', top:'10px', right:'10px',
+                    width:'7px', height:'7px', borderRadius:'50%',
+                    backgroundColor: color, display:'block',
+                  }} />
+                )}
+
+                {/* Icon — same container class as your original */}
+                <div className="notifications-icon-container">
+                  <svg
+                    fill={color}
+                    height="24" viewBox="0 0 256 256" width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path d={svg} />
+                  </svg>
+                </div>
+
+                {/* Content — same class names as your original */}
+                <div className="notifications-content">
+                  <p className="notifications-title">{notification.title}</p>
+                  <p className="notifications-message">{notification.message}</p>
+                  <p style={{ fontSize:'11px', color:'#555', marginTop:'3px' }}>
+                    {formatTime(notification.timestamp)}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
         </main>
       </div>
 
+      {/* Footer nav — exact same as your original */}
       <footer className="notifications-footer-nav">
         <nav className="notifications-nav-container">
           <Link className="notifications-nav-item" to="/yathrika-home">
@@ -100,11 +144,25 @@ const Notifications = () => {
             <span className="notifications-nav-text">Profile</span>
           </Link>
           <Link className="notifications-nav-item notifications-nav-active" to="/notifications">
-            <div className="notifications-icon-wrapper">
+            <div className="notifications-icon-wrapper" style={{ position:'relative' }}>
               <svg fill="currentColor" height="24" viewBox="0 0 256 256" width="24" xmlns="http://www.w3.org/2000/svg">
                 <path d="M221.8,175.94C216.25,166.38,208,139.33,208,104a80,80,0,1,0-160,0c0,35.34-8.26,62.38-13.81,71.94A16,16,0,0,0,48,200H88.81a40,40,0,0,0,78.38,0H208a16,16,0,0,0,13.8-24.06ZM128,216a24,24,0,0,1-22.62-16h45.24A24,24,0,0,1,128,216Z"></path>
               </svg>
-              <div className="notifications-badge"></div>
+              {/* Live unread count badge — replaces the static .notifications-badge div */}
+              {unreadCount > 0 ? (
+                <div style={{
+                  position:'absolute', top:'-4px', right:'-4px',
+                  background:'#ff4d4d', color:'#fff',
+                  fontSize:'9px', fontWeight:'700',
+                  borderRadius:'10px', minWidth:'15px', height:'15px',
+                  display:'flex', alignItems:'center', justifyContent:'center',
+                  padding:'0 3px',
+                }}>
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </div>
+              ) : (
+                <div className="notifications-badge" />
+              )}
             </div>
             <span className="notifications-nav-text notifications-nav-text-active">Notifications</span>
           </Link>

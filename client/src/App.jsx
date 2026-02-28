@@ -30,6 +30,7 @@ import LiveTrackingDemo from './pages/LiveTrackingDemo';
 import { BrowserRouter, Route, Routes, Navigate, useLocation } from 'react-router-dom';
 import { CartProvider } from './CartContext';
 import { LanguageProvider } from './LanguageContext';
+import { NotificationProvider } from './NotificationContext';
 import LanguageToggle from './LanguageToggle';
 
 const FloatingLanguageToggle = () => {
@@ -51,44 +52,46 @@ function App() {
   return (
     <div className="dark">
       <LanguageProvider>
-        <CartProvider>
-        <BrowserRouter>
-          <FloatingLanguageToggle />
-          <Routes>
-            <Route path="/" element={<Navigate to="/splash" />} />
+        <NotificationProvider>
+          <CartProvider>
+            <BrowserRouter>
+              <FloatingLanguageToggle />
+              <Routes>
+                <Route path="/" element={<Navigate to="/splash" />} />
 
-            <Route path="/register" element={<Signup />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/home" element={<Home />} />
+                <Route path="/register" element={<Signup />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/home" element={<Home />} />
 
-            <Route path="/yathrika" element={<Navigate to="/yathrika-home" />} />
-            <Route path="/yathrika-home" element={<YathrikaHome />} />
-            <Route path="/yathrika-signin" element={<YathrikaSignin />} />
-            <Route path="/cart" element={<Cart />} />
-            <Route path="/products" element={<Products />} />
-            <Route path="/notifications" element={<Notifications />} />
+                <Route path="/yathrika" element={<Navigate to="/yathrika-home" />} />
+                <Route path="/yathrika-home" element={<YathrikaHome />} />
+                <Route path="/yathrika-signin" element={<YathrikaSignin />} />
+                <Route path="/cart" element={<Cart />} />
+                <Route path="/products" element={<Products />} />
+                <Route path="/notifications" element={<Notifications />} />
 
-            <Route path="/order-history" element={<OrderHistory />} />
-            <Route path="/user-profile" element={<UserProfile />} />
-            <Route path="/order-summary" element={<OrderSummary />} />
-            <Route path="/admin" element={<Admin />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/payment" element={<Payment />} />
+                <Route path="/order-history" element={<OrderHistory />} />
+                <Route path="/user-profile" element={<UserProfile />} />
+                <Route path="/order-summary" element={<OrderSummary />} />
+                <Route path="/admin" element={<Admin />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/payment" element={<Payment />} />
 
-            <Route path="/tracking" element={<Tracking />} />
-            <Route path="/support" element={<Support />} />
-            <Route path="/vendors" element={<Vendors />} />
-            <Route path="/routes" element={<RoutesPage />} />
-            <Route path="/splash" element={<Splash />} />
+                <Route path="/tracking" element={<Tracking />} />
+                <Route path="/support" element={<Support />} />
+                <Route path="/vendors" element={<Vendors />} />
+                <Route path="/routes" element={<RoutesPage />} />
+                <Route path="/splash" element={<Splash />} />
 
-            <Route path="/user-type-selection" element={<UserTypeSelection />} />
-            <Route path="/delivery-partner" element={<DeliveryPartner />} />
-            <Route path="/delivery-partner-auth" element={<DeliveryPartnerAuth />} />
-            <Route path="/delivery-partner-dashboard" element={<DeliveryPartnerDashboard />} />
-            <Route path="/live-tracking-demo" element={<LiveTrackingDemo />} />
-          </Routes>
-        </BrowserRouter>
-        </CartProvider>
+                <Route path="/user-type-selection" element={<UserTypeSelection />} />
+                <Route path="/delivery-partner" element={<DeliveryPartner />} />
+                <Route path="/delivery-partner-auth" element={<DeliveryPartnerAuth />} />
+                <Route path="/delivery-partner-dashboard" element={<DeliveryPartnerDashboard />} />
+                <Route path="/live-tracking-demo" element={<LiveTrackingDemo />} />
+              </Routes>
+            </BrowserRouter>
+          </CartProvider>
+        </NotificationProvider>
       </LanguageProvider>
     </div>
   );
