@@ -61,9 +61,9 @@ const CATEGORIES = [
 ];
 
 const OFFERS = [
-  { en: '20% off on first order',       ml: 'ആദ്യ ഓർഡറിന് 20% കിഴിവ്',           color: '#68f91a', icon: 'percent',        img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuA1NFGnA1FHE26NnEQavduwTJKDB9iinjAtXFiNv-GoeDXRVwb7pJDbS7B7ljoJ5Mlo9azE2TCV5c4H3ooE4Kg6yTXTWXzZOdEHEh2x_2l6g7yImFsbmimsAcBKTPR4x0aWpFiBs-6H0DZPCWKuqE71PN5YV1rNG_-Qb1Qnt9HtlNo_LZM_IFrXPekTPlt7KThZtpChWpTg-nlrsg6zK-MCy8BZ8nUwkPgg4nLt5YNhVpdFWrJ8b5i7k3_cLDkQfDSq0c7Hn2tcLqk' },
-  { en: 'Free delivery on groceries',   ml: 'പലചരക്കിന് സൗജന്യ ഡെലിവറി',        color: '#4da6ff', icon: 'local_shipping',  img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAkXgZ_nn6jOWMX4GhlgDmPg5aAWCflq_1bCO3qyuRfoNxkzxVLhGYXQ490SiR53JVkU9nvn8B4WwsgZ4aaxWqCBfTo8PY8VDt47ZwQK93tM5tZReLDqWk7cNHCANmXBIT6M578i1mk2Z1J-6z7iBCDKzsv507PdAFuNnw_4PBYm8Dyi76hY1_905Rv77a1RClmzDLS4fUVNJ5JzGGabgKycVk1a2p0KiXCJptpH7Rbs8CPCumGIWiOeuHe53_JE7dxTb48qUWJUKg' },
-  { en: 'Special deals on medicines',   ml: 'മരുന്നുകൾക്ക് പ്രത്യേക ഓഫർ',        color: '#ff6b8a', icon: 'medication',       img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAQ-10uKsH2euqyt1LA0gh0TJQP-C4lxSTGrHVQxZpeNk_msuzFP3bW0lUWxDt0pK361pIeQdbYrjY1n46m3FuSgXfDteWpL9YmSmYgFAdPNtbpTTbK6cT6MvzKxxFY2LUzTdGHWWiert3-cx5Vm_xtV5DPIBMR1NpMvdtQ3AvRNf5_yMewK2qd6YGc_-Qo_i85YfEfkfi8uEUIoNhW5JBXyEND3ea9h5srQpHVjKedvS7BcZmP2e841XA-b8Deo0G2ZMEwSKIS1oc' },
+  { en: '20% off on first order',       ml: 'ആദ്യ ഓർഡറിന് 20% കിഴിവ്',           color: '#68f91a', icon: 'percent',        img: 'https://bimpos.com/sites/default/files/images/posts/turning-your-restaurant-into-a-delivery-service.jpg' },
+  { en: 'Free delivery on groceries',   ml: 'പലചരക്കിന് സൗജന്യ ഡെലിവറി',        color: '#68f91a', icon: 'local_shipping',  img: 'https://media.self.com/photos/599c997a774b667d3bbe1214/4:3/w_2560%2Cc_limit/groceries-family-month.jpg' },
+  { en: 'Special deals on medicines',   ml: 'മരുന്നുകൾക്ക് പ്രത്യേക ഓഫർ',        color: '#68f91a', icon: 'medication',       img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAQ-10uKsH2euqyt1LA0gh0TJQP-C4lxSTGrHVQxZpeNk_msuzFP3bW0lUWxDt0pK361pIeQdbYrjY1n46m3FuSgXfDteWpL9YmSmYgFAdPNtbpTTbK6cT6MvzKxxFY2LUzTdGHWWiert3-cx5Vm_xtV5DPIBMR1NpMvdtQ3AvRNf5_yMewK2qd6YGc_-Qo_i85YfEfkfi8uEUIoNhW5JBXyEND3ea9h5srQpHVjKedvS7BcZmP2e841XA-b8Deo0G2ZMEwSKIS1oc' },
 ];
 
 const YathrikaHome = () => {
