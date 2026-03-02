@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../CartContext';
+import { useUser } from '../UserContext';
 import '../index.css';
 
 // ─── Load Razorpay checkout script dynamically ────────────────────────────────
@@ -18,6 +19,7 @@ const Payment = () => {
   const navigate   = useNavigate();
   const location   = useLocation();
   const { cartItems, getTotalPrice, getTotalCount } = useCart();
+  const { user } = useUser();
 
   const [selectedMethod, setSelectedMethod] = useState('upi');
   const [isProcessing, setIsProcessing]     = useState(false);
@@ -53,7 +55,8 @@ const Payment = () => {
         body: JSON.stringify({
           amount:    totalAmount,
           cartItems: cartItems,
-          userId:    'guest', // replace with actual userId from auth context later
+          userId:    user?.phoneNumber || 'guest',
+          phoneNumber: user?.phoneNumber,
         }),
       });
 
@@ -104,7 +107,9 @@ const Payment = () => {
                 razorpay_signature:  response.razorpay_signature,
                 cartItems:           cartItems,
                 totalAmount:         totalAmount,
-                userId:              'guest',
+                userId:              user?.phoneNumber || 'guest',
+                phoneNumber:         user?.phoneNumber,
+                paymentMethod:       selectedMethod,
               }),
             });
 
@@ -124,9 +129,11 @@ const Payment = () => {
                 state: {
                   paymentId:   response.razorpay_payment_id,
                   orderId:     response.razorpay_order_id,
+                  customOrderId: verifyData.customOrderId,
                   amount:      totalAmount,
                   cartItems:   cartItems,
                   paymentMethod: selectedMethod,
+                  user:        user,
                 }
               }), 2500);
 
@@ -158,7 +165,9 @@ const Payment = () => {
                 error:       { description: 'User cancelled payment', reason: 'user_cancelled' },
                 cartItems:   cartItems,
                 totalAmount: totalAmount,
-                userId:      'guest',
+                userId:      user?.phoneNumber || 'guest',
+                phoneNumber: user?.phoneNumber,
+                paymentMethod: selectedMethod,
               }),
             }).catch(() => {});
 
@@ -169,9 +178,9 @@ const Payment = () => {
 
         // ── Prefill user details (replace with real user data later) ──────
         prefill: {
-          name:    '',
+          name:    user?.name || '',
           email:   '',
-          contact: '',
+          contact: user?.phoneNumber ? user.phoneNumber.replace('+91', '') : '',
         },
 
         theme: {
@@ -210,7 +219,9 @@ const Payment = () => {
             error:       errInfo,
             cartItems:   cartItems,
             totalAmount: totalAmount,
-            userId:      'guest',
+            userId:      user?.phoneNumber || 'guest',
+            phoneNumber: user?.phoneNumber,
+            paymentMethod: selectedMethod,
           }),
         }).catch(() => {});
 
@@ -340,6 +351,14 @@ const Payment = () => {
               fontSize: '0.78rem',
               color: 'rgba(255,255,255,0.55)',
             }}>
+              <div style={{ marginBottom: '0.5rem', color: 'var(--primary)', fontWeight: 600, fontSize: '0.8rem' }}>
+                {user?.name ? `Order for ${user.name}` : 'Guest Order'}
+                {user?.phoneNumber && (
+                  <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>
+                    {user.phoneNumber}
+                  </div>
+                )}
+              </div>
               {cartItems.map(i => (
                 <div key={i.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
                   <span>{i.name} × {i.quantity}</span>

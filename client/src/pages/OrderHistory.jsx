@@ -1,35 +1,55 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../LanguageContext';
+import { useUser } from '../UserContext';
 import '../index.css';
 
 const OrderHistory = () => {
   const { language } = useLanguage();
+  const { user, getUserOrders, refreshUser } = useUser();
   const [activeTab, setActiveTab] = useState('Food');
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
   
-  const orders = [
-    {
-      id: '1234567890',
-      status: language === 'en' ? 'Delivered' : 'വിതരണം ചെയ്തു',
-      items: 2,
-      date: '12/12/2023',
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAgJYPfYx4Qswfa1xEunByEnbMtxCizy6P42YwzwbX9atn2LIkn_a-3y_om_C2OglA3KRb3SfHgQJvKAts3wgU9ePGTqJ_uC-scHxIGwEQfvNJwizh61PppsKJSlVKvI_ECvl_44J8ldHLvvJOQ7irLskzcDqs6Kk0B2RCK1i621fCQJO2niUPoIDyUb2zBucHYc5xqPSFMSEyDXjBDch4Pxvb1C_9Cdf6Uclqy3Zr_r4x9VdIKNk2qDjbnY1LKT5A1DvviHbKNKl8'
-    },
-    {
-      id: '9876543210',
-      status: language === 'en' ? 'Delivered' : 'വിതരണം ചെയ്തു',
-      items: 3,
-      date: '11/25/2023',
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBOu7ZvODDIrGOMlo8mNQDKEayQn-92dhtGYhh0WsOJBrlxaQAXhLWkoyJ16y4aU-rcD65LUmt95BswB8oOMK-nQ3JjN9fQrbQh_jtqJRRYyKxsvEOgt7_Pk9UB-mHUShmBslsNWgMthshPTxquN1NbHm6Qy9Nr5HuAQ3ryXmxeLl93KMmLY3n8TtI4d7FQpTaQJ6BR-yWrIjErMSo7eRf-PtO_T95AKg_f6i3bEdL2bnRfVdqVqKeQVDBCWLqY4z2SnVPFMK_L754'
-    },
-    {
-      id: '5678901234',
-      status: language === 'en' ? 'Delivered' : 'വിതരണം ചെയ്തു',
-      items: 1,
-      date: '11/10/2023',
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDSk7QubbQdxzfXCA0rcOID1JID1YXVM232WuwHx5rqw4fH0hPWK7-mHybaihVBBokYl234hlZr5ku5pmvcJC0oYWwjnHbz712E0FSQ3kWokA-W4_gGNfG5xfg2dxVi65NRtchMGrb8ZXIRhiV97jPMuNx-WeeJ6ATB24AY3eVs6MS0G_z1D2rUToKBMlsmN3rSOfnw_jZlzMkbQDfuM8VpxbmwMxFTi3DSAmBzI_reekblpRCwA2fhhm2KPkaNL1wXWQpsVF4B3mI'
+  useEffect(() => {
+    const loadOrders = async () => {
+      setLoading(true);
+      try {
+        // Refresh user data to get latest orders
+        await refreshUser();
+        
+        // Get user orders
+        const userOrders = getUserOrders();
+        
+        // Transform orders to match the display format
+        const transformedOrders = userOrders.map((order) => ({
+          id: order.orderId,
+          status: order.paymentStatus === 'success' 
+            ? (language === 'en' ? 'Delivered' : 'വിതരണം ചെയ്തു')
+            : (language === 'en' ? 'Failed' : 'കുറ്റമുണ്ട്'),
+          items: order.items?.length || 0,
+          date: new Date(order.orderDate).toLocaleDateString('en-GB'),
+          amount: order.totalAmount,
+          paymentId: order.paymentId,
+          image: order.items?.[0]?.image || 'https://lh3.googleusercontent.com/aida-public/AB6AXuAgJYPfYx4Qswfa1xEunByEnbMtxCizy6P42YwzwbX9atn2LIkn_a-3y_om_C2OglA3KRb3SfHgQJvKAts3wgU9ePGTqJ_uC-scHxIGwEQfvNJwizh61PppsKJSlVKvI_ECvl_44J8ldHLvvJOQ7irLskzcDqs6Kk0B2RCK1i621fCQJO2niUPoIDyUb2zBucHYc5xqPSFMSEyDXjBDch4Pxvb1C_9Cdf6Uclqy3Zr_r4x9VdIKNk2qDjbnY1LKT5A1DvviHbKNKl8'
+        }));
+        
+        setOrders(transformedOrders.reverse()); // Show newest first
+      } catch (error) {
+        console.error('Failed to load orders:', error);
+        setOrders([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    if (user) {
+      loadOrders();
+    } else {
+      setOrders([]);
+      setLoading(false);
     }
-  ];
+  }, [user, refreshUser, getUserOrders, language]);
 
   const tabs = [
     { key: 'Food', label: language === 'en' ? 'Food' : 'ഭക്ഷണം' },
@@ -68,15 +88,53 @@ const OrderHistory = () => {
         </header>
 
         <main className="order-history-main-content">
-          {orders.map((order) => (
+          {!user && (
+            <div className="order-history-card" style={{ textAlign: 'center', padding: '2rem' }}>
+              <p className="order-history-status">
+                {language === 'en' ? 'Please sign in to view your orders' : 'നിങ്ങൾും ഓർഡറുകൾ കാണാൻ സൈൻ ഇൻ ചെയ്യുക'}
+              </p>
+              <Link to="/yathrika-signin" className="order-history-reorder-button" style={{ textDecoration: 'none', display: 'inline-block', marginTop: '1rem' }}>
+                {language === 'en' ? 'Sign In' : 'സൈൻ ഇൻ'}
+              </Link>
+            </div>
+          )}
+          
+          {user && loading && (
+            <div className="order-history-card" style={{ textAlign: 'center', padding: '2rem' }}>
+              <p className="order-history-status">
+                {language === 'en' ? 'Loading your orders...' : 'നിങ്ങൾും ഓർഡറുകൾ ലോഡ് ചെയ്യുന്നു...'}
+              </p>
+            </div>
+          )}
+          
+          {user && !loading && orders.length === 0 && (
+            <div className="order-history-card" style={{ textAlign: 'center', padding: '2rem' }}>
+              <p className="order-history-status">
+                {language === 'en' ? 'No orders found' : 'ഓർഡറുകൾ കണ്ടെത്തിയില്ല'}
+              </p>
+              <p className="order-history-meta">
+                {language === 'en' ? 'Start shopping to see your orders here!' : 'നിങ്ങൾും ഓർഡറുകൾ ഇവിടെ കാണാൻ ശോപ്പിംഗ് ആരംഭിക്കുക!'}
+              </p>
+              <Link to="/products" className="order-history-reorder-button" style={{ textDecoration: 'none', display: 'inline-block', marginTop: '1rem' }}>
+                {language === 'en' ? 'Start Shopping' : 'ശോപ്പിംഗ് ആരംഭിക്കുക'}
+              </Link>
+            </div>
+          )}
+          
+          {user && !loading && orders.map((order) => (
             <div key={order.id} className="order-history-card">
               <div className="order-history-card-content">
                 <div className="order-history-details">
                   <p className="order-history-status">{order.status}</p>
                   <p className="order-history-order-number">{language === 'en' ? 'Order' : 'ഓർഡർ'} #{order.id}</p>
                   <p className="order-history-meta">
-                    {order.items} {language === 'en' ? 'items' : 'സാധനങ്ങൾ'} • {order.date}
+                    {order.items} {language === 'en' ? 'items' : 'സാധനങ്ങൾ'} • {order.date} • ₹{order.amount}
                   </p>
+                  {order.paymentId && (
+                    <p className="order-history-meta" style={{ fontSize: '0.75rem', opacity: 0.7 }}>
+                      Payment ID: {order.paymentId}
+                    </p>
+                  )}
                   <button className="order-history-reorder-button">
                     {language === 'en' ? 'Reorder' : 'വീണ്ടും ഓർഡർ ചെയ്യുക'}
                     <span className="material-symbols-outlined">refresh</span>
@@ -87,6 +145,9 @@ const OrderHistory = () => {
                     alt="Order Image" 
                     className="order-history-image" 
                     src={order.image}
+                    onError={(e) => {
+                      e.target.src = 'https://lh3.googleusercontent.com/aida-public/AB6AXuAgJYPfYx4Qswfa1xEunByEnbMtxCizy6P42YwzwbX9atn2LIkn_a-3y_om_C2OglA3KRb3SfHgQJvKAts3wgU9ePGTqJ_uC-scHxIGwEQfvNJwizh61PppsKJSlVKvI_ECvl_44J8ldHLvvJOQ7irLskzcDqs6Kk0B2RCK1i621fCQJO2niUPoIDyUb2zBucHYc5xqPSFMSEyDXjBDch4Pxvb1C_9Cdf6Uclqy3Zr_r4x9VdIKNk2qDjbnY1LKT5A1DvviHbKNKl8';
+                    }}
                   />
                 </div>
               </div>

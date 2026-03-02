@@ -31,6 +31,7 @@ import { BrowserRouter, Route, Routes, Navigate, useLocation } from 'react-route
 import { CartProvider } from './CartContext';
 import { LanguageProvider } from './LanguageContext';
 import { NotificationProvider } from './NotificationContext';
+import { UserProvider } from './UserContext';
 import LanguageToggle from './LanguageToggle';
 
 const FloatingLanguageToggle = () => {
@@ -51,12 +52,13 @@ const FloatingLanguageToggle = () => {
 function App() {
   return (
     <div className="dark">
-      <LanguageProvider>
-        <NotificationProvider>
-          <CartProvider>
-            <BrowserRouter>
-              <FloatingLanguageToggle />
-              <Routes>
+      <UserProvider>
+        <LanguageProvider>
+          <NotificationProvider>
+            <CartProvider>
+              <BrowserRouter>
+                <FloatingLanguageToggle />
+                <Routes>
                 <Route path="/" element={<Navigate to="/splash" />} />
 
                 <Route path="/register" element={<Signup />} />
@@ -93,6 +95,7 @@ function App() {
           </CartProvider>
         </NotificationProvider>
       </LanguageProvider>
+      </UserProvider>
     </div>
   );
 }

@@ -1,10 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../LanguageContext';
+import { useUser } from '../UserContext';
 import '../index.css';
 
 const UserProfile = () => {
   const { language } = useLanguage();
+  const { user, getDisplayName, signOut } = useUser();
 
   const settingsItems = [
     {
@@ -115,11 +117,44 @@ const UserProfile = () => {
         <div className="flex flex-col items-center gap-4">
           <div 
             className="profile-avatar w-32 h-32 rounded-full bg-cover bg-center border-2 border-primary" 
-            style={{backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuB14tV6G9kmoE4uxq3hJp9nPxLv0lHQRILmiTGmjFd_EEctGgburaCaAJDEGnDIBMXDqTa9aMRZTu_0t73ATLkHCt2BNufHmogxCz-szGmm22WUG4Q9uZhV9y928aVzY7N3eVxN61RuG5yNR2zOHZcigJqjR2X51cCwIn4n2kJbW_e57AAA_oo_WGDCm73UmKFkLcMBSEj4GIlH536HOMxXy_xGRuxw1XQGsjGBHOYe9rOrHpcq2Ao6HL4Osw1X3BcE_QVFJaCgyWo")'}}
-          ></div>
+            style={{
+              backgroundImage: user?.name 
+                ? 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuB14tV6G9kmoE4uxq3hJp9nPxLv0lHQRILmiTGmjFd_EEctGgburaCaAJDEGnDIBMXDqTa9aMRZTu_0t73ATLkHCt2BNufHmogxCz-szGmm22WUG4Q9uZhV9y928aVzY7N3eVxN61RuG5yNR2zOHZcigJqjR2X51cCwIn4n2kJbW_e57AAA_oo_WGDCm73UmKFkLcMBSEj4GIlH536HOMxXy_xGRuxw1XQGsjGBHOYe9rOrHpcq2Ao6HL4Osw1X3BcE_QVFJaCgyWo")'
+                : 'linear-gradient(135deg, var(--primary), rgba(104, 249, 26, 0.7))'
+            }}
+          >
+            {!user?.name && (
+              <div 
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '2.5rem',
+                  fontWeight: 'bold',
+                  color: '#0c1508',
+                  textShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                }}
+              >
+                {user?.phoneNumber ? user.phoneNumber.slice(-2) : 'U'}
+              </div>
+            )}
+          </div>
           <div className="profile-info text-center">
-            <p className="profile-name text-2xl font-bold text-gray-900 dark:text-white">Raheem S</p>
-            <p className="profile-phone text-base font-normal text-primary">+91 9876543210</p>
+            <p className="profile-name text-2xl font-bold text-gray-900 dark:text-white">
+              {getDisplayName()}
+            </p>
+            {user?.phoneNumber && (
+              <p className="profile-phone text-base font-normal text-primary">
+                {user.phoneNumber}
+              </p>
+            )}
+            {user?.orderCount > 0 && (
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                {user.orderCount} {language === 'en' ? 'orders placed' : 'ഓർഡറുകൾ നൽകി'}
+              </p>
+            )}
           </div>
         </div>
 
@@ -139,6 +174,29 @@ const UserProfile = () => {
                   {index < settingsItems.length - 1 && <div className="divider-line"></div>}
                 </React.Fragment>
               ))}
+              
+              {/* Sign Out Button */}
+              <div className="divider-line"></div>
+              <button 
+                onClick={signOut}
+                className="settings-item"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: '0',
+                  width: '100%',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  color: '#ef4444'
+                }}
+              >
+                <div className="settings-icon">
+                  <svg fill="currentColor" height="24px" viewBox="0 0 256 256" width="24px" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M112,216a8,8,0,0,1-8,8H48a16,16,0,0,1-16-16V48A16,16,0,0,1,48,32h56a8,8,0,0,1,0,16H48V208h56A8,8,0,0,1,112,216Zm109.66-93.66-40-40a8,8,0,0,0-11.32,11.32L188.69,112H112a8,8,0,0,0,0,16h76.69l-18.35,18.34a8,8,0,0,0,11.32,11.32l40-40A8,8,0,0,0,221.66,122.34Z"></path>
+                  </svg>
+                </div>
+                <p className="settings-text">{language === 'en' ? 'Sign Out' : 'സൈൻ ഔട്ട്'}</p>
+              </button>
             </div>
           </div>
 

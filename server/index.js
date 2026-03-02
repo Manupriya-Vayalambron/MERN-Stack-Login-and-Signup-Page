@@ -208,6 +208,7 @@ const { Server } = require('socket.io');
 const http = require('http');
 const EmployeeModel = require('./models/Employee');
 const DeliveryPartnerModel = require('./models/DeliveryPartner');
+const UserModel = require('./models/User');
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
 
@@ -619,6 +620,116 @@ app.post('/register', async (req, res) => {
     }
 });
 
+// -------------------- User Management Routes --------------------
+
+// Create or get user by phone number (during OTP verification)
+app.post('/api/user/verify-phone', async (req, res) => {
+    try {
+        const { phoneNumber, name } = req.body;
+        
+        if (!phoneNumber) {
+            return res.status(400).json({ success: false, message: 'Phone number is required' });
+        }
+        
+        let user = await UserModel.findOne({ phoneNumber });
+        
+        if (!user) {
+            // Create new user
+            user = new UserModel({
+                phoneNumber,
+                name: name || '',
+                isVerified: true
+            });
+            await user.save();
+            console.log(`✅ New user created: ${phoneNumber}`);
+        } else {
+            // Update existing user verification status
+            user.isVerified = true;
+            if (name && name.trim()) {
+                user.name = name;
+            }
+            await user.save();
+            console.log(`✅ Existing user verified: ${phoneNumber}`);
+        }
+        
+        res.json({
+            success: true,
+            user: {
+                phoneNumber: user.phoneNumber,
+                name: user.name,
+                orderCount: user.orderCount,
+                isVerified: user.isVerified
+            }
+        });
+        
+    } catch (error) {
+        console.error('User verification error:', error);
+        res.status(500).json({ success: false, message: 'User verification failed', error: error.message });
+    }
+});
+
+// Get user details by phone number
+app.get('/api/user/:phoneNumber', async (req, res) => {
+    try {
+        const { phoneNumber } = req.params;
+        
+        const user = await UserModel.findOne({ phoneNumber });
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+        
+        res.json({
+            success: true,
+            user: {
+                phoneNumber: user.phoneNumber,
+                name: user.name,
+                orderCount: user.orderCount,
+                isVerified: user.isVerified,
+                orders: user.orders
+            }
+        });
+        
+    } catch (error) {
+        console.error('Get user error:', error);
+        res.status(500).json({ success: false, message: 'Failed to get user details', error: error.message });
+    }
+});
+
+// Update user name
+app.patch('/api/user/update-name', async (req, res) => {
+    try {
+        const { phoneNumber, name } = req.body;
+        
+        if (!phoneNumber || !name) {
+            return res.status(400).json({ success: false, message: 'Phone number and name are required' });
+        }
+        
+        const user = await UserModel.findOneAndUpdate(
+            { phoneNumber },
+            { name: name.trim() },
+            { new: true }
+        );
+        
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+        
+        res.json({
+            success: true,
+            user: {
+                phoneNumber: user.phoneNumber,
+                name: user.name,
+                orderCount: user.orderCount,
+                isVerified: user.isVerified
+            }
+        });
+        
+    } catch (error) {
+        console.error('Update user name error:', error);
+        res.status(500).json({ success: false, message: 'Failed to update user name', error: error.message });
+    }
+});
+
 // -------------------- Razorpay Payment Routes --------------------
 
 // 1. Create Order
@@ -669,6 +780,8 @@ app.post('/api/payment/verify', async (req, res) => {
             cartItems,
             totalAmount,
             userId,
+            phoneNumber,
+            paymentMethod
         } = req.body;
 
         // HMAC-SHA256 signature check
@@ -681,12 +794,35 @@ app.post('/api/payment/verify', async (req, res) => {
         const isValid = expectedSignature === razorpay_signature;
 
         if (isValid) {
+            // Save order to user's record
+            let customOrderId = null;
+            if (phoneNumber) {
+                try {
+                    const user = await UserModel.findOne({ phoneNumber });
+                    if (user) {
+                        customOrderId = user.addOrder({
+                            items: cartItems,
+                            totalAmount,
+                            paymentStatus: 'success',
+                            paymentId: razorpay_payment_id,
+                            paymentMethod: paymentMethod || 'razorpay'
+                        });
+                        await user.save();
+                        console.log(`✅ Order ${customOrderId} saved for user ${phoneNumber}`);
+                    }
+                } catch (userError) {
+                    console.error('Error saving order to user:', userError);
+                }
+            }
+
             const paymentRecord = {
                 status:       'SUCCESS',
                 orderId:      razorpay_order_id,
+                customOrderId: customOrderId,
                 paymentId:    razorpay_payment_id,
                 amount:       `₹${totalAmount}`,
                 userId:       userId || 'guest',
+                phoneNumber:  phoneNumber,
                 merchant_vpa: 'manupriyadhanushvayalambron-1@oksbi',
                 items:        cartItems?.map(i => ({
                                   name:     i.name,
@@ -703,15 +839,38 @@ app.post('/api/payment/verify', async (req, res) => {
             console.log(JSON.stringify(paymentRecord, null, 2));
             console.log('══════════════════════════════════════\n');
 
-            // TODO: await PaymentModel.create(paymentRecord);
-
-            res.json({ success: true, paymentId: razorpay_payment_id });
+            res.json({ 
+                success: true, 
+                paymentId: razorpay_payment_id,
+                customOrderId: customOrderId
+            });
         } else {
+            // Save failed payment to user's record
+            if (phoneNumber) {
+                try {
+                    const user = await UserModel.findOne({ phoneNumber });
+                    if (user) {
+                        const failedOrderId = user.addOrder({
+                            items: cartItems,
+                            totalAmount,
+                            paymentStatus: 'failed',
+                            paymentId: razorpay_payment_id,
+                            paymentMethod: paymentMethod || 'razorpay'
+                        });
+                        await user.save();
+                        console.log(`❌ Failed order ${failedOrderId} saved for user ${phoneNumber}`);
+                    }
+                } catch (userError) {
+                    console.error('Error saving failed order to user:', userError);
+                }
+            }
+
             const failRecord = {
                 status:    'FAILED — SIGNATURE MISMATCH',
                 orderId:   razorpay_order_id,
                 paymentId: razorpay_payment_id,
                 userId:    userId || 'guest',
+                phoneNumber: phoneNumber,
                 timestamp: new Date().toISOString(),
             };
 
@@ -731,7 +890,27 @@ app.post('/api/payment/verify', async (req, res) => {
 
 // 3. Payment Failed / Cancelled
 app.post('/api/payment/failed', async (req, res) => {
-    const { orderId, error, cartItems, totalAmount, userId } = req.body;
+    const { orderId, error, cartItems, totalAmount, userId, phoneNumber, paymentMethod } = req.body;
+
+    // Save failed payment to user's record
+    if (phoneNumber) {
+        try {
+            const user = await UserModel.findOne({ phoneNumber });
+            if (user) {
+                const failedOrderId = user.addOrder({
+                    items: cartItems,
+                    totalAmount,
+                    paymentStatus: 'failed',
+                    paymentId: null,
+                    paymentMethod: paymentMethod || 'razorpay'
+                });
+                await user.save();
+                console.log(`❌ Failed order ${failedOrderId} saved for user ${phoneNumber}`);
+            }
+        } catch (userError) {
+            console.error('Error saving failed order to user:', userError);
+        }
+    }
 
     const failRecord = {
         status:    'FAILED',
@@ -740,6 +919,7 @@ app.post('/api/payment/failed', async (req, res) => {
         code:      error?.code || 'N/A',
         amount:    `₹${totalAmount}`,
         userId:    userId || 'guest',
+        phoneNumber: phoneNumber,
         items:     cartItems?.map(i => `${i.name} x${i.quantity}`) || [],
         timestamp: new Date().toISOString(),
     };
@@ -749,8 +929,6 @@ app.post('/api/payment/failed', async (req, res) => {
     console.log('══════════════════════════════════════');
     console.log(JSON.stringify(failRecord, null, 2));
     console.log('══════════════════════════════════════\n');
-
-    // TODO: await PaymentModel.create(failRecord);
 
     res.json({ success: true, received: true });
 });

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { auth } from '../firebase';
 import { RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth';
 import { useLanguage } from '../LanguageContext';
+import { useUser } from '../UserContext';
 import '../index.css';
 
 const YathrikaSignin = () => {
@@ -14,6 +15,7 @@ const YathrikaSignin = () => {
   const [confirmationResult, setConfirmationResult] = useState(null);
   const navigate = useNavigate();
   const { language } = useLanguage();
+  const { signIn } = useUser();
 
   // Setup reCAPTCHA - create fresh each time
   const setupRecaptcha = () => {
@@ -111,13 +113,34 @@ const YathrikaSignin = () => {
     try {
       // Verify OTP with Firebase
       await confirmationResult.confirm(enteredOtp);
-      console.log('OTP verified successfully!');
-      navigate('/routes');
+      console.log('Firebase OTP verified successfully!');
+      
+      // Format phone number for database
+      const formattedPhone = '+91' + phoneNumber;
+      
+      // Sign in user using our context (which calls the backend)
+      const result = await signIn(formattedPhone, {
+        name: '' // Empty name initially, user can update later
+      });
+      
+      if (result.success) {
+        console.log('User signed in and saved to database:', result.user);
+        navigate('/routes');
+      } else {
+        throw new Error(result.error || 'Failed to save user to database');
+      }
     } catch (err) {
-      console.error('Error verifying OTP:', err);
-      setError('Invalid OTP. Please try again.');
+      console.error('Error during OTP verification or user creation:', err);
+      if (err.message.includes('auth/invalid-verification-code')) {
+        setError('Invalid OTP. Please try again.');
+      } else if (err.message.includes('database') || err.message.includes('save')) {
+        // Firebase OTP was successful but database save failed
+        setError('OTP verified but failed to save user data. Please try again.');
+      } else {
+        setError(err.message || 'Verification failed. Please try again.');
+      }
       setOtp(['', '', '', '', '', '']);
-      document.getElementById('signin-otp-0').focus();
+      document.getElementById('signin-otp-0')?.focus();
     } finally {
       setLoading(false);
     }
