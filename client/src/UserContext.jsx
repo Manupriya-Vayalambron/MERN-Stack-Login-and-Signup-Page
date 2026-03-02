@@ -52,6 +52,8 @@ export const UserProvider = ({ children }) => {
   // Sign in user after OTP verification
   const signIn = async (phoneNumber, userData = {}) => {
     try {
+      console.log('🔄 Attempting to sign in user:', phoneNumber);
+      
       // Call backend to create/verify user
       const response = await fetch('http://localhost:3001/api/user/verify-phone', {
         method: 'POST',
@@ -64,7 +66,16 @@ export const UserProvider = ({ children }) => {
         }),
       });
 
+      console.log('📡 API Response status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ API Error:', response.status, errorText);
+        throw new Error(`Server error: ${response.status} - ${errorText}`);
+      }
+
       const result = await response.json();
+      console.log('✅ API Response:', result);
 
       if (result.success) {
         const userInfo = {
@@ -87,8 +98,19 @@ export const UserProvider = ({ children }) => {
         throw new Error(result.message || 'Failed to verify user');
       }
     } catch (error) {
-      console.error('Sign in error:', error);
-      return { success: false, error: error.message };
+      console.error('❌ Sign in error:', error);
+      
+      // Provide more specific error messages
+      let errorMessage = error.message;
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        errorMessage = 'Unable to connect to server. Please check your internet connection and try again.';
+      } else if (error.message.includes('Server error: 500')) {
+        errorMessage = 'Server is experiencing issues. Please try again later.';
+      } else if (error.message.includes('Server error: 404')) {
+        errorMessage = 'API endpoint not found. Please contact support.';
+      }
+      
+      return { success: false, error: errorMessage };
     }
   };
 

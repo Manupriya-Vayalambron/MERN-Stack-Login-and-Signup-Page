@@ -49,7 +49,7 @@ const Payment = () => {
 
     try {
       // 2. Create order on your backend
-      const orderRes = await fetch('http://localhost:5000/api/payment/create-order', {
+      const orderRes = await fetch('http://localhost:3001/api/payment/create-order', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -98,7 +98,7 @@ const Payment = () => {
         // ── Success handler ───────────────────────────────────────────────
         handler: async (response) => {
           try {
-            const verifyRes = await fetch('http://localhost:5000/api/payment/verify', {
+            const verifyRes = await fetch('http://localhost:3001/api/payment/verify', {
               method:  'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -157,7 +157,7 @@ const Payment = () => {
             console.log('   Timestamp :', new Date().toISOString());
 
             // Notify backend
-            await fetch('http://localhost:5000/api/payment/failed', {
+            await fetch('http://localhost:3001/api/payment/failed', {
               method:  'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -211,7 +211,7 @@ const Payment = () => {
         console.log('   Timestamp  :', new Date().toISOString());
 
         // Notify backend
-        await fetch('http://localhost:5000/api/payment/failed', {
+        await fetch('http://localhost:3001/api/payment/failed', {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
