@@ -6,7 +6,7 @@ const Splash = () => {
   const navigate = useNavigate();
 
   const handleGetStarted = () => {
-    navigate('/user-type-selection');
+    navigate('/yathrika-home');
   };
 
   useEffect(() => {

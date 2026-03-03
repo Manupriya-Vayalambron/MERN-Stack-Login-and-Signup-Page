@@ -42,7 +42,7 @@ const getDistance = (lat1, lng1, lat2, lng2) => {
 const formatDist = (km) =>
   km < 1 ? `${Math.round(km * 1000)}m away` : `${km.toFixed(1)}km away`;
 
-const PHASES = { PERMISSION: 'permission', LOCATING: 'locating', SELECT: 'select', CONFIRMING: 'confirming' };
+const PHASES = { PERMISSION: 'permission', LOCATING: 'locating', SELECT: 'select', CONFIRMING: 'confirming', BUS_DETAILS: 'bus_details' };
 
 const Routes = () => {
   const navigate = useNavigate();
@@ -55,6 +55,9 @@ const Routes = () => {
   const [locationError, setLocationError] = useState('');
   const [searchQuery, setSearchQuery]   = useState('');
   const [allStops, setAllStops]         = useState(KERALA_BUS_STOPS);
+  const [busNumber, setBusNumber]       = useState('');
+  const [seatNumber, setSeatNumber]     = useState('');
+  const [busNumberError, setBusNumberError] = useState('');
 
   const requestLocation = () => {
     setPhase(PHASES.LOCATING);
@@ -105,8 +108,23 @@ const Routes = () => {
   };
 
   const handleConfirm = () => {
-    // Save to localStorage for use across the app
-    localStorage.setItem('yathrika_bus_stop', JSON.stringify(selectedStop));
+    setPhase(PHASES.BUS_DETAILS);
+    setBusNumber('');
+    setSeatNumber('');
+    setBusNumberError('');
+  };
+
+  const handleBusDetailsSubmit = () => {
+    if (!busNumber.trim()) {
+      setBusNumberError('Bus number is required');
+      return;
+    }
+    const stopData = {
+      ...selectedStop,
+      busNumber: busNumber.trim(),
+      seatNumber: seatNumber.trim() || null,
+    };
+    localStorage.setItem('yathrika_bus_stop', JSON.stringify(stopData));
     navigate('/yathrika-home');
   };
 
@@ -199,6 +217,78 @@ const Routes = () => {
           </button>
           <button style={S.ghostBtn} onClick={handleChangeStop}>
             Choose a different stop
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── BUS DETAILS SCREEN ──────────────────────────────────────────────────────
+  if (phase === PHASES.BUS_DETAILS && selectedStop) {
+    return (
+      <div style={S.page}>
+        <div style={S.permCard}>
+          <div style={{ ...S.permIconWrap, backgroundColor: 'rgba(104,249,26,0.15)' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 48, color: '#68f91a' }}>
+              confirmation_number
+            </span>
+          </div>
+          <div style={S.confirmBadge}>YOUR BUS DETAILS</div>
+          <h2 style={{ ...S.permTitle, fontSize: '1.2rem', marginBottom: 0 }}>
+            {selectedStop.name}
+          </h2>
+          <p style={{ ...S.permSubtitle, color: '#68f91a', fontWeight: 600, margin: 0 }}>
+            {selectedStop.city}
+          </p>
+          <p style={{ ...S.permSubtitle, marginTop: 4, marginBottom: 8 }}>
+            Enter your bus details so we can deliver to the right bus.
+          </p>
+
+          {/* Bus Number */}
+          <div style={S.inputGroup}>
+            <label style={S.inputLabel}>
+              Bus Number <span style={{ color: '#68f91a' }}>*</span>
+            </label>
+            <div style={{ ...S.inputWrap, borderColor: busNumberError ? '#ff5555' : 'rgba(104,249,26,0.25)' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#68f91a', flexShrink: 0 }}>
+                directions_bus
+              </span>
+              <input
+                style={S.textInput}
+                placeholder="e.g. KL-05-AB-1234"
+                value={busNumber}
+                onChange={e => { setBusNumber(e.target.value); setBusNumberError(''); }}
+              />
+            </div>
+            {busNumberError && (
+              <p style={S.errorText}>{busNumberError}</p>
+            )}
+          </div>
+
+          {/* Seat Number */}
+          <div style={S.inputGroup}>
+            <label style={S.inputLabel}>
+              Seat Number <span style={{ color: '#555', fontSize: '0.75rem' }}>(optional)</span>
+            </label>
+            <div style={S.inputWrap}>
+              <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#68f91a', flexShrink: 0 }}>
+                airline_seat_recline_normal
+              </span>
+              <input
+                style={S.textInput}
+                placeholder="e.g. 12A"
+                value={seatNumber}
+                onChange={e => setSeatNumber(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <button style={S.primaryBtn} onClick={handleBusDetailsSubmit}>
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>check_circle</span>
+            Save & Continue
+          </button>
+          <button style={S.ghostBtn} onClick={() => setPhase(PHASES.CONFIRMING)}>
+            ← Back to stop selection
           </button>
         </div>
       </div>
@@ -506,6 +596,42 @@ const S = {
     alignItems: 'center',
     padding: '40px 20px',
     textAlign: 'center',
+  },
+  inputGroup: {
+    width: '100%',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+  },
+  inputLabel: {
+    color: '#ccc',
+    fontSize: '0.85rem',
+    fontWeight: 600,
+  },
+  inputWrap: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    border: '1px solid rgba(104,249,26,0.25)',
+    borderRadius: 12,
+    padding: '0 14px',
+  },
+  textInput: {
+    flex: 1,
+    background: 'none',
+    border: 'none',
+    outline: 'none',
+    color: '#fff',
+    fontSize: '0.95rem',
+    padding: '13px 0',
+    fontFamily: "'Space Grotesk', sans-serif",
+  },
+  errorText: {
+    color: '#ff5555',
+    fontSize: '0.78rem',
+    margin: '2px 0 0',
+    fontWeight: 600,
   },
 };
 

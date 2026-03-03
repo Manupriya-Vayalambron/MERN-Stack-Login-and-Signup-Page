@@ -11,8 +11,55 @@ const Cart = () => {
 
   const isEmpty = cartItems.length === 0;
 
+  const [busStop, setBusStop] = React.useState(null);
+  React.useEffect(() => {
+    try {
+      const saved = localStorage.getItem('yathrika_bus_stop');
+      if (saved) setBusStop(JSON.parse(saved));
+    } catch(_) {}
+  }, []);
+
   return (
     <div className="cart-page-container">
+      <style>{`
+        .cart-delivery-info {
+          background: rgba(104,249,26,0.06);
+          border: 1px solid rgba(104,249,26,0.2);
+          border-radius: 12px;
+          padding: 12px 14px;
+          margin-bottom: 14px;
+          display: flex;
+          flex-direction: column;
+          gap: 5px;
+        }
+        .cart-delivery-info-title {
+          color: #68f91a;
+          font-size: 0.72rem;
+          font-weight: 700;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+          margin: 0;
+        }
+        .cart-delivery-info-value {
+          color: #fff;
+          font-size: 0.9rem;
+          font-weight: 600;
+          margin: 0;
+        }
+        .cart-delivery-info-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          color: #aaa;
+          font-size: 0.82rem;
+          margin: 0;
+        }
+        .cart-delivery-info-highlight {
+          color: #68f91a;
+          font-weight: 700;
+          font-size: 0.85rem;
+        }
+      `}</style>
       <div className="cart-content-wrapper">
         <header className="cart-header">
           <div className="cart-header-inner">
@@ -122,6 +169,28 @@ const Cart = () => {
                 <h2 className="price-details-title">
                   {language === 'en' ? "Price Details" : "പണമടയ്ക്കൽ വിവരങ്ങൾ"}
                 </h2>
+
+                {/* Delivery Info Summary */}
+                {busStop && (
+                  <div className="cart-delivery-info">
+                    <p className="cart-delivery-info-title">
+                      {language === 'en' ? '🚏 Delivery Stop' : '🚏 ഡെലിവറി സ്റ്റോപ്പ്'}
+                    </p>
+                    <p className="cart-delivery-info-value">{busStop.name}</p>
+                    {busStop.busNumber && (
+                      <p className="cart-delivery-info-row">
+                        <span>🚌 {language === 'en' ? 'Bus' : 'ബസ്'}</span>
+                        <span className="cart-delivery-info-highlight">{busStop.busNumber}</span>
+                      </p>
+                    )}
+                    {busStop.seatNumber && (
+                      <p className="cart-delivery-info-row">
+                        <span>💺 {language === 'en' ? 'Seat' : 'സീറ്റ്'}</span>
+                        <span className="cart-delivery-info-highlight">{busStop.seatNumber}</span>
+                      </p>
+                    )}
+                  </div>
+                )}
                 <div className="price-breakdown">
                   <div className="price-line">
                     <p>{language === 'en' ? "Subtotal" : "ഉപതുക"}</p>
