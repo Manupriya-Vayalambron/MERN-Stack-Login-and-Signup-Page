@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../LanguageContext';
 import { useCart } from '../CartContext';
+import teamImage from '../assets/team.jpeg';
 import '../index.css';
 
 const T = {
@@ -40,7 +41,7 @@ const T = {
 // Day-of-week quotes (Sunday = 0 … Saturday = 6)
 const DAY_QUOTES = [
   { day: 'Sunday Vibes 🌞',   quote: "Sunday is the golden clasp that binds together the volume of the week.",      sub: "Rest up. We'll carry the groceries." },
-  { day: 'Monday Mode 💪',    quote: "Monday: the day your motivation is highest and your milk is lowest.",          sub: "Start the week right — we've got you covered." },
+  { day: 'Monday Mode 💪',    quote: "Monday: the day your motivation is highest and your milk is lowest.",          sub: "Start the week right - we've got you covered." },
   { day: 'Taco Tuesday? 🌮',  quote: "Tuesday isn't so bad. It's a sign that you somehow survived Monday.",          sub: "Treat yourself. You made it past the worst day." },
   { day: 'Hump Day 🐪',       quote: "Wednesday: halfway to the weekend, fully in need of snacks.",                  sub: "Keep going. Order something delicious as fuel." },
   { day: 'Almost Friday ✨',  quote: "Thursday: the day you start convincing yourself the weekend is basically here.", sub: "Stock up now. Friday you won't want to wait." },
@@ -55,12 +56,6 @@ const CATEGORIES = [
   { key: 'essentials', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDAhRl5lJ64TTi7H9MLKSiyQ2bR0c5Sh-n5eUTHffpig8vQjF18w0geUoZrRB_O3Mhj6DxcWxgXTeT54N1HjdMbbyfUiCbU6VYwHXi9ZlnYWS8Kd9rZS7nBIzdA61ncSpa1RNDmuxkIaWBlZjOBY5M51SB7AtU6THGwyQaiBxeL42cTTlIQpspAQ6k-GUeYgv-0vZuApEyNzjHVxoJkmREZMKyZgC-_dgakVPGY0425F_47uL5YAIidFAEOKsWo02kFlAccoY3Zl9Q' },
 ];
 
-const ACHIEVEMENTS = [
-  { icon: '🚌', value: '500+',  label: 'Bus Routes Covered'  },
-  { icon: '📦', value: '12K+',  label: 'Orders Delivered'    },
-  { icon: '😊', value: '98%',   label: 'Happy Customers'     },
-  { icon: '⚡', value: '< 20m', label: 'Avg Delivery Time'   },
-];
 
 const YathrikaHome = () => {
   const navigate = useNavigate();
@@ -92,15 +87,18 @@ const YathrikaHome = () => {
 
       {/* ── HEADER ── */}
       <header style={S.header}>
-        <button style={S.cartBtn} onClick={() => navigate('/cart')}>
-          <span className="material-symbols-outlined" style={{ fontSize: 24, color: '#fff' }}>shopping_cart</span>
-          {cartCount > 0 && <span style={S.cartBadge}>{cartCount}</span>}
-        </button>
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <button style={S.cartBtn} onClick={() => navigate('/cart')}>
+            <span className="material-symbols-outlined" style={{ fontSize:24, color:'#fff' }}>shopping_cart</span>
+            {cartCount > 0 && <span style={S.cartBadge}>{cartCount}</span>}
+          </button>
+          <button style={S.signInBtn} onClick={() => navigate('/yathrika-signin')}>
+            <span className="material-symbols-outlined" style={{ fontSize:18, color:'#16230f' }}>person</span>
+            <span style={S.signInLabel}>Sign In</span>
+          </button>
+        </div>
         <h1 style={S.brand}>Yathrika</h1>
-        <button style={S.signInBtn} onClick={() => navigate('/yathrika-signin')}>
-          <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#16230f' }}>person</span>
-          <span style={S.signInLabel}>Sign In</span>
-        </button>
+        <div style={{ width:88 }} />
       </header>
 
       {/* ── DELIVERY STOP BANNER ── */}
@@ -150,7 +148,7 @@ const YathrikaHome = () => {
         <div style={S.shopCtaRow}>
           <Link to="/products" style={S.shopCtaBtn}>
             <span className="material-symbols-outlined" style={{ fontSize: 20 }}>storefront</span>
-            {t.shopNow} — Browse All Products
+            {t.shopNow} - Browse All Products
             <span className="material-symbols-outlined" style={{ fontSize: 18, marginLeft: 'auto' }}>arrow_forward</span>
           </Link>
         </div>
@@ -161,39 +159,94 @@ const YathrikaHome = () => {
           <span style={S.quoteDayBadge}>{todayQuote.day}</span>
           <p style={S.quoteText}>"{todayQuote.quote}"</p>
           <div style={S.quoteDivider} />
-          <p style={S.quoteSub}>— {todayQuote.sub}</p>
+          <p style={S.quoteSub}>- {todayQuote.sub}</p>
         </div>
 
         {/* ── ABOUT US ── */}
         <div style={S.sectionWrap}>
           <span style={S.sectionChip}>Who We Are</span>
           <h2 style={S.sectionHeading}>Kerala's First On-Route{'\n'}Bus Delivery Service</h2>
+
+          {/* Team photo */}
+          <div style={S.teamPhotoWrap}>
+            <img
+              src={teamImage}
+              alt="Yathrika Team"
+              style={S.teamPhoto}
+            />
+            <div style={S.teamPhotoOverlay} />
+          </div>
+
           <p style={S.sectionBody}>
-            Yathrika was born from one simple frustration — why can't your groceries
-            travel the same bus route you do? We bridge the gap between local vendors
-            and commuters across Kerala, delivering goods directly to your bus stop
-            while you're still on the move. No detours. No waiting. Just smart
-            delivery for smart travellers.
+            Yathrika was born from one simple frustration - why can't your groceries
+            travel the same bus route you do? We are a student-led startup from Kerala,
+            bridging the gap between local vendors and commuters by delivering goods
+            directly to your bus stop while you're still on the move. No detours.
+            No waiting. Just smart delivery for smart travellers.
           </p>
           <div style={S.aboutPillRow}>
-            {['Kerala-born 🌴', 'Eco-conscious 🌿', 'Community-first 🤝'].map(p => (
+            {['Kerala-born 🌴', 'Student-led 🎓', 'Community-first 🤝'].map(p => (
               <span key={p} style={S.aboutPill}>{p}</span>
             ))}
           </div>
         </div>
 
-        {/* ── ACHIEVEMENTS ── */}
+        {/* ── OUR JOURNEY ── */}
         <div style={S.sectionWrap}>
-          <span style={S.sectionChip}>By the Numbers</span>
-          <h2 style={S.sectionHeading}>Growing Every Single Day</h2>
-          <div style={S.achieveGrid}>
-            {ACHIEVEMENTS.map(a => (
-              <div key={a.label} style={S.achieveCard}>
-                <span style={S.achieveIcon}>{a.icon}</span>
-                <span style={S.achieveValue}>{a.value}</span>
-                <span style={S.achieveLabel}>{a.label}</span>
+          <span style={S.sectionChip}>Our Journey</span>
+          <h2 style={S.sectionHeading}>From Idea to Impact</h2>
+          <p style={{ ...S.sectionBody, marginBottom: 20 }}>
+            As a student-led project we've been pushing Yathrika from classroom concept
+            to a recognised startup - here's how far we've come.
+          </p>
+
+          {/* Timeline */}
+          <div style={S.timeline}>
+
+            <div style={S.timelineItem}>
+              <div style={S.timelineDot}>🥉</div>
+              <div style={S.timelineContent}>
+                <div style={S.timelineTag}>IEEE AJCE · I.D.E.A Competition</div>
+                <p style={S.timelineTitle}>3rd Prize - Idea Pitching</p>
+                <p style={S.timelineDesc}>
+                  Competed against college teams across Kerala and secured 3rd place
+                  at the I.D.E.A idea pitching competition organised by IEEE AJCE -
+                  our first public validation that Yathrika solves a real problem.
+                </p>
               </div>
-            ))}
+            </div>
+
+            <div style={S.timelineLine} />
+
+            <div style={S.timelineItem}>
+              <div style={S.timelineDot}>🚀</div>
+              <div style={S.timelineContent}>
+                <div style={S.timelineTag}>Samrambhak Mithra Programme</div>
+                <p style={S.timelineTitle}>Selected for IDEA 3.0 Challenge</p>
+                <p style={S.timelineDesc}>
+                  Yathrika was handpicked for the IDEA 3.0 Challenge under the
+                  Samrambhak Mithra entrepreneurship programme - giving us access
+                  to mentorship, resources and a structured path toward building
+                  a real business.
+                </p>
+              </div>
+            </div>
+
+            <div style={S.timelineLine} />
+
+            <div style={S.timelineItem}>
+              <div style={S.timelineDot}>💡</div>
+              <div style={S.timelineContent}>
+                <div style={S.timelineTag}>KSUM · Kerala Startup Mission</div>
+                <p style={S.timelineTitle}>WE Pitch to WE Start Programme</p>
+                <p style={S.timelineDesc}>
+                  Participated in the WE Pitch to WE Start programme by Kerala Startup
+                  Mission (KSUM) - connecting with investors, industry experts and
+                  fellow student founders across the state.
+                </p>
+              </div>
+            </div>
+
           </div>
         </div>
 
@@ -204,10 +257,10 @@ const YathrikaHome = () => {
             <span style={S.partnerBadge}>NOW HIRING</span>
             <span className="material-symbols-outlined" style={{ color: '#68f91a', fontSize: 20 }}>open_in_new</span>
           </div>
-          <h2 style={S.partnerHeading}>Ride. Deliver. Earn. 🛵</h2>
+          <h2 style={S.partnerHeading}>Ride. Deliver. Earn. </h2>
           <p style={S.partnerBody}>
             Already on a bus route? Turn your daily commute into a side income.
-            Join Yathrika as a Delivery Partner — flexible hours, honest pay, real impact
+            Join Yathrika as a Delivery Partner - flexible hours, honest pay, real impact
             in your local community.
           </p>
           <div style={S.partnerFeatureRow}>
@@ -314,7 +367,23 @@ const S = {
   aboutPillRow:     { display: 'flex', flexWrap: 'wrap', gap: 8 },
   aboutPill:        { backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(104,249,26,0.15)', borderRadius: 20, color: '#ccc', fontSize: '0.76rem', fontWeight: 600, padding: '5px 14px' },
 
-  /* Achievements */
+  /* Team photo */
+  teamPhotoWrap:    { position: 'relative', borderRadius: 14, overflow: 'hidden', marginBottom: 16, height: 160 },
+  teamPhoto:        { width: '100%', height: '100%', objectFit: 'cover', display: 'block' },
+  teamPhotoOverlay: { position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(22,35,15,0.7) 0%, transparent 60%)' },
+  teamPhotoCaption: { position: 'absolute', bottom: 10, left: 14, color: '#fff', fontSize: '0.8rem', fontWeight: 700 },
+
+  /* Journey timeline */
+  timeline:         { display: 'flex', flexDirection: 'column' },
+  timelineItem:     { display: 'flex', gap: 14, alignItems: 'flex-start' },
+  timelineDot:      { width: 38, height: 38, borderRadius: '50%', backgroundColor: 'rgba(104,249,26,0.12)', border: '1px solid rgba(104,249,26,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0, marginTop: 2 },
+  timelineContent:  { flex: 1, paddingBottom: 4 },
+  timelineTag:      { color: '#68f91a', fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 4 },
+  timelineTitle:    { color: '#fff', fontSize: '0.92rem', fontWeight: 700, margin: '0 0 5px' },
+  timelineDesc:     { color: '#888', fontSize: '0.8rem', lineHeight: 1.6, margin: 0 },
+  timelineLine:     { width: 1, height: 20, backgroundColor: 'rgba(104,249,26,0.2)', margin: '8px 0 8px 18px' },
+
+  /* Achievements - kept in case used elsewhere */
   achieveGrid:      { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 6 },
   achieveCard:      { backgroundColor: 'rgba(104,249,26,0.05)', border: '1px solid rgba(104,249,26,0.14)', borderRadius: 14, padding: '16px 12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 },
   achieveIcon:      { fontSize: '1.6rem', lineHeight: 1 },
