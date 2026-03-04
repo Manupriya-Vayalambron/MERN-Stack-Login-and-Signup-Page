@@ -107,15 +107,24 @@ const Tracking = () => {
   const cancelRef   = useRef(null);
   const deliveryRef = useRef(null);
 
-  // Load order data from localStorage
+  // Load order data — always use yathrika_current_order which has the real orderId
   useEffect(() => {
     try {
       const saved = localStorage.getItem('yathrika_current_order');
-      if (saved) { setOrderData(JSON.parse(saved)); return; }
+      if (saved) {
+        const order = JSON.parse(saved);
+        // Merge busStop from dedicated key if not present in order
+        if (!order.busStop) {
+          order.busStop = JSON.parse(localStorage.getItem('yathrika_bus_stop') || 'null');
+        }
+        setOrderData(order);
+        return;
+      }
+      // Fallback: build from cart (user navigated here without completing payment)
       const busStop   = JSON.parse(localStorage.getItem('yathrika_bus_stop') || 'null');
       const cartItems = JSON.parse(localStorage.getItem('yathrika_cart') || '[]');
       const subtotal  = cartItems.reduce((s, i) => s + i.price * i.quantity, 0);
-      setOrderData({ orderId: 'ORD' + Date.now().toString().slice(-8), paymentId: null, amount: subtotal + 40 - 20, cartItems, paymentMethod: 'upi', busStop });
+      setOrderData({ orderId: null, paymentId: null, amount: subtotal + 40 - 20, cartItems, paymentMethod: 'upi', busStop });
     } catch (_) {}
   }, []);
 
@@ -208,19 +217,24 @@ const Tracking = () => {
 
   // ← This is where partner acceptance unlocks the tracking UI
   const onPartnerStatus = (data) => {
-    if (data.orderId !== orderData?.orderId) return;
+    // Accept if orderId matches OR if we have no orderId yet (edge case)
+    if (orderData?.orderId && data.orderId && data.orderId !== orderData.orderId) return;
     clearInterval(cancelRef.current);
     setAssignedPartner(data.partner);
     setPartnerAccepted(true);
     setOrderStatus('confirmed');
-    toast({ type: 'success', message: `${t.partnerAssigned} ${data.partner.name}` });
+    toast({ type: 'success', message: `${t.partnerAssigned} ${data.partner?.name || 'Partner'}` });
   };
 
   const onOrderStatus = (data) => {
-    if (data.orderId !== orderData?.orderId) return;
+    if (orderData?.orderId && data.orderId && data.orderId !== orderData.orderId) return;
     setOrderStatus(data.status);
     const m = { confirmed: t.msgConfirmed, packed: t.msgPacked, partner_at_stop: t.msgPartnerStop, handover: t.msgHandover };
     toast({ type: data.status === 'handover' ? 'success' : 'info', message: m[data.status] || data.status });
+    // Clear stored order after successful handover
+    if (data.status === 'handover') {
+      setTimeout(() => localStorage.removeItem('yathrika_current_order'), 3000);
+    }
   };
 
   const toast = (n) => {

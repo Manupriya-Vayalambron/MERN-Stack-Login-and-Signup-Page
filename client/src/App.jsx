@@ -18,7 +18,6 @@ import Settings from './pages/Settings';
 import UserProfile from './pages/UserProfile';
 import Support from './pages/Support';
 import Tracking from './pages/Tracking';
-import Vendors from './pages/Vendors';
 import RoutesPage from './pages/Routes';
 import Splash from './pages/Splash';
 import UserTypeSelection from './pages/UserTypeSelection';
@@ -91,7 +90,6 @@ function App() {
 
                 <Route path="/tracking" element={<Tracking />} />
                 <Route path="/support" element={<Support />} />
-                <Route path="/vendors" element={<Vendors />} />
                 <Route path="/routes" element={<RoutesPage />} />
                 <Route path="/splash" element={<Splash />} />
 

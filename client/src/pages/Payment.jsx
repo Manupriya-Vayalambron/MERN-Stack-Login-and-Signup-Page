@@ -122,13 +122,27 @@ const Payment = () => {
             const verifyData = await verifyRes.json();
 
             if (verifyData.success) {
-              // ── Console log for Step 1 (before DB integration) ─────────
               console.log('\n✅ PAYMENT SUCCESS (frontend)');
               console.log('   Payment ID :', response.razorpay_payment_id);
               console.log('   Order ID   :', response.razorpay_order_id);
               console.log('   Amount     : ₹' + totalAmount);
               console.log('   Items      :', cartItems.map(i => `${i.name} x${i.quantity}`));
               console.log('   Timestamp  :', new Date().toISOString());
+
+              // ── Save order to localStorage so Tracking.jsx uses the REAL orderId ──
+              const busStopData = (() => { try { return JSON.parse(localStorage.getItem('yathrika_bus_stop') || 'null'); } catch { return null; } })();
+              const currentOrder = {
+                orderId:     verifyData.customOrderId,
+                razorpayOrderId: response.razorpay_order_id,
+                paymentId:   response.razorpay_payment_id,
+                amount:      totalAmount,
+                cartItems,
+                paymentMethod: selectedMethod,
+                busStop:     busStopData,
+                userId:      user?.phoneNumber || 'guest',
+                createdAt:   new Date().toISOString(),
+              };
+              localStorage.setItem('yathrika_current_order', JSON.stringify(currentOrder));
 
               setPaymentState('success');
               setTimeout(() => navigate('/order-summary', {

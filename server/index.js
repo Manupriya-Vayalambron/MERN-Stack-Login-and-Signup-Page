@@ -565,9 +565,11 @@ app.post('/api/orders/:orderId/accept', (req, res) => {
     pendingOrdersByStop.set(busStop, orders.filter(o => o.orderId !== orderId));
     // Tell all partners at stop: this order is gone
     io.to(`partners_${busStop}`).emit('order_update', { type: 'order_accepted', orderId, acceptedBy: partnerInfo?.partnerId });
-    // Tell user's tracking room: partner assigned
+    // Tell user's tracking room: partner assigned (this is the key real-time event)
     io.to(`order_${orderId}`).emit('partner_status_update', { orderId, partner: partnerInfo });
-    console.log(`✅ Order ${orderId} accepted by partner ${partnerInfo?.partnerId}`);
+    // Also emit first status update so tracking progress bar moves
+    io.to(`order_${orderId}`).emit('order_status_updated', { orderId, status: 'confirmed' });
+    console.log(`✅ Order ${orderId} accepted by partner ${partnerInfo?.partnerId} — emitted to room order_${orderId}`);
     res.json({ success: true, order });
 });
 
@@ -826,29 +828,27 @@ io.on('connection', (socket) => {
 
     // Handle order acceptance by delivery partners
     socket.on('order_accepted', (data) => {
-        const { orderId, busStop } = data;
+        const { orderId, busStop, partnerInfo } = data;
         const partnerRoomName = `partners_${busStop}`;
         const orderRoomName = `order_${orderId}`;
         
-        // Notify other partners that order was accepted
+        // Notify other partners that order is taken
         socket.to(partnerRoomName).emit('order_update', {
             type: 'order_accepted',
             orderId,
             acceptedBy: socket.partnerId
         });
 
-        // Notify the user that a partner was assigned
-        io.to(orderRoomName).emit('partner_status_update', {
-            orderId,
-            partner: {
-                id: socket.partnerId,
-                name: socket.userData?.name || 'Delivery Partner',
-                phone: socket.userData?.phone || '+91 9876543210',
-                vehicleType: socket.userData?.vehicleType || 'Bike'
-            }
-        });
+        // Notify the user's tracking room — partner has been assigned
+        const partner = partnerInfo || {
+            partnerId:   socket.partnerId,
+            name:        socket.userData?.name || 'Delivery Partner',
+            phone:       socket.userData?.phone || '',
+            vehicleType: socket.userData?.vehicleType || 'Bike',
+        };
+        io.to(orderRoomName).emit('partner_status_update', { orderId, partner });
 
-        console.log(`Order ${orderId} accepted by partner ${socket.partnerId}`);
+        console.log(`✅ Order ${orderId} accepted — notified room order_${orderId}`);
     });
 
     // Handle order status updates from delivery partners
@@ -1144,6 +1144,7 @@ app.post('/api/payment/verify', async (req, res) => {
                         
                         // ── Broadcast new order to delivery partners at the bus stop ──
                         const busStop = req.body.busStop;
+                        if (!busStop) console.warn('⚠️  No busStop in payment/verify body — order will NOT be visible to partners');
                         if (busStop) {
                             const orderForPartners = {
                                 orderId:       customOrderId,
@@ -1166,7 +1167,7 @@ app.post('/api/payment/verify', async (req, res) => {
                                 type: 'new_order',
                                 order: orderForPartners
                             });
-                            console.log(`📦 New order broadcasted to partners at ${busStop}`);
+                            console.log(`📦 New order broadcasted to partners at ${busStop} | orderId: ${customOrderId} | room: partners_${busStop}`);
                         }
                     }
                 } catch (userError) {
