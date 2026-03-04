@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth } from '../firebase';
 import { RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth';
@@ -17,61 +17,183 @@ const YathrikaSignin = () => {
   const { language } = useLanguage();
   const { signIn } = useUser();
 
+  // Cleanup effect for reCAPTCHA
+  useEffect(() => {
+    return () => {
+      // Cleanup reCAPTCHA when component unmounts
+      if (window.recaptchaVerifier) {
+        try {
+          window.recaptchaVerifier.clear();
+        } catch (error) {
+          console.log('Error clearing reCAPTCHA on unmount:', error);
+        }
+        window.recaptchaVerifier = null;
+      }
+    };
+  }, []);
+
   // Setup reCAPTCHA - create fresh each time
-  const setupRecaptcha = () => {
+  const setupRecaptcha = (useVisible = false) => {
+    // Clear any existing reCAPTCHA
     if (window.recaptchaVerifier) {
-      window.recaptchaVerifier.clear();
+      try {
+        window.recaptchaVerifier.clear();
+      } catch (error) {
+        console.log('Error clearing reCAPTCHA:', error);
+      }
       window.recaptchaVerifier = null;
     }
     
-    window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-      size: 'normal', // Changed to normal for better debugging
-      callback: (response) => {
-        console.log('reCAPTCHA verified', response);
-      },
-      'expired-callback': () => {
-        console.log('reCAPTCHA expired');
-        window.recaptchaVerifier = null;
-      }
-    });
+    // Clear the container
+    const container = document.getElementById('recaptcha-container');
+    if (container) {
+      container.innerHTML = '';
+    }
     
-    return window.recaptchaVerifier.render();
+    try {
+      const recaptchaConfig = {
+        callback: (response) => {
+          console.log('reCAPTCHA verified successfully');
+        },
+        'expired-callback': () => {
+          console.log('reCAPTCHA expired, please try again');
+          setError('reCAPTCHA expired. Please try again.');
+          if (window.recaptchaVerifier) {
+            window.recaptchaVerifier.clear();
+            window.recaptchaVerifier = null;
+          }
+        },
+        'error-callback': (error) => {
+          console.error('reCAPTCHA error:', error);
+          setError('reCAPTCHA verification failed. Please refresh and try again.');
+        }
+      };
+
+      // Use visible reCAPTCHA as fallback if invisible fails
+      if (useVisible) {
+        recaptchaConfig.size = 'normal';
+      } else {
+        recaptchaConfig.size = 'invisible';
+      }
+
+      console.log(`Setting up ${useVisible ? 'visible' : 'invisible'} reCAPTCHA...`);
+      
+      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', recaptchaConfig);
+      
+      return window.recaptchaVerifier;
+    } catch (error) {
+      console.error('Error setting up reCAPTCHA:', error);
+      setError('Failed to initialize reCAPTCHA. Please refresh the page.');
+      return null;
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     
-    if (phoneNumber.length < 10) {
+    // Validate phone number
+    if (!phoneNumber || phoneNumber.length !== 10) {
       setError('Please enter a valid 10-digit phone number');
+      return;
+    }
+
+    // Check if phone number is all zeros or invalid patterns
+    if (/^0+$/.test(phoneNumber) || !/^[6-9]\d{9}$/.test(phoneNumber)) {
+      setError('Please enter a valid Indian mobile number');
       return;
     }
 
     setLoading(true);
 
     try {
-      // Setup fresh reCAPTCHA and wait for it to render
-      await setupRecaptcha();
+      console.log('Setting up reCAPTCHA...');
+      
+      // First try invisible reCAPTCHA
+      let recaptchaVerifier = setupRecaptcha(false); // invisible
+      if (!recaptchaVerifier) {
+        throw new Error('Failed to initialize reCAPTCHA');
+      }
       
       // Format with country code (+91 for India)
       const formattedPhone = '+91' + phoneNumber;
+      console.log('Sending OTP to:', formattedPhone);
       
-      // Send OTP via Firebase
-      const confirmation = await signInWithPhoneNumber(
-        auth, 
-        formattedPhone, 
-        window.recaptchaVerifier
-      );
-      
-      setConfirmationResult(confirmation);
-      setShowOtpModal(true);
-      setError('');
+      try {
+        // Send OTP via Firebase
+        const confirmation = await signInWithPhoneNumber(
+          auth, 
+          formattedPhone, 
+          window.recaptchaVerifier
+        );
+        
+        console.log('OTP sent successfully');
+        setConfirmationResult(confirmation);
+        setShowOtpModal(true);
+        setError('');
+      } catch (otpError) {
+        // If invisible reCAPTCHA fails, try visible reCAPTCHA as fallback
+        if (otpError.code === 'auth/captcha-check-failed' || 
+            otpError.message.includes('reCAPTCHA')) {
+          
+          console.log('Invisible reCAPTCHA failed, trying visible reCAPTCHA...');
+          
+          recaptchaVerifier = setupRecaptcha(true); // visible
+          if (!recaptchaVerifier) {
+            throw new Error('Failed to initialize visible reCAPTCHA');
+          }
+          
+          // Update container to show visible reCAPTCHA
+          const container = document.getElementById('recaptcha-container');
+          if (container) {
+            container.style.opacity = '1';
+            container.style.position = 'relative';
+            container.style.top = '0';
+            container.style.marginTop = '10px';
+          }
+          
+          // Try sending OTP again with visible reCAPTCHA
+          const confirmation = await signInWithPhoneNumber(
+            auth, 
+            formattedPhone, 
+            window.recaptchaVerifier
+          );
+          
+          console.log('OTP sent successfully with visible reCAPTCHA');
+          setConfirmationResult(confirmation);
+          setShowOtpModal(true);
+          setError('');
+        } else {
+          throw otpError; // Re-throw if it's not a reCAPTCHA issue
+        }
+      }
     } catch (err) {
       console.error('Error sending OTP:', err);
-      setError(err.message || 'Failed to send OTP. Please try again.');
+      
+      // Handle specific Firebase errors
+      let errorMessage = 'Failed to send OTP. Please try again.';
+      
+      if (err.code === 'auth/invalid-phone-number') {
+        errorMessage = 'Invalid phone number format';
+      } else if (err.code === 'auth/too-many-requests') {
+        errorMessage = 'Too many attempts. Please try again later';
+      } else if (err.code === 'auth/captcha-check-failed') {
+        errorMessage = 'reCAPTCHA verification failed. Please complete the reCAPTCHA and try again';
+      } else if (err.code === 'auth/web-storage-unsupported') {
+        errorMessage = 'Please enable cookies and try again';
+      } else if (err.message.includes('reCAPTCHA')) {
+        errorMessage = 'reCAPTCHA verification failed. Please refresh and try again';
+      }
+      
+      setError(errorMessage);
+      
       // Clear reCAPTCHA on error
       if (window.recaptchaVerifier) {
-        window.recaptchaVerifier.clear();
+        try {
+          window.recaptchaVerifier.clear();
+        } catch (clearError) {
+          console.log('Error clearing reCAPTCHA:', clearError);
+        }
         window.recaptchaVerifier = null;
       }
     } finally {
@@ -152,17 +274,43 @@ const YathrikaSignin = () => {
     setError('');
 
     try {
+      // Setup fresh reCAPTCHA for resend
+      const recaptchaVerifier = setupRecaptcha();
+      if (!recaptchaVerifier) {
+        throw new Error('Failed to initialize reCAPTCHA for resend');
+      }
+      
       const formattedPhone = '+91' + phoneNumber;
       const confirmation = await signInWithPhoneNumber(
         auth, 
         formattedPhone, 
         window.recaptchaVerifier
       );
+      
       setConfirmationResult(confirmation);
-      alert('New OTP sent successfully!');
+      // Use a better notification instead of alert
+      setError('');
+      // You could also show a success message here instead
+      console.log('New OTP sent successfully!');
     } catch (err) {
       console.error('Error resending OTP:', err);
-      setError('Failed to resend OTP. Please try again.');
+      
+      let errorMessage = 'Failed to resend OTP. Please try again.';
+      if (err.code === 'auth/too-many-requests') {
+        errorMessage = 'Too many resend attempts. Please wait before trying again.';
+      }
+      
+      setError(errorMessage);
+      
+      // Clear reCAPTCHA on error
+      if (window.recaptchaVerifier) {
+        try {
+          window.recaptchaVerifier.clear();
+        } catch (clearError) {
+          console.log('Error clearing reCAPTCHA:', clearError);
+        }
+        window.recaptchaVerifier = null;
+      }
     } finally {
       setLoading(false);
     }
@@ -193,29 +341,57 @@ const YathrikaSignin = () => {
 
           <form className="signin-form" onSubmit={handleSubmit}>
             <div className="signin-input-container">
-              <input 
-                className="signin-phone-input" 
-                placeholder={language === 'en' ? "Phone Number" : "ഫോൺ നമ്പർ"} 
-                type="tel"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
-                maxLength={10}
-              />
+              <div style={{ position: 'relative' }}>
+                <span style={{ 
+                  position: 'absolute', 
+                  left: '12px', 
+                  top: '50%', 
+                  transform: 'translateY(-50%)', 
+                  color: '#68f91a',
+                  fontSize: '16px',
+                  fontWeight: '500'
+                }}>
+                  +91
+                </span>
+                <input 
+                  className="signin-phone-input" 
+                  placeholder={language === 'en' ? "Phone Number" : "ഫോൺ നമ്പർ"} 
+                  type="tel"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
+                  maxLength={10}
+                  style={{ paddingLeft: '50px' }}
+                  autoComplete="tel"
+                />
+              </div>
             </div>
             {error && !showOtpModal && (
-              <p style={{ color: '#ef4444', fontSize: '14px', marginBottom: '10px' }}>{error}</p>
+              <p style={{ color: '#ef4444', fontSize: '14px', marginBottom: '10px', textAlign: 'center' }}>{error}</p>
             )}
             <button 
               className="signin-continue-button" 
               type="submit"
-              disabled={loading}
-              style={{ opacity: loading ? 0.7 : 1 }}
+              disabled={loading || phoneNumber.length !== 10}
+              style={{ 
+                opacity: (loading || phoneNumber.length !== 10) ? 0.7 : 1,
+                cursor: (loading || phoneNumber.length !== 10) ? 'not-allowed' : 'pointer'
+              }}
             >
               {loading ? 'Sending OTP...' : 'Continue'}
             </button>
           </form>
-          {/* Invisible reCAPTCHA container */}
-          <div id="recaptcha-container"></div>
+          {/* reCAPTCHA container - starts invisible, becomes visible if needed */}
+          <div id="recaptcha-container" 
+               style={{ 
+                 opacity: 0, 
+                 position: 'absolute', 
+                 top: '-9999px',
+                 transition: 'all 0.3s ease',
+                 display: 'flex',
+                 justifyContent: 'center',
+                 marginTop: '10px'
+               }}>
+          </div>
         </div>
       </main>
 
