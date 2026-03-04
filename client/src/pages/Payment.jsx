@@ -4,6 +4,10 @@ import { useCart } from '../CartContext';
 import { useUser } from '../UserContext';
 import '../index.css';
 
+// ─── Backend API base URL ──────────────────────────────────────────────────────
+// Reads from Vite env var; falls back to same origin (works on Render + yathrika.in)
+const API_BASE = import.meta.env.VITE_API_URL?.replace(/\/$/, '') || '';
+
 // ─── Load Razorpay checkout script dynamically ────────────────────────────────
 const loadRazorpay = () =>
   new Promise((resolve) => {
@@ -49,7 +53,7 @@ const Payment = () => {
 
     try {
       // 2. Create order on your backend
-      const orderRes = await fetch('http://localhost:3001/api/payment/create-order', {
+      const orderRes = await fetch(`${API_BASE}/api/payment/create-order`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -98,7 +102,7 @@ const Payment = () => {
         // ── Success handler ───────────────────────────────────────────────
         handler: async (response) => {
           try {
-            const verifyRes = await fetch('http://localhost:3001/api/payment/verify', {
+            const verifyRes = await fetch(`${API_BASE}/api/payment/verify`, {
               method:  'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -157,7 +161,7 @@ const Payment = () => {
             console.log('   Timestamp :', new Date().toISOString());
 
             // Notify backend
-            await fetch('http://localhost:3001/api/payment/failed', {
+            await fetch(`${API_BASE}/api/payment/failed`, {
               method:  'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -211,7 +215,7 @@ const Payment = () => {
         console.log('   Timestamp  :', new Date().toISOString());
 
         // Notify backend
-        await fetch('http://localhost:3001/api/payment/failed', {
+        await fetch(`${API_BASE}/api/payment/failed`, {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
