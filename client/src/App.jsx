@@ -20,7 +20,6 @@ import Support from './pages/Support';
 import Tracking from './pages/Tracking';
 import RoutesPage from './pages/Routes';
 import Splash from './pages/Splash';
-import UserTypeSelection from './pages/UserTypeSelection';
 import DeliveryPartner from './pages/DeliveryPartner';
 import DeliveryPartnerAuth from './pages/DeliveryPartnerAuth';
 import DeliveryPartnerDashboard from './pages/DeliveryPartnerDashboard';
@@ -93,7 +92,6 @@ function App() {
                 <Route path="/routes" element={<RoutesPage />} />
                 <Route path="/splash" element={<Splash />} />
 
-                <Route path="/user-type-selection" element={<UserTypeSelection />} />
                 <Route path="/delivery-partner" element={<DeliveryPartner />} />
                 <Route path="/delivery-partner-auth" element={<DeliveryPartnerAuth />} />
                 <Route path="/delivery-partner-dashboard" element={<DeliveryPartnerDashboard />} />
