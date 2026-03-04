@@ -304,6 +304,13 @@ app.patch('/api/admin/delivery-partners/:id/approve', async (req, res) => {
             return res.status(404).json({ message: 'Partner not found' });
         }
 
+        // Emit real-time approval event so pending screen updates instantly
+        io.to(`partner_approval_${id}`).emit('approval_status_changed', {
+            partnerId: id,
+            approvalStatus: 'approved',
+            partner
+        });
+
         res.json({
             message: 'Partner approved successfully',
             partner
@@ -365,14 +372,15 @@ const crypto = require('crypto');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-    cors: {
-        origin: process.env.CLIENT_URL || "http://localhost:5173",
-        methods: ["GET", "POST"]
-    }
+    cors: { origin: '*', methods: ["GET", "POST", "PATCH"] }
 });
 
 app.use(express.json());
-app.use(cors());
+app.use(cors({ origin: '*' }));
+
+// In-memory store: orders pending partner acceptance
+// Key: busStop string  ->  Value: array of order objects
+const pendingOrdersByStop = new Map();
 
 // -------------------- Razorpay Instance --------------------
 const razorpay = new Razorpay({
@@ -405,6 +413,150 @@ mongoose.connect(mongoURI, {
 mongoose.connection.on('connected', () => console.log('Mongoose connected to MongoDB'));
 mongoose.connection.on('error', (err) => console.error('Mongoose connection error:', err));
 mongoose.connection.on('disconnected', () => console.log('Mongoose disconnected from MongoDB'));
+
+// -------------------- Delivery Partner Auth Routes --------------------
+
+app.post('/api/delivery-partner/register', async (req, res) => {
+    try {
+        const { name, email, phone, password, assignedBusStop, assignedBusStopCoords, licenseNumber, vehicleType } = req.body;
+        const existing = await DeliveryPartnerModel.findOne({ email });
+        if (existing) return res.status(400).json({ message: 'Partner with this email already exists' });
+        const partner = await new DeliveryPartnerModel({
+            name, email, phone, password, assignedBusStop,
+            assignedBusStopCoords: assignedBusStopCoords || null,
+            licenseNumber, vehicleType
+        }).save();
+        const token = `partner_${partner._id}_${Date.now()}`;
+        const resp = partner.toObject(); delete resp.password;
+        console.log('✅ Partner registered:', partner.email);
+        res.status(201).json({ message: 'Partner registered successfully', partner: resp, token });
+    } catch (err) {
+        res.status(500).json({ message: 'Registration failed', error: err.message });
+    }
+});
+
+app.post('/api/delivery-partner/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        const partner = await DeliveryPartnerModel.findOne({ email });
+        if (!partner || partner.password !== password)
+            return res.status(401).json({ message: 'Invalid email or password' });
+        if (!partner.isActive)
+            return res.status(403).json({ message: 'Account deactivated. Contact support.' });
+        partner.lastLoginDate = new Date();
+        await partner.save();
+        const token = `partner_${partner._id}_${Date.now()}`;
+        const resp = partner.toObject(); delete resp.password;
+        res.json({ message: 'Login successful', partner: resp, token });
+    } catch (err) {
+        res.status(500).json({ message: 'Login failed', error: err.message });
+    }
+});
+
+// Single partner status check (pending screen polls this)
+app.get('/api/delivery-partner/:id/status', async (req, res) => {
+    try {
+        const partner = await DeliveryPartnerModel.findById(req.params.id).select('-password');
+        if (!partner) return res.status(404).json({ message: 'Partner not found' });
+        res.json({ approvalStatus: partner.approvalStatus, rejectReason: partner.rejectReason, partner });
+    } catch (err) {
+        res.status(500).json({ message: 'Failed to get status', error: err.message });
+    }
+});
+
+app.patch('/api/delivery-partner/:id/availability', async (req, res) => {
+    try {
+        const partner = await DeliveryPartnerModel.findByIdAndUpdate(
+            req.params.id, { isOnline: req.body.isOnline }, { new: true }
+        ).select('-password');
+        if (!partner) return res.status(404).json({ message: 'Partner not found' });
+        res.json({ message: `Partner is now ${req.body.isOnline ? 'online' : 'offline'}`, partner });
+    } catch (err) {
+        res.status(500).json({ message: 'Failed to update availability', error: err.message });
+    }
+});
+
+// -------------------- Admin Delivery Partner Routes --------------------
+
+app.get('/api/admin/delivery-partners', async (req, res) => {
+    try {
+        const partners = await DeliveryPartnerModel.find({}).select('-password');
+        res.json(partners);
+    } catch (err) {
+        res.status(500).json({ message: 'Failed to fetch partners', error: err.message });
+    }
+});
+
+app.get('/api/admin/delivery-partners/pending', async (req, res) => {
+    try {
+        const partners = await DeliveryPartnerModel.find({ approvalStatus: 'pending' }).select('-password');
+        res.json(partners);
+    } catch (err) {
+        res.status(500).json({ message: 'Failed to fetch pending partners', error: err.message });
+    }
+});
+
+app.patch('/api/admin/delivery-partners/:id/approve', async (req, res) => {
+    try {
+        const partner = await DeliveryPartnerModel.findByIdAndUpdate(
+            req.params.id,
+            { approvalStatus: 'approved', isActive: true, approvedAt: new Date(), approvedBy: 'admin' },
+            { new: true }
+        ).select('-password');
+        if (!partner) return res.status(404).json({ message: 'Partner not found' });
+        // Real-time: notify partner's pending screen instantly
+        io.to(`partner_approval_${req.params.id}`).emit('approval_status_changed', {
+            partnerId: req.params.id, approvalStatus: 'approved', partner
+        });
+        res.json({ message: 'Partner approved successfully', partner });
+    } catch (err) {
+        res.status(500).json({ message: 'Failed to approve partner', error: err.message });
+    }
+});
+
+app.patch('/api/admin/delivery-partners/:id/reject', async (req, res) => {
+    try {
+        const { rejectReason } = req.body;
+        const partner = await DeliveryPartnerModel.findByIdAndUpdate(
+            req.params.id,
+            { approvalStatus: 'rejected', isActive: false, rejectedAt: new Date(), rejectReason: rejectReason || 'No reason provided' },
+            { new: true }
+        ).select('-password');
+        if (!partner) return res.status(404).json({ message: 'Partner not found' });
+        // Real-time: notify partner's pending screen instantly
+        io.to(`partner_approval_${req.params.id}`).emit('approval_status_changed', {
+            partnerId: req.params.id, approvalStatus: 'rejected',
+            rejectReason: rejectReason || 'No reason provided', partner
+        });
+        res.json({ message: 'Partner rejected successfully', partner });
+    } catch (err) {
+        res.status(500).json({ message: 'Failed to reject partner', error: err.message });
+    }
+});
+
+// -------------------- Order Routes for Partners --------------------
+
+// Get pending (unaccepted) orders at a bus stop
+app.get('/api/orders/pending/:busStop', (req, res) => {
+    const orders = pendingOrdersByStop.get(req.params.busStop) || [];
+    res.json({ orders });
+});
+
+// Partner accepts an order
+app.post('/api/orders/:orderId/accept', (req, res) => {
+    const { orderId } = req.params;
+    const { busStop, partnerInfo } = req.body;
+    const orders = pendingOrdersByStop.get(busStop) || [];
+    const order = orders.find(o => o.orderId === orderId);
+    if (!order) return res.status(404).json({ message: 'Order not found or already accepted' });
+    pendingOrdersByStop.set(busStop, orders.filter(o => o.orderId !== orderId));
+    // Tell all partners at stop: this order is gone
+    io.to(`partners_${busStop}`).emit('order_update', { type: 'order_accepted', orderId, acceptedBy: partnerInfo?.partnerId });
+    // Tell user's tracking room: partner assigned
+    io.to(`order_${orderId}`).emit('partner_status_update', { orderId, partner: partnerInfo });
+    console.log(`✅ Order ${orderId} accepted by partner ${partnerInfo?.partnerId}`);
+    res.json({ success: true, order });
+});
 
 // -------------------- Location Tracking API Routes --------------------
 
@@ -646,12 +798,17 @@ io.on('connection', (socket) => {
     socket.on('join_partner_room', (data) => {
         const { busStop, partnerId } = data;
         const partnerRoomName = `partners_${busStop}`;
-        
         socket.join(partnerRoomName);
         socket.partnerBusStop = busStop;
         socket.partnerId = partnerId;
-        
         console.log(`Partner ${partnerId} joined room: ${busStop}`);
+    });
+
+    // Partner pending screen subscribes to their approval room
+    socket.on('watch_approval', (data) => {
+        const { partnerId } = data;
+        socket.join(`partner_approval_${partnerId}`);
+        console.log(`Socket ${socket.id} watching approval for partner ${partnerId}`);
     });
 
     // Handle order acceptance by delivery partners
@@ -971,6 +1128,33 @@ app.post('/api/payment/verify', async (req, res) => {
                         });
                         await user.save();
                         console.log(`✅ Order ${customOrderId} saved for user ${phoneNumber}`);
+                        
+                        // ── Broadcast new order to delivery partners at the bus stop ──
+                        const busStop = req.body.busStop;
+                        if (busStop) {
+                            const orderForPartners = {
+                                orderId:       customOrderId,
+                                razorpayOrderId: razorpay_order_id,
+                                userId:        user.phoneNumber,
+                                userName:      user.name || 'Customer',
+                                userPhone:     user.phoneNumber,
+                                items:         cartItems,
+                                total:         totalAmount,
+                                busStop,
+                                status:        'confirmed',
+                                pickupReward:  Math.round(totalAmount * 0.1),
+                                createdAt:     new Date().toISOString(),
+                            };
+                            // Store in memory pool
+                            if (!pendingOrdersByStop.has(busStop)) pendingOrdersByStop.set(busStop, []);
+                            pendingOrdersByStop.get(busStop).push(orderForPartners);
+                            // Push to all online partners at this stop via socket
+                            io.to(`partners_${busStop}`).emit('order_update', {
+                                type: 'new_order',
+                                order: orderForPartners
+                            });
+                            console.log(`📦 New order broadcasted to partners at ${busStop}`);
+                        }
                     }
                 } catch (userError) {
                     console.error('Error saving order to user:', userError);

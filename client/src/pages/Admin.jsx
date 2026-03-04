@@ -8,13 +8,13 @@ const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day:'numeri
 
 // API helper functions
 const fetchAllPartners = async () => {
-  const response = await fetch('http://localhost:3001/api/admin/delivery-partners');
+  const response = await fetch('/api/admin/delivery-partners');
   if (!response.ok) throw new Error('Failed to fetch partners');
   return response.json();
 };
 
 const approvePartner = async (id) => {
-  const response = await fetch(`http://localhost:3001/api/admin/delivery-partners/${id}/approve`, {
+  const response = await fetch(`/api/admin/delivery-partners/${id}/approve`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' }
   });
@@ -23,7 +23,7 @@ const approvePartner = async (id) => {
 };
 
 const rejectPartner = async (id, rejectReason) => {
-  const response = await fetch(`http://localhost:3001/api/admin/delivery-partners/${id}/reject`, {
+  const response = await fetch(`/api/admin/delivery-partners/${id}/reject`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ rejectReason })

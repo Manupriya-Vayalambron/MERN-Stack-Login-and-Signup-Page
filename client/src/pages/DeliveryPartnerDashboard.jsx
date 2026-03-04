@@ -9,12 +9,17 @@ import '../index.css';
 const fmt = (n) => typeof n === 'number' ? n.toLocaleString('en-IN') : '0';
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' }) : '—';
 
-// Persist updated partner stats to localStorage (simulates DB write)
+// Persist partner stats — localStorage + backend
 const persistPartner = (updated) => {
   localStorage.setItem('deliveryPartner', JSON.stringify(updated));
-  const all = JSON.parse(localStorage.getItem('deliveryPartners') || '[]');
-  const next = all.map(p => p.id === updated.id ? updated : p);
-  localStorage.setItem('deliveryPartners', JSON.stringify(next));
+  // Update availability in DB (earnings update would need a dedicated endpoint)
+  if (updated._id) {
+    fetch(`/api/delivery-partner/${updated._id}/availability`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ isOnline: updated.isOnline }),
+    }).catch(() => {});
+  }
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -30,42 +35,66 @@ const DeliveryPartnerDashboard = () => {
   const [isOnline,       setIsOnline]       = useState(false);
   const [notifications,  setNotifications]  = useState([]);
 
-  // ── Auth + approval guard ────────────────────────────────────────────────────
+  // ── Auth + approval guard (checks live from backend) ────────────────────────
   useEffect(() => {
     const raw   = localStorage.getItem('deliveryPartner');
     const token = localStorage.getItem('deliveryPartnerToken');
     if (!raw || !token) { navigate('/delivery-partner-auth'); return; }
 
     const p = JSON.parse(raw);
-    // Re-read from the partners list to get freshest approval status
-    const all   = JSON.parse(localStorage.getItem('deliveryPartners') || '[]');
-    const fresh = all.find(x => x.id === p.id) || p;
+    if (!p?._id) { navigate('/delivery-partner-auth'); return; }
 
-    if (fresh.approvalStatus === 'pending')  { navigate('/delivery-partner-pending');  return; }
-    if (fresh.approvalStatus === 'rejected') { navigate('/delivery-partner-auth');     return; }
+    // Always verify approval status from the backend (not localStorage)
+    fetch(`/api/delivery-partner/${p._id}/status`)
+      .then(r => r.json())
+      .then(data => {
+        const fresh = data.partner || p;
+        localStorage.setItem('deliveryPartner', JSON.stringify(fresh));
 
-    setPartner(fresh);
-    localStorage.setItem('deliveryPartner', JSON.stringify(fresh));
+        if (fresh.approvalStatus === 'pending')  { navigate('/delivery-partner-pending'); return; }
+        if (fresh.approvalStatus === 'rejected') { navigate('/delivery-partner-auth');    return; }
 
-    const coords = getBusStopCoordinates(fresh.assignedBusStop);
-    if (coords) setPartnerLocation({ latitude: coords.lat, longitude: coords.lng });
+        setPartner(fresh);
 
-    socketService.connect();
-    socketService.joinPartnerRoom(fresh.assignedBusStop, fresh.id);
-    loadAvailableOrders();
-    loadAcceptedOrders();
+        const coords = getBusStopCoordinates(fresh.assignedBusStop);
+        if (coords) setPartnerLocation({ latitude: coords.lat, longitude: coords.lng });
 
-    socketService.onOrderUpdate(handleOrderUpdate);
-    socketService.onUserLocationUpdate(handleUserLocationUpdate);
-    socketService.onOrderStatusUpdate(handleOrderStatusUpdate);
+        socketService.connect();
+        socketService.joinPartnerRoom(fresh.assignedBusStop, fresh._id);
+        loadAvailableOrders(fresh.assignedBusStop);
+        loadAcceptedOrders();
+
+        socketService.onOrderUpdate(handleOrderUpdate);
+        socketService.onUserLocationUpdate(handleUserLocationUpdate);
+        socketService.onOrderStatusUpdate(handleOrderStatusUpdate);
+      })
+      .catch(() => {
+        // Network error: use cached value but still guard
+        const fresh = p;
+        if (fresh.approvalStatus !== 'approved') { navigate('/delivery-partner-auth'); return; }
+        setPartner(fresh);
+        socketService.connect();
+        socketService.joinPartnerRoom(fresh.assignedBusStop, fresh._id);
+        loadAvailableOrders(fresh.assignedBusStop);
+        loadAcceptedOrders();
+        socketService.onOrderUpdate(handleOrderUpdate);
+        socketService.onUserLocationUpdate(handleUserLocationUpdate);
+        socketService.onOrderStatusUpdate(handleOrderStatusUpdate);
+      });
+
     return () => socketService.removeAllListeners();
   }, [navigate]);
 
-  // ── Mock order loaders ───────────────────────────────────────────────────────
-  const loadAvailableOrders = () => setAvailableOrders([
-    { id:'1234567890', userId:'user_456', userName:'Arun Kumar',  userPhone:'+91 9876543210', items:[{name:'Snacks Pack',quantity:1},{name:'Water Bottle',quantity:1}], total:250, deliveryLocation:'', status:'confirmed', createdAt:new Date(Date.now()-300000), busRoute:'Kakkanad – Ernakulam', pickupReward:50 },
-    { id:'0987654321', userId:'user_789', userName:'Priya Nair',  userPhone:'+91 9876543211', items:[{name:'Food Combo',quantity:1}],                                   total:180, deliveryLocation:'', status:'confirmed', createdAt:new Date(Date.now()-120000), busRoute:'Aluva – Fort Kochi',    pickupReward:35 },
-  ]);
+  // ── Load real orders from backend (filtered by partner's assigned bus stop) ──
+  const loadAvailableOrders = async (busStop) => {
+    try {
+      const res = await fetch(`/api/orders/pending/${encodeURIComponent(busStop)}`);
+      const data = await res.json();
+      setAvailableOrders(data.orders || []);
+    } catch (err) {
+      console.error('Failed to load orders:', err);
+    }
+  };
   const loadAcceptedOrders = () => setAcceptedOrders([]);
 
   // ── Socket handlers ──────────────────────────────────────────────────────────
@@ -82,17 +111,45 @@ const DeliveryPartnerDashboard = () => {
   const handleOrderStatusUpdate = ({ orderId, status }) =>
     setAcceptedOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
 
-  // ── Accept order ─────────────────────────────────────────────────────────────
-  const acceptOrder = (order) => {
-    const ao = { ...order, acceptedAt:new Date(), partnerId:partner.id, partnerName:partner.name, partnerPhone:partner.phone };
-    setAcceptedOrders(prev => [ao, ...prev]);
-    setAvailableOrders(prev => prev.filter(o => o.id !== order.id));
+  // ── Accept order — calls backend, broadcasts via socket ─────────────────────
+  const acceptOrder = async (order) => {
+    const orderId = order.orderId || order.id;
+    try {
+      const partnerInfo = {
+        partnerId:   partner._id,
+        partnerName: partner.name,
+        name:        partner.name,
+        phone:       partner.phone,
+        vehicleType: partner.vehicleType || 'Bike',
+        busStop:     partner.assignedBusStop,
+      };
 
-    socketService.notifyOrderAccepted(order.id, partner.assignedBusStop);
-    socketService.joinTrackingRoom(order.id, 'delivery_partner', { partnerId:partner.id, partnerName:partner.name, busStop:partner.assignedBusStop });
-    socketService.emit('partner_status_update', { orderId:order.id, partner:{ id:partner.id, name:partner.name, phone:partner.phone, vehicleType:partner.vehicleType||'Bike' } });
+      const res = await fetch(`/api/orders/${orderId}/accept`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ busStop: partner.assignedBusStop, partnerInfo }),
+      });
 
-    toast({ type:'success', message:`Order #${order.id.slice(-6)} accepted` });
+      if (!res.ok) {
+        const err = await res.json();
+        toast({ type:'error', message: err.message || 'Could not accept order' });
+        return;
+      }
+
+      const ao = { ...order, id: orderId, orderId, acceptedAt: new Date(), partnerId: partner._id, partnerName: partner.name, partnerPhone: partner.phone };
+      setAcceptedOrders(prev => [ao, ...prev]);
+      setAvailableOrders(prev => prev.filter(o => (o.orderId || o.id) !== orderId));
+
+      // Join the tracking room so we can receive user location updates
+      socketService.joinTrackingRoom(orderId, 'delivery_partner', {
+        partnerId: partner._id, partnerName: partner.name, busStop: partner.assignedBusStop
+      });
+
+      toast({ type:'success', message:`Order #${orderId.slice(-6)} accepted` });
+    } catch (err) {
+      console.error('Accept order error:', err);
+      toast({ type:'error', message:'Network error. Please try again.' });
+    }
   };
 
   // ── Update status (HANDOVER = order complete → update earnings) ──────────────
@@ -127,7 +184,13 @@ const DeliveryPartnerDashboard = () => {
     toast({ type:'info', message:`You are now ${next ? 'Online' : 'Offline'}` });
   };
 
-  const logout = () => {
+  const logout = async () => {
+    if (partner?._id) {
+      await fetch(`/api/delivery-partner/${partner._id}/availability`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isOnline: false }),
+      }).catch(() => {});
+    }
     localStorage.removeItem('deliveryPartnerToken');
     socketService.disconnect();
     navigate('/delivery-partner-auth');

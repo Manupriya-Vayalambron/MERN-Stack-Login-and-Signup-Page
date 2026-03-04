@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import socketService from '../services/socketService';
 import '../index.css';
 
 // ─── Kerala bus stops (same list as Routes.jsx) ───────────────────────────────
@@ -43,38 +44,50 @@ export const DeliveryPartnerPending = () => {
   });
   const [statusMsg, setStatusMsg] = React.useState('');
 
-  // Poll every 3 s — detect when admin approves or rejects
+  // Real-time approval via socket + fallback HTTP poll every 10s
   React.useEffect(() => {
+    if (!partner?._id) return;
+
+    socketService.connect();
+    socketService.watchApproval(partner._id);
+
+    // Socket-based instant update
+    socketService.onApprovalStatusChanged((data) => {
+      if (data.partnerId !== partner._id) return;
+      const latest = data.partner || { ...partner, approvalStatus: data.approvalStatus, rejectReason: data.rejectReason };
+      localStorage.setItem('deliveryPartner', JSON.stringify(latest));
+      setPartner(latest);
+      if (data.approvalStatus === 'approved') {
+        setStatusMsg('✅ Approved! Redirecting to your dashboard…');
+        setTimeout(() => navigate('/delivery-partner-dashboard'), 1500);
+      } else if (data.approvalStatus === 'rejected') {
+        setStatusMsg('❌ Application rejected. ' + (data.rejectReason ? 'Reason: ' + data.rejectReason : 'Please contact admin.'));
+      }
+    });
+
+    // HTTP fallback poll every 10s (in case socket misses)
     const interval = setInterval(async () => {
-      if (!partner?._id) return;
-      
       try {
-        // Check current status from backend
-        const response = await fetch(`http://localhost:3001/api/admin/delivery-partners`);
-        if (!response.ok) return;
-        
-        const allPartners = await response.json();
-        const latest = allPartners.find(p => p._id === partner._id);
-        
-        if (!latest) return;
-        
-        // Update localStorage and state
-        localStorage.setItem('deliveryPartner', JSON.stringify(latest));
-        setPartner(latest);
-        
-        if (latest.approvalStatus === 'approved') {
-          setStatusMsg('\u2705 Approved! Redirecting to your dashboard\u2026');
+        const res = await fetch(`/api/delivery-partner/${partner._id}/status`);
+        if (!res.ok) return;
+        const data = await res.json();
+        localStorage.setItem('deliveryPartner', JSON.stringify(data.partner));
+        setPartner(data.partner);
+        if (data.approvalStatus === 'approved') {
+          setStatusMsg('✅ Approved! Redirecting to your dashboard…');
           clearInterval(interval);
           setTimeout(() => navigate('/delivery-partner-dashboard'), 1500);
-        } else if (latest.approvalStatus === 'rejected') {
-          setStatusMsg('\u274c Application rejected. ' + (latest.rejectReason ? 'Reason: ' + latest.rejectReason : 'Please contact admin.'));
+        } else if (data.approvalStatus === 'rejected') {
+          setStatusMsg('❌ Application rejected. ' + (data.rejectReason ? 'Reason: ' + data.rejectReason : 'Please contact admin.'));
           clearInterval(interval);
         }
-      } catch (error) {
-        console.error('Error checking partner status:', error);
-      }
-    }, 3000);
-    return () => clearInterval(interval);
+      } catch (_) {}
+    }, 10000);
+
+    return () => {
+      clearInterval(interval);
+      socketService.removeAllListeners();
+    };
   }, [navigate, partner?._id]);
 
   const isRejected = partner?.approvalStatus === 'rejected';
@@ -181,7 +194,7 @@ const DeliveryPartnerAuth = () => {
     try {
       if (isLogin) {
         // Login via API
-        const response = await fetch('http://localhost:3001/api/delivery-partner/login', {
+        const response = await fetch('/api/delivery-partner/login', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -231,7 +244,7 @@ const DeliveryPartnerAuth = () => {
         }
 
         // Register via API
-        const response = await fetch('http://localhost:3001/api/delivery-partner/register', {
+        const response = await fetch('/api/delivery-partner/register', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

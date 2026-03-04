@@ -57,10 +57,11 @@ const Payment = () => {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          amount:    totalAmount,
-          cartItems: cartItems,
-          userId:    user?.phoneNumber || 'guest',
+          amount:      totalAmount,
+          cartItems:   cartItems,
+          userId:      user?.phoneNumber || 'guest',
           phoneNumber: user?.phoneNumber,
+          busStop:     location.state?.busStop?.name || localStorage.getItem('yathrika_bus_stop') ? JSON.parse(localStorage.getItem('yathrika_bus_stop') || 'null')?.name : null,
         }),
       });
 
@@ -114,6 +115,7 @@ const Payment = () => {
                 userId:              user?.phoneNumber || 'guest',
                 phoneNumber:         user?.phoneNumber,
                 paymentMethod:       selectedMethod,
+                busStop:             location.state?.busStop?.name || (() => { try { return JSON.parse(localStorage.getItem('yathrika_bus_stop') || 'null')?.name; } catch { return null; } })(),
               }),
             });
 
