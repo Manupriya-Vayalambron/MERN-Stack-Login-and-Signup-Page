@@ -421,16 +421,29 @@ app.post('/api/delivery-partner/register', async (req, res) => {
         const { name, email, phone, password, assignedBusStop, assignedBusStopCoords, licenseNumber, vehicleType } = req.body;
         const existing = await DeliveryPartnerModel.findOne({ email });
         if (existing) return res.status(400).json({ message: 'Partner with this email already exists' });
+        // Safely parse coords — null/undefined coords are omitted so Mongoose doesn't reject them
+        const coords = assignedBusStopCoords && 
+            (assignedBusStopCoords.lat != null) && 
+            (assignedBusStopCoords.lng != null)
+            ? { lat: Number(assignedBusStopCoords.lat), lng: Number(assignedBusStopCoords.lng) }
+            : { lat: null, lng: null };
+
         const partner = await new DeliveryPartnerModel({
-            name, email, phone, password, assignedBusStop,
-            assignedBusStopCoords: assignedBusStopCoords || null,
-            licenseNumber, vehicleType
+            name: name?.trim(),
+            email: email?.trim().toLowerCase(),
+            phone: phone?.trim(),
+            password,
+            assignedBusStop: assignedBusStop?.trim(),
+            assignedBusStopCoords: coords,
+            licenseNumber: licenseNumber?.trim(),
+            vehicleType: vehicleType || 'Bike'
         }).save();
         const token = `partner_${partner._id}_${Date.now()}`;
         const resp = partner.toObject(); delete resp.password;
         console.log('✅ Partner registered:', partner.email);
         res.status(201).json({ message: 'Partner registered successfully', partner: resp, token });
     } catch (err) {
+        console.error('❌ Partner registration error:', err.message, err.errors ? JSON.stringify(err.errors) : '');
         res.status(500).json({ message: 'Registration failed', error: err.message });
     }
 });
