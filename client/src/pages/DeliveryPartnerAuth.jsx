@@ -45,15 +45,23 @@ export const DeliveryPartnerPending = () => {
 
   // Poll every 3 s — detect when admin approves or rejects
   React.useEffect(() => {
-    const interval = setInterval(() => {
+    const interval = setInterval(async () => {
+      if (!partner?._id) return;
+      
       try {
-        const stored = JSON.parse(localStorage.getItem('deliveryPartner'));
-        if (!stored) return;
-        const allPartners = JSON.parse(localStorage.getItem('deliveryPartners') || '[]');
-        const latest = allPartners.find(p => p.id === stored.id);
+        // Check current status from backend
+        const response = await fetch(`http://localhost:3001/api/admin/delivery-partners`);
+        if (!response.ok) return;
+        
+        const allPartners = await response.json();
+        const latest = allPartners.find(p => p._id === partner._id);
+        
         if (!latest) return;
+        
+        // Update localStorage and state
         localStorage.setItem('deliveryPartner', JSON.stringify(latest));
         setPartner(latest);
+        
         if (latest.approvalStatus === 'approved') {
           setStatusMsg('\u2705 Approved! Redirecting to your dashboard\u2026');
           clearInterval(interval);
@@ -62,10 +70,12 @@ export const DeliveryPartnerPending = () => {
           setStatusMsg('\u274c Application rejected. ' + (latest.rejectReason ? 'Reason: ' + latest.rejectReason : 'Please contact admin.'));
           clearInterval(interval);
         }
-      } catch { /* ignore */ }
+      } catch (error) {
+        console.error('Error checking partner status:', error);
+      }
     }, 3000);
     return () => clearInterval(interval);
-  }, [navigate]);
+  }, [navigate, partner?._id]);
 
   const isRejected = partner?.approvalStatus === 'rejected';
 
@@ -167,70 +177,99 @@ const DeliveryPartnerAuth = () => {
     e.preventDefault();
     setError('');
     setLoading(true);
+
     try {
-      const partners = JSON.parse(localStorage.getItem('deliveryPartners') || '[]');
-
       if (isLogin) {
-        const found = partners.find(p => p.email === formData.email && p.password === formData.password);
-        if (!found) { setError('Invalid email or password.'); return; }
+        // Login via API
+        const response = await fetch('http://localhost:3001/api/delivery-partner/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password
+          }),
+        });
 
-        localStorage.setItem('deliveryPartner', JSON.stringify(found));
+        const data = await response.json();
 
-        if (found.approvalStatus === 'rejected') {
-          setError(`Application rejected. Reason: ${found.rejectReason || 'Contact admin.'}`);
+        if (!response.ok) {
+          throw new Error(data.message || 'Login failed');
+        }
+
+        // Store partner data and token
+        localStorage.setItem('deliveryPartner', JSON.stringify(data.partner));
+        localStorage.setItem('deliveryPartnerToken', data.token);
+
+        // Check approval status
+        if (data.partner.approvalStatus === 'rejected') {
+          setError(`Application rejected. Reason: ${data.partner.rejectReason || 'Contact admin.'}`);
           return;
         }
-        if (found.approvalStatus !== 'approved') {
+        if (data.partner.approvalStatus !== 'approved') {
           navigate('/delivery-partner-pending');
           return;
         }
-        localStorage.setItem('deliveryPartnerToken', 'token-' + Date.now());
-        found.lastLoginDate = new Date().toISOString();
-        const updated = partners.map(p => p.id === found.id ? found : p);
-        localStorage.setItem('deliveryPartners', JSON.stringify(updated));
+
+        // Successfully logged in and approved
         navigate('/delivery-partner-dashboard');
 
       } else {
-        if (formData.password !== formData.confirmPassword) { setError('Passwords do not match.'); return; }
-        if (!formData.name || !formData.email || !formData.phone || !formData.licenseNumber) { setError('Please fill all required fields.'); return; }
-        if (!formData.busStop) { setError('Please select a bus stop.'); return; }
-        if (partners.find(p => p.email === formData.email)) { setError('Email already registered.'); return; }
+        // Registration validation
+        if (formData.password !== formData.confirmPassword) {
+          setError('Passwords do not match.');
+          return;
+        }
+        if (!formData.name || !formData.email || !formData.phone || !formData.licenseNumber) {
+          setError('Please fill all required fields.');
+          return;
+        }
+        if (!formData.busStop) {
+          setError('Please select a bus stop.');
+          return;
+        }
 
-        const newPartner = {
-          id:               'partner_' + Date.now(),
-          name:             formData.name,
-          email:            formData.email,
-          phone:            formData.phone,
-          password:         formData.password,
-          assignedBusStop:  formData.busStop,
-          busStopCoords:    { lat: formData.busStopLat, lng: formData.busStopLng },
-          licenseNumber:    formData.licenseNumber,
-          vehicleType:      formData.vehicleType,
-          approvalStatus:   'pending',
-          approvedBy:       null,
-          approvedAt:       null,
-          rejectedAt:       null,
-          rejectReason:     '',
-          isActive:         false,
-          isOnline:         false,
-          rating:           5.0,
-          completedOrders:  0,
-          completedOrderLog:[],
-          totalEarnings:    0,
-          pendingEarnings:  0,
-          totalCredited:    0,
-          lastCreditAmount: 0,
-          lastCreditDate:   null,
-          creditHistory:    [],
-          joinedDate:       new Date().toISOString(),
-          lastLoginDate:    new Date().toISOString(),
-        };
-        localStorage.setItem('deliveryPartners', JSON.stringify([...partners, newPartner]));
-        localStorage.setItem('deliveryPartner',  JSON.stringify(newPartner));
+        // Register via API
+        const response = await fetch('http://localhost:3001/api/delivery-partner/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone,
+            password: formData.password,
+            assignedBusStop: formData.busStop,
+            assignedBusStopCoords: {
+              lat: formData.busStopLat,
+              lng: formData.busStopLng
+            },
+            licenseNumber: formData.licenseNumber,
+            vehicleType: formData.vehicleType
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Registration failed');
+        }
+
+        // Store partner data and token
+        localStorage.setItem('deliveryPartner', JSON.stringify(data.partner));
+        localStorage.setItem('deliveryPartnerToken', data.token);
+        
+        // Navigate to pending approval page
         navigate('/delivery-partner-pending');
       }
-    } catch { setError('Something went wrong. Please try again.'); }
-    finally  { setLoading(false); }
+    } catch (error) {
+      console.error('Auth error:', error);
+      setError(error.message || 'Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

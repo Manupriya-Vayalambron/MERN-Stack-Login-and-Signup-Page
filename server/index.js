@@ -195,6 +195,92 @@ app.patch('/api/delivery-partner/:id/availability', async (req, res) => {
     }
 });
 
+// -------------------- Admin Routes for Delivery Partners --------------------
+
+// Get all delivery partners (for admin)
+app.get('/api/admin/delivery-partners', async (req, res) => {
+    try {
+        const partners = await DeliveryPartnerModel.find({}).select('-password');
+        res.json(partners);
+    } catch (error) {
+        console.error('Error fetching all partners:', error);
+        res.status(500).json({ message: 'Failed to fetch partners', error: error.message });
+    }
+});
+
+// Get pending delivery partners (for admin approval)
+app.get('/api/admin/delivery-partners/pending', async (req, res) => {
+    try {
+        const pendingPartners = await DeliveryPartnerModel.find({
+            approvalStatus: 'pending'
+        }).select('-password');
+        res.json(pendingPartners);
+    } catch (error) {
+        console.error('Error fetching pending partners:', error);
+        res.status(500).json({ message: 'Failed to fetch pending partners', error: error.message });
+    }
+});
+
+// Approve delivery partner
+app.patch('/api/admin/delivery-partners/:id/approve', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const partner = await DeliveryPartnerModel.findByIdAndUpdate(
+            id,
+            {
+                approvalStatus: 'approved',
+                isActive: true,
+                approvedAt: new Date(),
+                approvedBy: 'admin' // In production, get this from JWT token
+            },
+            { new: true }
+        ).select('-password');
+
+        if (!partner) {
+            return res.status(404).json({ message: 'Partner not found' });
+        }
+
+        res.json({
+            message: 'Partner approved successfully',
+            partner
+        });
+    } catch (error) {
+        console.error('Error approving partner:', error);
+        res.status(500).json({ message: 'Failed to approve partner', error: error.message });
+    }
+});
+
+// Reject delivery partner
+app.patch('/api/admin/delivery-partners/:id/reject', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { rejectReason } = req.body;
+        
+        const partner = await DeliveryPartnerModel.findByIdAndUpdate(
+            id,
+            {
+                approvalStatus: 'rejected',
+                isActive: false,
+                rejectedAt: new Date(),
+                rejectReason: rejectReason || 'No reason provided'
+            },
+            { new: true }
+        ).select('-password');
+
+        if (!partner) {
+            return res.status(404).json({ message: 'Partner not found' });
+        }
+
+        res.json({
+            message: 'Partner rejected successfully',
+            partner
+        });
+    } catch (error) {
+        console.error('Error rejecting partner:', error);
+        res.status(500).json({ message: 'Failed to reject partner', error: error.message });
+    }
+});
+
 app.listen(3001, () => {
     console.log("Server Started on port 3001");
 });*/

@@ -6,7 +6,31 @@ import '../index.css';
 const fmt    = (n) => typeof n === 'number' ? n.toLocaleString('en-IN') : '0';
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' }) : '—';
 
-const persistAll = (partners) => localStorage.setItem('deliveryPartners', JSON.stringify(partners));
+// API helper functions
+const fetchAllPartners = async () => {
+  const response = await fetch('http://localhost:3001/api/admin/delivery-partners');
+  if (!response.ok) throw new Error('Failed to fetch partners');
+  return response.json();
+};
+
+const approvePartner = async (id) => {
+  const response = await fetch(`http://localhost:3001/api/admin/delivery-partners/${id}/approve`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' }
+  });
+  if (!response.ok) throw new Error('Failed to approve partner');
+  return response.json();
+};
+
+const rejectPartner = async (id, rejectReason) => {
+  const response = await fetch(`http://localhost:3001/api/admin/delivery-partners/${id}/reject`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rejectReason })
+  });
+  if (!response.ok) throw new Error('Failed to reject partner');
+  return response.json();
+};
 
 // ─── Sub-component: Partner detail/credit modal ────────────────────────────────
 const PartnerModal = ({ partner, onClose, onUpdate }) => {
@@ -150,52 +174,94 @@ const Admin = () => {
   const [rejectReason, setRejectReason] = useState('');
   const [searchQ,      setSearchQ]      = useState('');
 
-  // Load partners from localStorage
+  // Load partners from backend API
   useEffect(() => {
-    const all = JSON.parse(localStorage.getItem('deliveryPartners') || '[]');
-    setPartners(all);
+    const loadPartners = async () => {
+      try {
+        const allPartners = await fetchAllPartners();
+        setPartners(allPartners);
+      } catch (error) {
+        console.error('Error loading partners:', error);
+        // Fallback to localStorage for backwards compatibility
+        const localPartners = JSON.parse(localStorage.getItem('deliveryPartners') || '[]');
+        setPartners(localPartners);
+      }
+    };
+    loadPartners();
   }, []);
 
-  const reload = () => {
-    const all = JSON.parse(localStorage.getItem('deliveryPartners') || '[]');
-    setPartners(all);
+  const reload = async () => {
+    try {
+      const allPartners = await fetchAllPartners();
+      setPartners(allPartners);
+    } catch (error) {
+      console.error('Error reloading partners:', error);
+    }
   };
 
   // Approve
-  const approvePartner = (id) => {
-    const updated = partners.map(p => p.id === id
-      ? { ...p, approvalStatus:'approved', approvedAt:new Date().toISOString(), approvedBy:'admin', isActive:true }
-      : p
-    );
-    setPartners(updated);
-    persistAll(updated);
-    // Also update logged-in partner if it's the same person
-    const cur = JSON.parse(localStorage.getItem('deliveryPartner') || 'null');
-    if (cur?.id === id) localStorage.setItem('deliveryPartner', JSON.stringify(updated.find(p=>p.id===id)));
+  const handleApprovePartner = async (id) => {
+    try {
+      await approvePartner(id);
+      await reload(); // Refresh the list
+      
+      // Also update localStorage if partner is currently logged in
+      const currentPartner = JSON.parse(localStorage.getItem('deliveryPartner') || 'null');
+      if (currentPartner?._id === id) {
+        const updatedPartners = await fetchAllPartners();
+        const updatedPartner = updatedPartners.find(p => p._id === id);
+        if (updatedPartner) {
+          localStorage.setItem('deliveryPartner', JSON.stringify(updatedPartner));
+        }
+      }
+    } catch (error) {
+      console.error('Error approving partner:', error);
+      alert('Failed to approve partner. Please try again.');
+    }
   };
 
   // Reject
-  const rejectPartner = (id) => {
-    const updated = partners.map(p => p.id === id
-      ? { ...p, approvalStatus:'rejected', rejectedAt:new Date().toISOString(), rejectReason, isActive:false }
-      : p
-    );
-    setPartners(updated);
-    persistAll(updated);
-    setRejectTarget(null);
-    setRejectReason('');
-    const cur = JSON.parse(localStorage.getItem('deliveryPartner') || 'null');
-    if (cur?.id === id) localStorage.setItem('deliveryPartner', JSON.stringify(updated.find(p=>p.id===id)));
+  const handleRejectPartner = async (id) => {
+    try {
+      await rejectPartner(id, rejectReason);
+      await reload(); // Refresh the list
+      setRejectTarget(null);
+      setRejectReason('');
+      
+      // Also update localStorage if partner is currently logged in
+      const currentPartner = JSON.parse(localStorage.getItem('deliveryPartner') || 'null');
+      if (currentPartner?._id === id) {
+        const updatedPartners = await fetchAllPartners();
+        const updatedPartner = updatedPartners.find(p => p._id === id);
+        if (updatedPartner) {
+          localStorage.setItem('deliveryPartner', JSON.stringify(updatedPartner));
+        }
+      }
+    } catch (error) {
+      console.error('Error rejecting partner:', error);
+      alert('Failed to reject partner. Please try again.');
+    }
   };
 
   // Update partner (from modal credit action)
-  const updatePartner = (updated) => {
-    const next = partners.map(p => p.id === updated.id ? updated : p);
-    setPartners(next);
-    persistAll(next);
-    setSelectedP(updated);
-    const cur = JSON.parse(localStorage.getItem('deliveryPartner') || 'null');
-    if (cur?.id === updated.id) localStorage.setItem('deliveryPartner', JSON.stringify(updated));
+  const updatePartner = async (updated) => {
+    try {
+      // For now, just update locally - in production you'd have a credit API endpoint
+      const next = partners.map(p => p._id === updated._id ? updated : p);
+      setPartners(next);
+      setSelectedP(updated);
+      
+      // Update localStorage if it's the currently logged in partner
+      const currentPartner = JSON.parse(localStorage.getItem('deliveryPartner') || 'null');
+      if (currentPartner?._id === updated._id) {
+        localStorage.setItem('deliveryPartner', JSON.stringify(updated));
+      }
+      
+      // TODO: Implement backend API for crediting partners
+      console.log('Credit action - TODO: implement backend API');
+    } catch (error) {
+      console.error('Error updating partner:', error);
+    }
   };
 
   // Computed
@@ -304,7 +370,7 @@ const Admin = () => {
               ) : (
                 <div className="admin-partners-list">
                   {approved.slice(0, 4).map(p => (
-                    <div key={p.id} className="admin-partner-card" style={{ cursor:'pointer' }} onClick={() => setSelectedP(p)}>
+                    <div key={p._id} className="admin-partner-card" style={{ cursor:'pointer' }} onClick={() => setSelectedP(p)}>
                       <div style={A.partnerAvatar}>{p.name.charAt(0)}</div>
                       <div className="admin-partner-info">
                         <p className="admin-partner-name">{p.name}</p>
@@ -343,7 +409,7 @@ const Admin = () => {
                   <p style={{ color:'#666', marginTop:8 }}>No pending applications</p>
                 </div>
               ) : pending.map(p => (
-                <div key={p.id} style={A.pendingCard}>
+                <div key={p._id} style={A.pendingCard}>
                   <div style={A.pendingHeader}>
                     <div style={A.partnerAvatar}>{p.name.charAt(0)}</div>
                     <div style={{ flex:1 }}>
@@ -368,7 +434,7 @@ const Admin = () => {
                   </div>
 
                   {/* Reject reason input */}
-                  {rejectTarget === p.id && (
+                  {rejectTarget === p._id && (
                     <div style={{ margin:'12px 0 0' }}>
                       <input
                         type="text"
@@ -378,7 +444,7 @@ const Admin = () => {
                         style={A.reasonInput}
                       />
                       <div style={{ display:'flex', gap:8, marginTop:8 }}>
-                        <button style={A.confirmRejectBtn} onClick={() => rejectPartner(p.id)}>
+                        <button style={A.confirmRejectBtn} onClick={() => handleRejectPartner(p._id)}>
                           Confirm Reject
                         </button>
                         <button style={A.cancelBtn} onClick={() => { setRejectTarget(null); setRejectReason(''); }}>
@@ -388,12 +454,12 @@ const Admin = () => {
                     </div>
                   )}
 
-                  {rejectTarget !== p.id && (
+                  {rejectTarget !== p._id && (
                     <div style={{ display:'flex', gap:10, marginTop:14 }}>
-                      <button style={A.approveBtn} onClick={() => approvePartner(p.id)}>
+                      <button style={A.approveBtn} onClick={() => handleApprovePartner(p._id)}>
                         <i className="material-icons" style={{ fontSize:18 }}>check_circle</i> Approve
                       </button>
-                      <button style={A.rejectBtn} onClick={() => setRejectTarget(p.id)}>
+                      <button style={A.rejectBtn} onClick={() => setRejectTarget(p._id)}>
                         <i className="material-icons" style={{ fontSize:18 }}>cancel</i> Reject
                       </button>
                     </div>
@@ -409,7 +475,7 @@ const Admin = () => {
                   </summary>
                   <div style={{ display:'flex', flexDirection:'column', gap:8, marginTop:10 }}>
                     {rejected.map(p => (
-                      <div key={p.id} style={{ ...A.pendingCard, opacity:0.65 }}>
+                      <div key={p._id} style={{ ...A.pendingCard, opacity:0.65 }}>
                         <div style={A.pendingHeader}>
                           <div style={A.partnerAvatar}>{p.name.charAt(0)}</div>
                           <div style={{ flex:1 }}>
@@ -419,7 +485,7 @@ const Admin = () => {
                           </div>
                           <span style={A.pillRed}>Rejected</span>
                         </div>
-                        <button style={{ ...A.approveBtn, marginTop:10 }} onClick={() => approvePartner(p.id)}>
+                        <button style={{ ...A.approveBtn, marginTop:10 }} onClick={() => handleApprovePartner(p._id)}>
                           <i className="material-icons" style={{ fontSize:16 }}>undo</i> Re-approve
                         </button>
                       </div>
@@ -458,7 +524,7 @@ const Admin = () => {
                   <p style={{ color:'#666', marginTop:8 }}>No approved partners yet</p>
                 </div>
               ) : filteredApproved.map(p => (
-                <div key={p.id} style={A.partnerRow} onClick={() => setSelectedP(p)}>
+                <div key={p._id} style={A.partnerRow} onClick={() => setSelectedP(p)}>
                   <div style={A.partnerAvatar}>{p.name.charAt(0)}</div>
                   <div style={{ flex:1, minWidth:0 }}>
                     <p style={{ color:'#fff', fontWeight:700, margin:0, fontSize:'0.92rem', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>{p.name}</p>
@@ -529,7 +595,7 @@ const Admin = () => {
             <div style={M.body}>
               <input type="text" placeholder="Reason (optional)" value={rejectReason} onChange={e => setRejectReason(e.target.value)} style={A.reasonInput} />
               <div style={{ display:'flex', gap:8, marginTop:12 }}>
-                <button style={A.confirmRejectBtn} onClick={() => rejectPartner(rejectTarget)}>Confirm Reject</button>
+                <button style={A.confirmRejectBtn} onClick={() => handleRejectPartner(rejectTarget)}>Confirm Reject</button>
                 <button style={A.cancelBtn} onClick={() => { setRejectTarget(null); setRejectReason(''); }}>Cancel</button>
               </div>
             </div>
