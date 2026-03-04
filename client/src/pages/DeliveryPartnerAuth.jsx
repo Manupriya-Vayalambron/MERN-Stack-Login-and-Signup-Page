@@ -38,25 +38,75 @@ const fmtDist = (km) => km < 1 ? `${Math.round(km*1000)}m away` : `${km.toFixed(
 // ─── Pending approval screen ──────────────────────────────────────────────────
 export const DeliveryPartnerPending = () => {
   const navigate = useNavigate();
-  const partner = (() => { try { return JSON.parse(localStorage.getItem('deliveryPartner')); } catch { return null; } })();
+  const [partner, setPartner] = React.useState(() => {
+    try { return JSON.parse(localStorage.getItem('deliveryPartner')); } catch { return null; }
+  });
+  const [statusMsg, setStatusMsg] = React.useState('');
+
+  // Poll every 3 s — detect when admin approves or rejects
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      try {
+        const stored = JSON.parse(localStorage.getItem('deliveryPartner'));
+        if (!stored) return;
+        const allPartners = JSON.parse(localStorage.getItem('deliveryPartners') || '[]');
+        const latest = allPartners.find(p => p.id === stored.id);
+        if (!latest) return;
+        localStorage.setItem('deliveryPartner', JSON.stringify(latest));
+        setPartner(latest);
+        if (latest.approvalStatus === 'approved') {
+          setStatusMsg('\u2705 Approved! Redirecting to your dashboard\u2026');
+          clearInterval(interval);
+          setTimeout(() => navigate('/delivery-partner-dashboard'), 1500);
+        } else if (latest.approvalStatus === 'rejected') {
+          setStatusMsg('\u274c Application rejected. ' + (latest.rejectReason ? 'Reason: ' + latest.rejectReason : 'Please contact admin.'));
+          clearInterval(interval);
+        }
+      } catch { /* ignore */ }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [navigate]);
+
+  const isRejected = partner?.approvalStatus === 'rejected';
+
   return (
     <div style={S.page}>
       <div style={S.centreCard}>
-        <div style={S.iconCircle}>⏳</div>
-        <h2 style={S.h2}>Application Under Review</h2>
+        <div style={S.iconCircle}>{isRejected ? '\u274c' : '\u23f3'}</div>
+        <h2 style={S.h2}>{isRejected ? 'Application Rejected' : 'Application Under Review'}</h2>
         <p style={S.subtext}>
-          Hi <strong style={{ color:'#fff' }}>{partner?.name || 'there'}</strong>, your delivery partner
-          application has been submitted successfully.
+          Hi <strong style={{ color:'#fff' }}>{partner?.name || 'there'}</strong>,{' '}
+          {isRejected
+            ? 'your application was not approved at this time.'
+            : 'your delivery partner application has been submitted successfully.'}
         </p>
-        <p style={S.subtext}>
-          Our admin team will review your details and approve your account shortly.
-          You'll be able to access your dashboard once approved.
-        </p>
+        {statusMsg ? (
+          <p style={{ ...S.subtext, color: isRejected ? '#ff5555' : '#68f91a', fontWeight: 700 }}>{statusMsg}</p>
+        ) : (
+          <p style={S.subtext}>
+            Our admin team will review your details and approve your account shortly.
+            You'll be able to access your dashboard once approved.
+          </p>
+        )}
         <div style={S.infoBox}>
-          <div style={S.infoRow}><span style={S.infoLabel}>Assigned Stop</span><span style={S.infoVal}>{partner?.assignedBusStop || '—'}</span></div>
-          <div style={S.infoRow}><span style={S.infoLabel}>Vehicle</span><span style={S.infoVal}>{partner?.vehicleType || '—'}</span></div>
-          <div style={S.infoRow}><span style={S.infoLabel}>Status</span><span style={{ ...S.infoVal, color:'#ffb84d', fontWeight:700 }}>Pending Approval</span></div>
+          <div style={S.infoRow}><span style={S.infoLabel}>Assigned Stop</span><span style={S.infoVal}>{partner?.assignedBusStop || '\u2014'}</span></div>
+          <div style={S.infoRow}><span style={S.infoLabel}>Vehicle</span><span style={S.infoVal}>{partner?.vehicleType || '\u2014'}</span></div>
+          <div style={S.infoRow}>
+            <span style={S.infoLabel}>Status</span>
+            <span style={{ ...S.infoVal, color: isRejected ? '#ff5555' : '#ffb84d', fontWeight:700 }}>
+              {isRejected ? 'Rejected' : 'Pending Approval'}
+            </span>
+          </div>
+          {isRejected && partner?.rejectReason && (
+            <div style={S.infoRow}><span style={S.infoLabel}>Reason</span><span style={{ ...S.infoVal, color:'#ff5555' }}>{partner.rejectReason}</span></div>
+          )}
         </div>
+        {!isRejected && (
+          <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:4 }}>
+            <div style={S.pulsingDot} />
+            <span style={{ color:'#888', fontSize:'0.78rem' }}>Checking for updates automatically\u2026</span>
+          </div>
+        )}
         <button style={S.ghostBtn} onClick={() => { localStorage.removeItem('deliveryPartner'); navigate('/delivery-partner-auth'); }}>
           Back to Login
         </button>
@@ -396,6 +446,7 @@ const S = {
   infoLabel: { color:'#555', fontSize:'0.78rem' },
   infoVal:   { color:'#fff', fontSize:'0.82rem', fontWeight:600 },
   ghostBtn:  { background:'none', border:'none', color:'#68f91a', fontSize:'0.85rem', cursor:'pointer', textDecoration:'underline', fontFamily:"'Space Grotesk',sans-serif", marginTop:4 },
+  pulsingDot: { width:8, height:8, borderRadius:'50%', backgroundColor:'#ffb84d', animation:'pulse 1.5s ease-in-out infinite', flexShrink:0 },
 };
 
 // ─── Stop picker inline styles ────────────────────────────────────────────────

@@ -517,7 +517,7 @@ const Admin = () => {
       )}
 
       {/* ── Reject confirmation dialog ── */}
-      {rejectTarget && activeTab !== 'pending' && (
+      {rejectTarget && activeTab === 'pending' && (
         <div style={M.overlay}>
           <div style={{ ...M.modal, maxWidth:380 }}>
             <div style={M.modalHeader}>
