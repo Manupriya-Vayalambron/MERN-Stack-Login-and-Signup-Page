@@ -36,9 +36,17 @@ import LanguageToggle from './LanguageToggle';
 
 const FloatingLanguageToggle = () => {
   const location = useLocation();
-  const hiddenRoutes = ['/splash'];
+  const allowedRoutes = [
+    '/yathrika-home',
+    '/yathrika-signin', 
+    '/products',
+    '/cart',
+    '/order-history',
+    '/user-profile',
+    '/routes'
+  ];
 
-  if (hiddenRoutes.includes(location.pathname)) {
+  if (!allowedRoutes.includes(location.pathname)) {
     return null;
   }
 

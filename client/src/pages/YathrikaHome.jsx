@@ -20,6 +20,25 @@ const T = {
     profile:       'Profile',
     notifications: 'Notifications',
     shopNow:       'Shop Now',
+    signIn:        'Sign In',
+    seat:          'Seat',
+    browseAll:     'Browse All Products',
+    whoWeAre:      'Who We Are',
+    ourMission:    'Kerala\'s First On-Route\nBus Delivery Service',
+    aboutDesc:     'Yathrika was born from one simple frustration - why can\'t your groceries travel the same bus route you do? We are a student-led startup from Kerala, bridging the gap between local vendors and commuters by delivering goods directly to your bus stop while you\'re still on the move. No detours. No waiting. Just smart delivery for smart travellers.',
+    keralaBorn:    'Kerala-born 🌴',
+    studentLed:    'Student-led 🎓',
+    communityFirst: 'Community-first 🤝',
+    ourJourney:    'Our Journey',
+    ideaToImpact:  'From Idea to Impact',
+    journeyDesc:   'As a student-led project we\'ve been pushing Yathrika from classroom concept to a recognised startup - here\'s how far we\'ve come.',
+    nowHiring:     'NOW HIRING',
+    partnerTitle:  'Ride. Deliver. Earn.',
+    partnerDesc:   'Already on a bus route? Turn your daily commute into a side income. Join Yathrika as a Delivery Partner - flexible hours, honest pay, real impact in your local community.',
+    dailyEarnings: 'Daily Earnings',
+    yourHours:     'Your Own Hours',
+    ratingsRewards: 'Ratings & Rewards',
+    joinPartner:   'Join as Delivery Partner',
   },
   ml: {
     search:        'ഉൽപ്പന്നങ്ങൾ തിരയുക...',
@@ -35,19 +54,49 @@ const T = {
     profile:       'പ്രൊഫൈൽ',
     notifications: 'അറിയിപ്പുകൾ',
     shopNow:       'ഷോപ്പ് ചെയ്യൂ',
+    signIn:        'സൈൻ ഇൻ',
+    seat:          'സീറ്റ്',
+    browseAll:     'എല്ലാ ഉൽപ്പന്നങ്ങളും കാണുക',
+    whoWeAre:      'ഞങ്ങൾ ആരാണ്',
+    ourMission:    'കേരളത്തിലെ ആദ്യത്തെ റൂട്ടിൽ\nബസ് ഡെലിവറി സേവനം',
+    aboutDesc:     'യാത്രിക ജനിച്ചത് ഒരു ലളിതമായ നിരാശയിൽ നിന്നാണ് - എന്തുകൊണ്ട് നിങ്ങളുടെ പലചരക്ക് സാധനങ്ങൾക്ക് നിങ്ങൾ സഞ്ചരിക്കുന്ന അതേ ബസ് റൂട്ടിൽ സഞ്ചരിക്കാനാവില്ല? ഞങ്ങൾ കേരളത്തിൽ നിന്നുള്ള വിദ്യാർത്ഥികളുടെ നേതൃത്വത്തിലുള്ള ഒരു സ്റ്റാർട്ടപ്പാണ്, പ്രാദേശിക വെണ്ടർമാരും യാത്രക്കാരും തമ്മിലുള്ള അന്തരം നികത്തുന്നു. നിങ്ങൾ യാത്രയിലായിരിക്കുമ്പോൾ തന്നെ നിങ്ങളുടെ ബസ് സ്റ്റോപ്പിൽ സാധനങ്ങൾ എത്തിക്കുന്നു. വഴിതിരിവുകളില്ല. കാത്തിരിപ്പില്ല. സ്മാർട്ട് യാത്രക്കാർക്കായി സ്മാർട്ട് ഡെലിവറി.',
+    keralaBorn:    'കേരള ജാതൻ 🌴',
+    studentLed:    'വിദ്യാർത്ഥി നേതൃത്വം 🎓',
+    communityFirst: 'കമ്മ്യൂണിറ്റി മുൻഗണന 🤝',
+    ourJourney:    'ഞങ്ങളുടെ യാത്ര',
+    ideaToImpact:  'ആശയത്തിൽ നിന്ന് സ്വാധീനത്തിലേക്ക്',
+    journeyDesc:   'വിദ്യാർത്ഥികളുടെ നേതൃത്വത്തിലുള്ള പദ്ധതിയെന്ന നിലയിൽ ഞങ്ങൾ യാത്രികയെ ക്ലാസ്റൂം ആശയത്തിൽ നിന്ന് അംഗീകൃത സ്റ്റാർട്ടപ്പായി മാറ്റാൻ ശ്രമിക്കുന്നു - ഞങ്ങൾ എത്ര ദൂരം എത്തിയെന്ന് ഇതാ.',
+    nowHiring:     'ഇപ്പോൾ നിയമിക്കുന്നു',
+    partnerTitle:  'സവാരി. ഡെലിവറി. സമ്പാദിക്കുക.',
+    partnerDesc:   'ഇതിനകം ഒരു ബസ് റൂട്ടിലാണോ? നിങ്ങളുടെ ദൈനംദിന യാത്രയെ അധിക വരുമാനമാക്കി മാറ്റുക. യാത്രികയിൽ ഡെലിവറി പാർട്ണറായി ചേരുക - ഫ്ലെക്സിബിൾ സമയം, സത്യസന്ധമായ വേതനം, നിങ്ങളുടെ പ്രാദേശിക കമ്മ്യൂണിറ്റിയിൽ യഥാർത്ഥ സ്വാധീനം.',
+    dailyEarnings: 'ദൈനംദിന വരുമാനം',
+    yourHours:     'നിങ്ങളുടെ സമയം',
+    ratingsRewards: 'റേറ്റിംഗ്സും പ്രതിഫലവും',
+    joinPartner:   'ഡെലിവറി പാർട്ണറായി ചേരുക',
   },
 };
 
 // Day-of-week quotes (Sunday = 0 … Saturday = 6)
-const DAY_QUOTES = [
-  { day: 'Sunday Vibes 🌞',   quote: "Sunday is the golden clasp that binds together the volume of the week.",      sub: "Rest up. We'll carry the groceries." },
-  { day: 'Monday Mode 💪',    quote: "Monday: the day your motivation is highest and your milk is lowest.",          sub: "Start the week right - we've got you covered." },
-  { day: 'Taco Tuesday? 🌮',  quote: "Tuesday isn't so bad. It's a sign that you somehow survived Monday.",          sub: "Treat yourself. You made it past the worst day." },
-  { day: 'Hump Day 🐪',       quote: "Wednesday: halfway to the weekend, fully in need of snacks.",                  sub: "Keep going. Order something delicious as fuel." },
-  { day: 'Almost Friday ✨',  quote: "Thursday: the day you start convincing yourself the weekend is basically here.", sub: "Stock up now. Friday you won't want to wait." },
-  { day: "It's Friday! 🎉",   quote: "Friday is like a superhero that always arrives just in time to save you.",     sub: "Celebrate with a delivery. You earned it." },
-  { day: 'Saturday Sorted 🛋️', quote: "Saturday: the only day where doing nothing counts as productivity.",         sub: "Don't move. We'll bring everything to your stop." },
-];
+const DAY_QUOTES = {
+  en: [
+    { day: 'Sunday Vibes 🌞',   quote: "Sunday is the golden clasp that binds together the volume of the week.",      sub: "Rest up. We'll carry the groceries." },
+    { day: 'Monday Mode 💪',    quote: "Monday: the day your motivation is highest and your milk is lowest.",          sub: "Start the week right - we've got you covered." },
+    { day: 'Taco Tuesday? 🌮',  quote: "Tuesday isn't so bad. It's a sign that you somehow survived Monday.",          sub: "Treat yourself. You made it past the worst day." },
+    { day: 'Hump Day 🐪',       quote: "Wednesday: halfway to the weekend, fully in need of snacks.",                  sub: "Keep going. Order something delicious as fuel." },
+    { day: 'Almost Friday ✨',  quote: "Thursday: the day you start convincing yourself the weekend is basically here.", sub: "Stock up now. Friday you won't want to wait." },
+    { day: "It's Friday! 🎉",   quote: "Friday is like a superhero that always arrives just in time to save you.",     sub: "Celebrate with a delivery. You earned it." },
+    { day: 'Saturday Sorted 🛋️', quote: "Saturday: the only day where doing nothing counts as productivity.",         sub: "Don't move. We'll bring everything to your stop." },
+  ],
+  ml: [
+    { day: 'ഞായറാഴ്ച വൈബ്സ് 🌞',   quote: "ഞായറാഴ്ച ആഴ്ചയുടെ പുസ്തകത്തെ ഒരുമിച്ച് നിർത്തുന്ന സ്വർണ്ണ കൊളുത്താണ്.",      sub: "വിശ്രമിക്കൂ. ഞങ്ങൾ പലചരക്ക് സാധനങ്ങൾ വഹിക്കാം." },
+    { day: 'തിങ്കളാഴ്ച മോഡ് 💪',    quote: "തിങ്കൾ: നിങ്ങളുടെ പ്രചോദനം ഏറ്റവും കൂടുതലും പാലിന്റെ അളവ് ഏറ്റവും കുറഞ്ഞ ദിവസം.",          sub: "ആഴ്ച ശരിയായി തുടങ്ങൂ - ഞങ്ങൾ നിങ്ങളെ പിന്തുണയ്ക്കും." },
+    { day: 'ചൊവ്വാഴ്ച? 🌮',  quote: "ചൊവ്വാഴ്ച അത്ര മോശമല്ല. തിങ്കളാഴ്ച എങ്ങനെയോ അതിജീവിച്ചു എന്നതിന്റെ അടയാളമാണ്.",          sub: "സ്വയം ആദരിക്കൂ. ഏറ്റവും മോശം ദിവസം കടന്നു പോയി." },
+    { day: 'ബുധനാഴ്ച 🐪',       quote: "ബുധൻ: വാരാന്ത്യത്തിലേക്ക് പകുതി വഴി, പൂർണ്ണമായും ലഘുഭോജനത്തിന്റെ ആവശ്യത്തിൽ.",                  sub: "തുടരുക. ഇന്ധനമായി എന്തെങ്കിലും രുചികരമായത് ഓർഡർ ചെയ്യൂ." },
+    { day: 'മുങ്ങിയ വെള്ളി ✨',  quote: "വ്യാഴം: വാരാന്ത്യം അടിസ്ഥാനപരമായി ഇവിടെയാണെന്ന് സ്വയം ബോധ്യപ്പെടുത്താൻ തുടങ്ങുന്ന ദിവസം.", sub: "ഇപ്പോൾ സ്റ്റോക്ക് ചെയ്യൂ. വെള്ളിയാഴ്ച നിങ്ങൾ കാത്തിരിക്കാൻ ആഗ്രഹിക്കില്ല." },
+    { day: "വെള്ളിയാഴ്ചയാണ്! 🎉",   quote: "വെള്ളിയാഴ്ച നിങ്ങളെ രക്ഷിക്കാൻ കൃത്യ സമയത്ത് എത്തുന്ന സൂപ്പർഹീറോയെപ്പോലെയാണ്.",     sub: "ഡെലിവറിയോടൊപ്പം ആഘോഷിക്കൂ. നിങ്ങൾ അത് അർഹിക്കുന്നു." },
+    { day: 'ശനിയാഴ്ച ക്രമീകരിച്ചു 🛋️', quote: "ശനിയാഴ്ച: ഒന്നും ചെയ്യാതിരിക്കുന്നത് ഉൽപ്പാദനക്ഷമതയായി കണക്കാക്കുന്ന ഏക ദിവസം.",         sub: "അനങ്ങരുത്. ഞങ്ങൾ എല്ലാം നിങ്ങളുടെ സ്റ്റോപ്പിൽ എത്തിക്കാം." },
+  ]
+};
 
 const CATEGORIES = [
   { key: 'food',       img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDvPcTsasbxb7K-aOsx4oRU93OzFQBf_X2Y4CiMCmbNI8fsgvCnOhbXmTJ8gnl3rwVO9Ev2zDjKQTN7CkrU2GQU5rdn_U44DMVLU7N5kLS0AUuxksxWEc0qGoWg0sTIVfWjESaAUsp5Mrjh0J6O5XgdgW6PZwW4ZJHqM-HkTQCRRnws6KnCPwTSIm9bhdfMzKMmNawS40_5zjbOrz934M94rUpoIJcHbQdEqX2yw1YPni59Tjj5E9kEzC_imqvU2NcH1iguOoKwZUI' },
@@ -75,7 +124,7 @@ const YathrikaHome = () => {
     } catch(_) {}
   }, []);
 
-  const todayQuote = DAY_QUOTES[new Date().getDay()];
+  const todayQuote = DAY_QUOTES[language][new Date().getDay()];
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -88,13 +137,9 @@ const YathrikaHome = () => {
       {/* ── HEADER ── */}
       <header style={S.header}>
         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-          <button style={S.cartBtn} onClick={() => navigate('/cart')}>
-            <span className="material-symbols-outlined" style={{ fontSize:24, color:'#fff' }}>shopping_cart</span>
-            {cartCount > 0 && <span style={S.cartBadge}>{cartCount}</span>}
-          </button>
           <button style={S.signInBtn} onClick={() => navigate('/yathrika-signin')}>
             <span className="material-symbols-outlined" style={{ fontSize:18, color:'#16230f' }}>person</span>
-            <span style={S.signInLabel}>Sign In</span>
+            <span style={S.signInLabel}>{t.signIn}</span>
           </button>
         </div>
         <h1 style={S.brand}>Yathrika</h1>
@@ -110,7 +155,7 @@ const YathrikaHome = () => {
           {busStop?.busNumber && (
             <p style={S.busDetails}>
               🚌 {busStop.busNumber}
-              {busStop.seatNumber && <span style={{ marginLeft: 8 }}>💺 Seat {busStop.seatNumber}</span>}
+              {busStop.seatNumber && <span style={{ marginLeft: 8 }}>💺 {t.seat} {busStop.seatNumber}</span>}
             </p>
           )}
         </div>
@@ -148,7 +193,7 @@ const YathrikaHome = () => {
         <div style={S.shopCtaRow}>
           <Link to="/products" style={S.shopCtaBtn}>
             <span className="material-symbols-outlined" style={{ fontSize: 20 }}>storefront</span>
-            {t.shopNow} - Browse All Products
+            {t.shopNow} - {t.browseAll}
             <span className="material-symbols-outlined" style={{ fontSize: 18, marginLeft: 'auto' }}>arrow_forward</span>
           </Link>
         </div>
@@ -164,8 +209,8 @@ const YathrikaHome = () => {
 
         {/* ── ABOUT US ── */}
         <div style={S.sectionWrap}>
-          <span style={S.sectionChip}>Who We Are</span>
-          <h2 style={S.sectionHeading}>Kerala's First On-Route{'\n'}Bus Delivery Service</h2>
+          <span style={S.sectionChip}>{t.whoWeAre}</span>
+          <h2 style={S.sectionHeading}>{t.ourMission}</h2>
 
           {/* Team photo */}
           <div style={S.teamPhotoWrap}>
@@ -178,14 +223,10 @@ const YathrikaHome = () => {
           </div>
 
           <p style={S.sectionBody}>
-            Yathrika was born from one simple frustration - why can't your groceries
-            travel the same bus route you do? We are a student-led startup from Kerala,
-            bridging the gap between local vendors and commuters by delivering goods
-            directly to your bus stop while you're still on the move. No detours.
-            No waiting. Just smart delivery for smart travellers.
+            {t.aboutDesc}
           </p>
           <div style={S.aboutPillRow}>
-            {['Kerala-born 🌴', 'Student-led 🎓', 'Community-first 🤝'].map(p => (
+            {[t.keralaBorn, t.studentLed, t.communityFirst].map(p => (
               <span key={p} style={S.aboutPill}>{p}</span>
             ))}
           </div>
@@ -193,11 +234,10 @@ const YathrikaHome = () => {
 
         {/* ── OUR JOURNEY ── */}
         <div style={S.sectionWrap}>
-          <span style={S.sectionChip}>Our Journey</span>
-          <h2 style={S.sectionHeading}>From Idea to Impact</h2>
+          <span style={S.sectionChip}>{t.ourJourney}</span>
+          <h2 style={S.sectionHeading}>{t.ideaToImpact}</h2>
           <p style={{ ...S.sectionBody, marginBottom: 20 }}>
-            As a student-led project we've been pushing Yathrika from classroom concept
-            to a recognised startup - here's how far we've come.
+            {t.journeyDesc}
           </p>
 
           {/* Timeline */}
@@ -254,20 +294,18 @@ const YathrikaHome = () => {
         <div style={S.partnerCard} onClick={() => navigate('/delivery-partner-auth')}>
           <div style={S.partnerGlowOrb} />
           <div style={S.partnerTopRow}>
-            <span style={S.partnerBadge}>NOW HIRING</span>
+            <span style={S.partnerBadge}>{t.nowHiring}</span>
             <span className="material-symbols-outlined" style={{ color: '#68f91a', fontSize: 20 }}>open_in_new</span>
           </div>
-          <h2 style={S.partnerHeading}>Ride. Deliver. Earn. </h2>
+          <h2 style={S.partnerHeading}>{t.partnerTitle}</h2>
           <p style={S.partnerBody}>
-            Already on a bus route? Turn your daily commute into a side income.
-            Join Yathrika as a Delivery Partner - flexible hours, honest pay, real impact
-            in your local community.
+            {t.partnerDesc}
           </p>
           <div style={S.partnerFeatureRow}>
             {[
-              { icon: 'payments',   text: 'Daily Earnings'   },
-              { icon: 'schedule',   text: 'Your Own Hours'   },
-              { icon: 'star',       text: 'Ratings & Rewards'},
+              { icon: 'payments',   text: t.dailyEarnings   },
+              { icon: 'schedule',   text: t.yourHours   },
+              { icon: 'star',       text: t.ratingsRewards},
             ].map(f => (
               <div key={f.text} style={S.partnerFeature}>
                 <span className="material-symbols-outlined" style={{ fontSize: 16, color: '#68f91a' }}>{f.icon}</span>
@@ -276,8 +314,8 @@ const YathrikaHome = () => {
             ))}
           </div>
           <div style={S.partnerBtn}>
-            <span>Join as Delivery Partner</span>
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>arrow_forward</span>
+            <span style={{ color: '#16230f' }}>{t.joinPartner}</span>
+            <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#16230f' }}>arrow_forward</span>
           </div>
         </div>
 
