@@ -247,7 +247,6 @@ const Products = () => {
           { to: '/yathrika-home', icon: 'home',          label: language === 'ml' ? 'ഹോം'          : 'Home',    active: true  },
           { to: '/order-history', icon: 'receipt_long',  label: language === 'ml' ? 'ഓർഡറുകൾ'     : 'Orders',  active: false },
           { to: '/user-profile',  icon: 'person',        label: language === 'ml' ? 'പ്രൊഫൈൽ'     : 'Profile', active: false },
-          { to: '/notifications', icon: 'notifications', label: language === 'ml' ? 'അറിയിപ്പുകൾ' : 'Alerts',  active: false },
         ].map(item => (
           <Link key={item.to} to={item.to} style={S.navItem}>
             <span className="material-symbols-outlined" style={{ fontSize: 24, color: item.active ? '#68f91a' : '#555' }}>

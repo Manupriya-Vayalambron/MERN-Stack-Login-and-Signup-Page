@@ -43,7 +43,9 @@ const FloatingLanguageToggle = () => {
     '/cart',
     '/order-history',
     '/user-profile',
-    '/routes'
+    '/routes',
+    '/tracking',
+    '/support',
   ];
 
   if (!allowedRoutes.includes(location.pathname)) {

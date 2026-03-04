@@ -1,204 +1,612 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useLanguage } from '../LanguageContext';
 import '../index.css';
 
-const Admin = () => {
-  const liveOrders = [
-    {
-      id: '12345',
-      busStop: 'Central Station',
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuANBNNPjU6mAdXgx9-Fxxv5MBddePWJ-pSX4LrulHuuc-tqmQmq4Z0_ncoqaUE3n-BYLW4grTNw1934fdHpzESm_Exbsc3BEoHgO5dbP2HTZ1OClzQLoeLnELDJ4C-G-LYeW8Jk9Rp_zBH3QjMtOn49u23b80I0GH2Ac2TZnqeBUn3UqaF9ET1S60lITMd5ojw8tgkVtlWgidfdhROKun6KL3fbUZtavnlpCL1WoxEL_-Zck5DEMqUZQ-Yi35NMDupWWiFySbtQTOk'
-    },
-    {
-      id: '67890',
-      busStop: 'University',
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBH8ODLdc3m1ywvPxzCcfZFlON0demJOYF6T9kcUiipaiVJmOQJaKYe0lSEiwMzLwAcLr3wAozC3lG7nQ990P7iHyAayE8vGyATUamiT9zrqpY1I9ULPUckyhhSdRTqDXAQLIEwlqTpB6LzImdARYqVwdjwMP152o6rSzu6h_JzMQuEkiT-BRPvkvRxV99R4HgG1YH2QfhtG0aCtOIx4pX9XdIqy3h4PPIxSUX0WriDQNjIhSyralKjdJ_H2tdwCZ4X04nl5CIYVaM'
-    }
-  ];
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const fmt    = (n) => typeof n === 'number' ? n.toLocaleString('en-IN') : '0';
+const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' }) : '—';
 
-  const deliveryPartners = [
-    {
-      name: 'Partner A',
-      status: 'Available',
-      isAvailable: true,
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuB4GPvwV4RDb72PUb8742zR_yJf0DAvkvffjsHdrvlDIW58M27hPPPgi5swaYroOzFWuZFBUfqraBE_u720qGeBrBO_vW3o5gBIPaN62vjnApGxc7GwJ2_ThpTwWW22qaANpqfGlDYq8Yxvt9F6prSsUef8qXWbGCldsvYn_l34fY2tIgCYDWeO8rkxhz9a9eGv43szA9wY9YC-PHG1SwuHzUympCfLjWSqjgdZWLRqNrJqCdlVm8kPfkRFOvji2SktB5-46F8NDw'
-    },
-    {
-      name: 'Partner B',
-      status: 'Busy',
-      isAvailable: false,
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAzMgMvlL2B7uu6RwppB7YEfFgK4J-du3DGbJe0WLCk7gglWlI-uIfhwHD5cLHWFlYko_tVCD_3ikmvWu9gg_nXQJdHpF7Bt5pRtmB98OcX1UH_fKCZYmHeF9yeYG9pA563JaDLFwnzwuRT0Bq2IKM6Qt4EWjp_n8rYGiAKWwhEp2ftCOFsjceYHhP2GB7UKFx-cgQblqQw4QFRMdQzvvrm0VIBGSWrJucfS4vg4fcbr8_WjwZ_ynY01zfYvlqF1Iiv3_-MnwIii_U'
-    }
+const persistAll = (partners) => localStorage.setItem('deliveryPartners', JSON.stringify(partners));
+
+// ─── Sub-component: Partner detail/credit modal ────────────────────────────────
+const PartnerModal = ({ partner, onClose, onUpdate }) => {
+  const [creditAmt,  setCreditAmt]  = useState('');
+  const [creditNote, setCreditNote] = useState('');
+  const [msg,        setMsg]        = useState('');
+
+  const handleCredit = () => {
+    const amount = parseFloat(creditAmt);
+    if (!amount || amount <= 0) { setMsg('Enter a valid amount'); return; }
+
+    const entry = { amount, note: creditNote.trim(), creditedBy:'admin', creditedAt: new Date().toISOString() };
+    const updated = {
+      ...partner,
+      creditHistory:    [...(partner.creditHistory || []), entry],
+      totalCredited:    (partner.totalCredited    || 0) + amount,
+      pendingEarnings:  Math.max(0, (partner.pendingEarnings || 0) - amount),
+      lastCreditAmount: amount,
+      lastCreditDate:   new Date().toISOString(),
+    };
+    onUpdate(updated);
+    setCreditAmt('');
+    setCreditNote('');
+    setMsg(`✓ ₹${fmt(amount)} credited successfully`);
+    setTimeout(() => setMsg(''), 3000);
+  };
+
+  const lastCredit = partner.creditHistory?.slice(-1)[0] || null;
+
+  return (
+    <div style={M.overlay} onClick={onClose}>
+      <div style={M.modal} onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div style={M.modalHeader}>
+          <div>
+            <h2 style={M.modalName}>{partner.name}</h2>
+            <p style={M.modalSub}>{partner.assignedBusStop} · {partner.vehicleType}</p>
+          </div>
+          <button style={M.closeBtn} onClick={onClose}>
+            <i className="material-icons">close</i>
+          </button>
+        </div>
+
+        <div style={M.body}>
+          {/* Contact */}
+          <div style={M.row}><span style={M.lbl}>Email</span><span style={M.val}>{partner.email}</span></div>
+          <div style={M.row}><span style={M.lbl}>Phone</span><span style={M.val}>{partner.phone}</span></div>
+          <div style={M.row}><span style={M.lbl}>License</span><span style={M.val}>{partner.licenseNumber}</span></div>
+          <div style={M.row}><span style={M.lbl}>Joined</span><span style={M.val}>{fmtDate(partner.joinedDate)}</span></div>
+          <div style={M.row}><span style={M.lbl}>Rating</span><span style={M.val}>{'⭐'.repeat(Math.round(partner.rating || 5))} {(partner.rating||5).toFixed(1)}</span></div>
+
+          <div style={M.divider} />
+
+          {/* Earnings stats */}
+          <p style={M.sectionHead}>Earnings Overview</p>
+          <div style={M.statsGrid}>
+            {[
+              { label:'Orders Done',    value: fmt(partner.completedOrders),  color:'#2196F3' },
+              { label:'Total Earned',   value:`₹${fmt(partner.totalEarnings)}`,color:'#68f91a' },
+              { label:'Pending Payout', value:`₹${fmt(partner.pendingEarnings)}`,color:'#ffb84d' },
+              { label:'Total Credited', value:`₹${fmt(partner.totalCredited)}`, color:'#4CAF50' },
+            ].map(s => (
+              <div key={s.label} style={M.statBox}>
+                <p style={{ ...M.statVal, color:s.color }}>{s.value}</p>
+                <p style={M.statLbl}>{s.label}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Last credit */}
+          {lastCredit && (
+            <div style={M.lastCreditBox}>
+              <i className="material-icons" style={{ color:'#4CAF50', fontSize:16 }}>check_circle</i>
+              <span style={{ color:'#aaa', fontSize:'0.82rem' }}>
+                Last credit: <strong style={{ color:'#4CAF50' }}>₹{fmt(lastCredit.amount)}</strong>
+                {' '}on {fmtDate(lastCredit.creditedAt)}
+                {lastCredit.note && <em style={{ color:'#666' }}> — {lastCredit.note}</em>}
+              </span>
+            </div>
+          )}
+
+          {/* Credit history */}
+          {partner.creditHistory?.length > 0 && (
+            <details style={{ marginTop:8 }}>
+              <summary style={{ color:'#68f91a', fontSize:'0.78rem', cursor:'pointer', fontWeight:600 }}>
+                Credit history ({partner.creditHistory.length})
+              </summary>
+              <div style={{ display:'flex', flexDirection:'column', gap:4, marginTop:6 }}>
+                {[...partner.creditHistory].reverse().map((c, i) => (
+                  <div key={i} style={M.histRow}>
+                    <span style={{ color:'#4CAF50', fontWeight:700, fontSize:'0.82rem', flexShrink:0 }}>+₹{fmt(c.amount)}</span>
+                    <span style={{ color:'#888', fontSize:'0.78rem', flex:1 }}>{c.note||'—'}</span>
+                    <span style={{ color:'#555', fontSize:'0.72rem', flexShrink:0 }}>{fmtDate(c.creditedAt)}</span>
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
+
+          <div style={M.divider} />
+
+          {/* Credit form */}
+          <p style={M.sectionHead}>Credit Earnings to Partner</p>
+          {msg && <p style={{ color: msg.startsWith('✓') ? '#4CAF50' : '#ff5555', fontSize:'0.82rem', margin:'0 0 8px' }}>{msg}</p>}
+          <div style={{ display:'flex', gap:8, marginBottom:8 }}>
+            <div style={M.inputWrap}>
+              <span style={{ color:'#68f91a', fontWeight:700, fontSize:'0.9rem' }}>₹</span>
+              <input
+                type="number"
+                min="1"
+                placeholder="Amount"
+                value={creditAmt}
+                onChange={e => setCreditAmt(e.target.value)}
+                style={M.input}
+              />
+            </div>
+            <input
+              type="text"
+              placeholder="Note (optional)"
+              value={creditNote}
+              onChange={e => setCreditNote(e.target.value)}
+              style={{ ...M.input, flex:2, backgroundColor:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:10, padding:'0 12px', color:'#fff' }}
+            />
+          </div>
+          <button style={M.creditBtn} onClick={handleCredit}>
+            <i className="material-icons" style={{ fontSize:18 }}>payments</i>
+            Credit ₹{creditAmt || '0'} to {partner.name.split(' ')[0]}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── Main Admin Component ─────────────────────────────────────────────────────
+const Admin = () => {
+  const [activeTab,    setActiveTab]    = useState('dashboard');  // dashboard | partners | pending
+  const [partners,     setPartners]     = useState([]);
+  const [selectedP,    setSelectedP]    = useState(null);
+  const [rejectTarget, setRejectTarget] = useState(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [searchQ,      setSearchQ]      = useState('');
+
+  // Load partners from localStorage
+  useEffect(() => {
+    const all = JSON.parse(localStorage.getItem('deliveryPartners') || '[]');
+    setPartners(all);
+  }, []);
+
+  const reload = () => {
+    const all = JSON.parse(localStorage.getItem('deliveryPartners') || '[]');
+    setPartners(all);
+  };
+
+  // Approve
+  const approvePartner = (id) => {
+    const updated = partners.map(p => p.id === id
+      ? { ...p, approvalStatus:'approved', approvedAt:new Date().toISOString(), approvedBy:'admin', isActive:true }
+      : p
+    );
+    setPartners(updated);
+    persistAll(updated);
+    // Also update logged-in partner if it's the same person
+    const cur = JSON.parse(localStorage.getItem('deliveryPartner') || 'null');
+    if (cur?.id === id) localStorage.setItem('deliveryPartner', JSON.stringify(updated.find(p=>p.id===id)));
+  };
+
+  // Reject
+  const rejectPartner = (id) => {
+    const updated = partners.map(p => p.id === id
+      ? { ...p, approvalStatus:'rejected', rejectedAt:new Date().toISOString(), rejectReason, isActive:false }
+      : p
+    );
+    setPartners(updated);
+    persistAll(updated);
+    setRejectTarget(null);
+    setRejectReason('');
+    const cur = JSON.parse(localStorage.getItem('deliveryPartner') || 'null');
+    if (cur?.id === id) localStorage.setItem('deliveryPartner', JSON.stringify(updated.find(p=>p.id===id)));
+  };
+
+  // Update partner (from modal credit action)
+  const updatePartner = (updated) => {
+    const next = partners.map(p => p.id === updated.id ? updated : p);
+    setPartners(next);
+    persistAll(next);
+    setSelectedP(updated);
+    const cur = JSON.parse(localStorage.getItem('deliveryPartner') || 'null');
+    if (cur?.id === updated.id) localStorage.setItem('deliveryPartner', JSON.stringify(updated));
+  };
+
+  // Computed
+  const pending  = partners.filter(p => p.approvalStatus === 'pending');
+  const approved = partners.filter(p => p.approvalStatus === 'approved');
+  const rejected = partners.filter(p => p.approvalStatus === 'rejected');
+
+  const filteredApproved = approved.filter(p =>
+    !searchQ || p.name.toLowerCase().includes(searchQ.toLowerCase()) || p.assignedBusStop.toLowerCase().includes(searchQ.toLowerCase())
+  );
+
+  const totalEarnings  = approved.reduce((s,p) => s+(p.totalEarnings||0), 0);
+  const totalPending   = approved.reduce((s,p) => s+(p.pendingEarnings||0), 0);
+  const totalCredited  = approved.reduce((s,p) => s+(p.totalCredited||0), 0);
+  const totalOrders    = approved.reduce((s,p) => s+(p.completedOrders||0), 0);
+
+  const liveOrders = [
+    { id:'12345', busStop:'Central Station' },
+    { id:'67890', busStop:'University' },
   ];
 
   return (
     <div className="admin-page-container">
       <div className="admin-content-wrapper">
+
+        {/* ── Header ── */}
         <header className="admin-header">
           <div className="admin-header-inner">
             <div className="admin-header-spacer"></div>
             <h1 className="admin-page-title">Yathrika Admin</h1>
             <div className="admin-settings-container">
-              <button className="admin-settings-button">
-                <svg className="admin-settings-icon" fill="currentColor" height="24" viewBox="0 0 256 256" width="24" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M216.7,132.7,199.11,154a8,8,0,0,0-2,5.85,75.46,75.46,0,0,1,0,12.3,8,8,0,0,0,2,5.85l17.59,21.3a8,8,0,0,1-1.39,11.83l-19.45,16a8,8,0,0,0-6.14,1,75.43,75.43,0,0,1-10.66,10.66,8,8,0,0,0-1,6.14l-2.82,21.75a8,8,0,0,1-10.42,7.3l-21-5.61a8,8,0,0,0-6.4,0,76.5,76.5,0,0,1-12.3,0,8,8,0,0,0-6.4,0l-21,5.61a8,8,0,0,1-10.42-7.3l-2.82-21.75a8,8,0,0,0-1-6.14,75.43,75.43,0,0,1-10.66-10.66,8,8,0,0,0-6.14-1l-19.45-16a8,8,0,0,1-1.39-11.83l17.59-21.3a8,8,0,0,0,2-5.85,75.46,75.46,0,0,1,0-12.3,8,8,0,0,0-2-5.85L39.3,123.3a8,8,0,0,1,1.39-11.83l19.45-16a8,8,0,0,0,6.14-1,75.43,75.43,0,0,1,10.66-10.66,8,8,0,0,0,1-6.14l2.82-21.75a8,8,0,0,1,10.42-7.3l21,5.61a8,8,0,0,0,6.4,0,76.5,76.5,0,0,1,12.3,0,8,8,0,0,0,6.4,0l21-5.61a8,8,0,0,1,10.42,7.3l2.82,21.75a8,8,0,0,0,1,6.14,75.43,75.43,0,0,1,10.66,10.66,8,8,0,0,0,6.14,1l19.45,16A8,8,0,0,1,216.7,132.7ZM128,88a40,40,0,1,0,40,40A40,40,0,0,0,128,88Zm0,64a24,24,0,1,1,24-24A24,24,0,0,1,128,152Z"></path>
-                </svg>
+              <button onClick={reload} className="admin-settings-button" title="Refresh data">
+                <i className="material-icons" style={{ fontSize:22 }}>refresh</i>
               </button>
             </div>
           </div>
         </header>
 
+        {/* ── Tab bar ── */}
+        <div style={A.tabBar}>
+          {[
+            { key:'dashboard', label:'Dashboard' },
+            { key:'pending',   label:`Pending${pending.length ? ` (${pending.length})` : ''}` },
+            { key:'partners',  label:'Partners' },
+          ].map(tab => (
+            <button key={tab.key} style={{ ...A.tab, ...(activeTab===tab.key ? A.tabActive : {}) }} onClick={() => setActiveTab(tab.key)}>
+              {tab.label}
+              {tab.key === 'pending' && pending.length > 0 && (
+                <span style={A.badge}>{pending.length}</span>
+              )}
+            </button>
+          ))}
+        </div>
+
         <main className="admin-main-content">
-          <section className="admin-live-tracking-section">
-            <div className="admin-section-header">
-              <h2 className="admin-section-title">Live Location Tracking</h2>
-              <Link to="/live-tracking-demo" className="admin-partner-dashboard-button">
-                <svg fill="currentColor" height="20" viewBox="0 0 256 256" width="20" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M240,112H224V96a16,16,0,0,0-16-16H184V64a16,16,0,0,0-16-16H88A16,16,0,0,0,72,64V80H48A16,16,0,0,0,32,96v16H16a8,8,0,0,0,0,16H32v16H16a8,8,0,0,0,0,16H32v16H16a8,8,0,0,0,0,16H32v16a16,16,0,0,0,16,16H72v16a16,16,0,0,0,16,16h80a16,16,0,0,0,16-16V208h24a16,16,0,0,0,16-16V176h16a8,8,0,0,0,0-16H224V144h16a8,8,0,0,0,0-16H224V112ZM184,192H88V80h96V192Z"></path>
-                </svg>
-                View Demo
-              </Link>
-            </div>
-            <div className="admin-tracking-info">
-              <p>Real-time location tracking system using OpenStreetMap (no API fees required)</p>
-              <div className="admin-tracking-features">
-                <div className="admin-feature-item">
-                  <span>📍</span>
-                  <span>Live GPS tracking</span>
-                </div>
-                <div className="admin-feature-item">
-                  <span>🗺️</span>
-                  <span>Free mapping</span>
-                </div>
-                <div className="admin-feature-item">
-                  <span>⚡</span>
-                  <span>Real-time updates</span>
-                </div>
-                <div className="admin-feature-item">
-                  <span>📊</span>
-                  <span>Distance & ETA</span>
-                </div>
-              </div>
-            </div>
-          </section>
 
-          <section className="admin-live-orders-section">
-            <h2 className="admin-section-title">Live Orders</h2>
-            <div className="admin-orders-list">
-              {liveOrders.map((order) => (
-                <div key={order.id} className="admin-order-card">
-                  <div className="admin-order-details">
-                    <div className="admin-order-info">
-                      <p className="admin-order-number">Order #{order.id}</p>
-                      <p className="admin-bus-stop">Bus Stop: {order.busStop}</p>
+          {/* ══════════════════ DASHBOARD TAB ══════════════════ */}
+          {activeTab === 'dashboard' && (<>
+
+            {/* Summary cards */}
+            <section style={A.statsSection}>
+              <div style={A.statsGrid}>
+                {[
+                  { label:'Active Partners',  value: approved.length,       icon:'people',             color:'#2196F3' },
+                  { label:'Orders Completed', value: fmt(totalOrders),       icon:'local_shipping',     color:'#68f91a' },
+                  { label:'Total Earned',     value:`₹${fmt(totalEarnings)}`, icon:'account_balance_wallet', color:'#68f91a' },
+                  { label:'Total Credited',   value:`₹${fmt(totalCredited)}`, icon:'payments',          color:'#4CAF50' },
+                  { label:'Pending Payout',   value:`₹${fmt(totalPending)}`,  icon:'pending',           color:'#ffb84d' },
+                  { label:'Pending Approval', value: pending.length,          icon:'hourglass_top',     color:'#ffb84d' },
+                ].map(s => (
+                  <div key={s.label} style={A.statCard}>
+                    <i className="material-icons" style={{ color:s.color, fontSize:24 }}>{s.icon}</i>
+                    <p style={{ ...A.statVal, color:s.color }}>{s.value}</p>
+                    <p style={A.statLbl}>{s.label}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* Live orders */}
+            <section className="admin-live-orders-section">
+              <h2 className="admin-section-title">Live Orders</h2>
+              <div className="admin-orders-list">
+                {liveOrders.map(order => (
+                  <div key={order.id} className="admin-order-card">
+                    <div className="admin-order-details">
+                      <div className="admin-order-info">
+                        <p className="admin-order-number">Order #{order.id}</p>
+                        <p className="admin-bus-stop">Bus Stop: {order.busStop}</p>
+                      </div>
+                      <Link to="/tracking" className="admin-track-button">Track Live</Link>
                     </div>
-                    <Link to="/tracking" className="admin-track-button">
-                      Track Live
-                    </Link>
                   </div>
-                  <div 
-                    className="admin-order-image" 
-                    style={{backgroundImage: `url("${order.image}")`}}
-                  ></div>
+                ))}
+              </div>
+            </section>
+
+            {/* Partners quick overview */}
+            <section className="admin-partners-section">
+              <div className="admin-section-header">
+                <h2 className="admin-section-title">Active Partners</h2>
+                <button style={A.viewAllBtn} onClick={() => setActiveTab('partners')}>View All →</button>
+              </div>
+              {approved.length === 0 ? (
+                <p style={{ color:'#555', fontSize:'0.85rem', padding:'12px 0' }}>No approved partners yet.</p>
+              ) : (
+                <div className="admin-partners-list">
+                  {approved.slice(0, 4).map(p => (
+                    <div key={p.id} className="admin-partner-card" style={{ cursor:'pointer' }} onClick={() => setSelectedP(p)}>
+                      <div style={A.partnerAvatar}>{p.name.charAt(0)}</div>
+                      <div className="admin-partner-info">
+                        <p className="admin-partner-name">{p.name}</p>
+                        <p style={{ color:'#888', fontSize:'0.75rem', margin:0 }}>{p.assignedBusStop}</p>
+                        <p style={{ color:'#4CAF50', fontSize:'0.72rem', fontWeight:600, margin:0 }}>
+                          {p.completedOrders||0} orders · ₹{fmt(p.totalEarnings||0)} earned
+                        </p>
+                      </div>
+                      <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:4 }}>
+                        <span style={{ ...A.pillGreen }}>Approved</span>
+                        {(p.pendingEarnings||0) > 0 && (
+                          <span style={A.pillOrange}>₹{fmt(p.pendingEarnings)} pending</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+          </>)}
+
+          {/* ══════════════════ PENDING TAB ══════════════════ */}
+          {activeTab === 'pending' && (
+            <section style={{ padding:'0 0 24px' }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
+                <h2 style={A.sectionH2}>Pending Applications</h2>
+                <button onClick={reload} style={A.refreshBtn}>
+                  <i className="material-icons" style={{ fontSize:16 }}>refresh</i> Refresh
+                </button>
+              </div>
+
+              {pending.length === 0 ? (
+                <div style={A.emptyBox}>
+                  <i className="material-icons" style={{ fontSize:40, color:'#444' }}>inbox</i>
+                  <p style={{ color:'#666', marginTop:8 }}>No pending applications</p>
+                </div>
+              ) : pending.map(p => (
+                <div key={p.id} style={A.pendingCard}>
+                  <div style={A.pendingHeader}>
+                    <div style={A.partnerAvatar}>{p.name.charAt(0)}</div>
+                    <div style={{ flex:1 }}>
+                      <p style={{ color:'#fff', fontWeight:700, margin:0, fontSize:'0.95rem' }}>{p.name}</p>
+                      <p style={{ color:'#888', margin:0, fontSize:'0.78rem' }}>{p.email} · {p.phone}</p>
+                      <p style={{ color:'#888', margin:'2px 0 0', fontSize:'0.78rem' }}>Applied: {fmtDate(p.joinedDate)}</p>
+                    </div>
+                    <span style={A.pillOrange}>Pending</span>
+                  </div>
+
+                  <div style={A.detailGrid}>
+                    {[
+                      { label:'Bus Stop',   value: p.assignedBusStop  },
+                      { label:'Vehicle',    value: p.vehicleType       },
+                      { label:'License',    value: p.licenseNumber     },
+                    ].map(d => (
+                      <div key={d.label} style={A.detailItem}>
+                        <span style={A.detailLabel}>{d.label}</span>
+                        <span style={A.detailValue}>{d.value}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Reject reason input */}
+                  {rejectTarget === p.id && (
+                    <div style={{ margin:'12px 0 0' }}>
+                      <input
+                        type="text"
+                        placeholder="Reason for rejection (optional)"
+                        value={rejectReason}
+                        onChange={e => setRejectReason(e.target.value)}
+                        style={A.reasonInput}
+                      />
+                      <div style={{ display:'flex', gap:8, marginTop:8 }}>
+                        <button style={A.confirmRejectBtn} onClick={() => rejectPartner(p.id)}>
+                          Confirm Reject
+                        </button>
+                        <button style={A.cancelBtn} onClick={() => { setRejectTarget(null); setRejectReason(''); }}>
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {rejectTarget !== p.id && (
+                    <div style={{ display:'flex', gap:10, marginTop:14 }}>
+                      <button style={A.approveBtn} onClick={() => approvePartner(p.id)}>
+                        <i className="material-icons" style={{ fontSize:18 }}>check_circle</i> Approve
+                      </button>
+                      <button style={A.rejectBtn} onClick={() => setRejectTarget(p.id)}>
+                        <i className="material-icons" style={{ fontSize:18 }}>cancel</i> Reject
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
-            </div>
-          </section>
 
-          <section className="admin-partners-section">
-            <div className="admin-section-header">
-              <h2 className="admin-section-title">Delivery Partners</h2>
-              <div className="admin-partner-actions">
-                <Link to="/delivery-partner" className="admin-partner-dashboard-button">
-                  <svg fill="currentColor" height="20" viewBox="0 0 256 256" width="20" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm32-120v8a8,8,0,0,1-8,8H136v64a8,8,0,0,1-16,0V112a8,8,0,0,1,8-8h24A8,8,0,0,1,160,112ZM112,84a12,12,0,1,1,12,12A12,12,0,0,1,112,84Z"></path>
-                  </svg>
-                  Legacy Dashboard
-                </Link>
-                <Link to="/delivery-partner-auth" className="admin-partner-auth-button">
-                  <svg fill="currentColor" height="20" viewBox="0 0 256 256" width="20" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M230.92,212c-15.23-26.33-38.7-45.21-66.09-54.16a72,72,0,1,0-73.66,0c-27.39,8.94-50.86,27.82-66.09,54.16a8,8,0,1,0,13.85,8c18.84-32.56,52.14-52,89.07-52s70.23,19.44,89.07,52a8,8,0,1,0,13.85-8ZM72,96a56,56,0,1,1,56,56A56.06,56.06,0,0,1,72,96Z"></path>
-                  </svg>
-                  Partner Login
-                </Link>
-              </div>
-            </div>
-            <div className="admin-partners-info">
-              <p>Manage delivery partners with separate authentication system and real-time order management</p>
-              <div className="admin-partner-features">
-                <div className="admin-feature-item">
-                  <span>🔐</span>
-                  <span>Secure partner authentication</span>
-                </div>
-                <div className="admin-feature-item">
-                  <span>📱</span>
-                  <span>Real-time order acceptance</span>
-                </div>
-                <div className="admin-feature-item">
-                  <span>🚀</span>
-                  <span>Status update system</span>
-                </div>
-                <div className="admin-feature-item">
-                  <span>📞</span>
-                  <span>Direct customer communication</span>
-                </div>
-              </div>
-            </div>
-            <div className="admin-partners-list">
-              {deliveryPartners.map((partner, index) => (
-                <div key={index} className="admin-partner-card">
-                  <div 
-                    className="admin-partner-avatar" 
-                    style={{backgroundImage: `url("${partner.image}")`}}
-                  ></div>
-                  <div className="admin-partner-info">
-                    <p className="admin-partner-name">{partner.name}</p>
-                    <p className={`admin-partner-status ${partner.isAvailable ? 'admin-status-available' : 'admin-status-busy'}`}>
-                      {partner.status}
-                    </p>
+              {/* Rejected partners archive */}
+              {rejected.length > 0 && (
+                <details style={{ marginTop:24 }}>
+                  <summary style={{ color:'#555', fontSize:'0.82rem', cursor:'pointer', fontWeight:600 }}>
+                    Rejected Applications ({rejected.length})
+                  </summary>
+                  <div style={{ display:'flex', flexDirection:'column', gap:8, marginTop:10 }}>
+                    {rejected.map(p => (
+                      <div key={p.id} style={{ ...A.pendingCard, opacity:0.65 }}>
+                        <div style={A.pendingHeader}>
+                          <div style={A.partnerAvatar}>{p.name.charAt(0)}</div>
+                          <div style={{ flex:1 }}>
+                            <p style={{ color:'#fff', fontWeight:700, margin:0, fontSize:'0.9rem' }}>{p.name}</p>
+                            <p style={{ color:'#888', margin:0, fontSize:'0.75rem' }}>{p.email}</p>
+                            {p.rejectReason && <p style={{ color:'#ff5555', margin:'2px 0 0', fontSize:'0.72rem' }}>Reason: {p.rejectReason}</p>}
+                          </div>
+                          <span style={A.pillRed}>Rejected</span>
+                        </div>
+                        <button style={{ ...A.approveBtn, marginTop:10 }} onClick={() => approvePartner(p.id)}>
+                          <i className="material-icons" style={{ fontSize:16 }}>undo</i> Re-approve
+                        </button>
+                      </div>
+                    ))}
                   </div>
+                </details>
+              )}
+            </section>
+          )}
+
+          {/* ══════════════════ PARTNERS TAB ══════════════════ */}
+          {activeTab === 'partners' && (
+            <section style={{ padding:'0 0 24px' }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
+                <h2 style={A.sectionH2}>Approved Partners ({approved.length})</h2>
+                <button onClick={reload} style={A.refreshBtn}>
+                  <i className="material-icons" style={{ fontSize:16 }}>refresh</i>
+                </button>
+              </div>
+
+              {/* Search */}
+              <div style={A.searchBox}>
+                <i className="material-icons" style={{ color:'#555', fontSize:18 }}>search</i>
+                <input
+                  type="text"
+                  placeholder="Search by name or bus stop…"
+                  value={searchQ}
+                  onChange={e => setSearchQ(e.target.value)}
+                  style={A.searchInput}
+                />
+              </div>
+
+              {filteredApproved.length === 0 ? (
+                <div style={A.emptyBox}>
+                  <i className="material-icons" style={{ fontSize:40, color:'#444' }}>group</i>
+                  <p style={{ color:'#666', marginTop:8 }}>No approved partners yet</p>
+                </div>
+              ) : filteredApproved.map(p => (
+                <div key={p.id} style={A.partnerRow} onClick={() => setSelectedP(p)}>
+                  <div style={A.partnerAvatar}>{p.name.charAt(0)}</div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <p style={{ color:'#fff', fontWeight:700, margin:0, fontSize:'0.92rem', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>{p.name}</p>
+                    <p style={{ color:'#888', margin:'2px 0 0', fontSize:'0.75rem' }}>{p.assignedBusStop} · {p.vehicleType}</p>
+                    <div style={{ display:'flex', gap:12, marginTop:4, flexWrap:'wrap' }}>
+                      <span style={{ color:'#2196F3', fontSize:'0.72rem', fontWeight:600 }}>📦 {p.completedOrders||0} orders</span>
+                      <span style={{ color:'#68f91a', fontSize:'0.72rem', fontWeight:600 }}>💰 ₹{fmt(p.totalEarnings||0)}</span>
+                      <span style={{ color:'#ffb84d', fontSize:'0.72rem', fontWeight:600 }}>⏳ ₹{fmt(p.pendingEarnings||0)} pending</span>
+                      <span style={{ color:'#4CAF50', fontSize:'0.72rem', fontWeight:600 }}>✓ ₹{fmt(p.totalCredited||0)} credited</span>
+                    </div>
+                  </div>
+                  <i className="material-icons" style={{ color:'#555', fontSize:20, flexShrink:0 }}>chevron_right</i>
                 </div>
               ))}
-            </div>
-          </section>
 
-          <section className="admin-revenue-section">
-            <h2 className="admin-section-title">Revenue</h2>
-            <div className="admin-revenue-card">
-              <p className="admin-revenue-label">Total Today</p>
-              <p className="admin-revenue-amount">$5,432</p>
-            </div>
-          </section>
+              {/* Summary totals */}
+              {filteredApproved.length > 0 && (
+                <div style={A.totalsBox}>
+                  <p style={{ color:'#555', fontSize:'0.72rem', fontWeight:700, textTransform:'uppercase', margin:'0 0 8px', letterSpacing:'0.06em' }}>Platform Totals</p>
+                  <div style={{ display:'flex', gap:16, flexWrap:'wrap' }}>
+                    <span style={{ color:'#68f91a', fontSize:'0.82rem' }}>Earned: <strong>₹{fmt(totalEarnings)}</strong></span>
+                    <span style={{ color:'#4CAF50', fontSize:'0.82rem' }}>Credited: <strong>₹{fmt(totalCredited)}</strong></span>
+                    <span style={{ color:'#ffb84d', fontSize:'0.82rem' }}>Pending: <strong>₹{fmt(totalPending)}</strong></span>
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
+
         </main>
       </div>
 
+      {/* ── Footer nav ── */}
       <footer className="admin-footer-nav">
         <div className="admin-nav-container">
-          <Link className="admin-nav-item admin-nav-active" to="/admin">
-            <svg fill="currentColor" height="28" viewBox="0 0 256 256" width="28" xmlns="http://www.w3.org/2000/svg">
-              <path d="M224,115.55V208a16,16,0,0,1-16,16H168a16,16,0,0,1-16-16V168a8,8,0,0,0-8-8H112a8,8,0,0,0-8,8v40a16,16,0,0,1-16,16H48a16,16,0,0,1-16-16V115.55a16,16,0,0,1,5.17-11.78l80-75.48.11-.11a16,16,0,0,1,21.53,0l.11.11,80,75.48A16,16,0,0,1,224,115.55Z"></path>
-            </svg>
-          </Link>
-          <Link className="admin-nav-item" to="/analytics">
-            <svg fill="currentColor" height="28" viewBox="0 0 256 256" width="28" xmlns="http://www.w3.org/2000/svg">
-              <path d="M232,208a8,8,0,0,1-8,8H32a8,8,0,0,1-8-8V48a8,8,0,0,1,16,0v94.37L90.73,98a8,8,0,0,1,10.07-.38l58.81,44.11L218.73,90a8,8,0,1,1,10.54,12l-64,56a8,8,0,0,1-10.07.38L96.39,114.29,40,163.63V200H224A8,8,0,0,1,232,208Z"></path>
-            </svg>
-          </Link>
-          <Link className="admin-nav-item" to="/users">
-            <svg fill="currentColor" height="28" viewBox="0 0 256 256" width="28" xmlns="http://www.w3.org/2000/svg">
-              <path d="M117.25,157.92a60,60,0,1,0-66.5,0A95.83,95.83,0,0,0,3.53,195.63a8,8,0,1,0,13.4,8.74,80,80,0,0,1,134.14,0,8,8,0,0,0,13.4-8.74A95.83,95.83,0,0,0,117.25,157.92ZM40,108a44,44,0,1,1,44,44A44.05,44.05,0,0,1,40,108Zm210.14,98.7a8,8,0,0,1-11.07-2.33A79.83,79.83,0,0,0,172,168a8,8,0,0,1,0-16,44,44,0,1,0-16.34-84.87,8,8,0,1,1-5.94-14.85,60,60,0,0,1,55.53,105.64,95.83,95.83,0,0,1,47.22,37.71A8,8,0,0,1,250.14,206.7Z"></path>
-            </svg>
-          </Link>
-          <Link className="admin-nav-item" to="/routes">
-            <svg fill="currentColor" height="28" viewBox="0 0 256 256" width="28" xmlns="http://www.w3.org/2000/svg">
-              <path d="M228.92,49.69a8,8,0,0,0-6.86-1.45L160.93,63.52,99.58,32.84a8,8,0,0,0-5.52-.6l-64,16A8,8,0,0,0,24,56V200a8,8,0,0,0,9.94,7.76l61.13-15.28,61.35,30.68A8.15,8.15,0,0,0,160,224a8,8,0,0,0,1.94-.24l64-16A8,8,0,0,0,232,200V56A8,8,0,0,0,228.92,49.69ZM104,52.94l48,24V203.06l-48-24ZM40,62.25l48-12v127.5l-48,12Zm176,131.5-48,12V78.25l48-12Z"></path>
-            </svg>
-          </Link>
+          {[
+            { to:'/admin',     icon:<svg fill="currentColor" height="28" viewBox="0 0 256 256" width="28" xmlns="http://www.w3.org/2000/svg"><path d="M224,115.55V208a16,16,0,0,1-16,16H168a16,16,0,0,1-16-16V168a8,8,0,0,0-8-8H112a8,8,0,0,0-8,8v40a16,16,0,0,1-16,16H48a16,16,0,0,1-16-16V115.55a16,16,0,0,1,5.17-11.78l80-75.48.11-.11a16,16,0,0,1,21.53,0l.11.11,80,75.48A16,16,0,0,1,224,115.55Z"/></svg>, active:true },
+            { to:'/analytics', icon:<svg fill="currentColor" height="28" viewBox="0 0 256 256" width="28" xmlns="http://www.w3.org/2000/svg"><path d="M232,208a8,8,0,0,1-8,8H32a8,8,0,0,1-8-8V48a8,8,0,0,1,16,0v94.37L90.73,98a8,8,0,0,1,10.07-.38l58.81,44.11L218.73,90a8,8,0,1,1,10.54,12l-64,56a8,8,0,0,1-10.07.38L96.39,114.29,40,163.63V200H224A8,8,0,0,1,232,208Z"/></svg> },
+            { to:'/users',     icon:<svg fill="currentColor" height="28" viewBox="0 0 256 256" width="28" xmlns="http://www.w3.org/2000/svg"><path d="M117.25,157.92a60,60,0,1,0-66.5,0A95.83,95.83,0,0,0,3.53,195.63a8,8,0,1,0,13.4,8.74,80,80,0,0,1,134.14,0,8,8,0,0,0,13.4-8.74A95.83,95.83,0,0,0,117.25,157.92ZM40,108a44,44,0,1,1,44,44A44.05,44.05,0,0,1,40,108Z"/></svg> },
+            { to:'/routes',    icon:<svg fill="currentColor" height="28" viewBox="0 0 256 256" width="28" xmlns="http://www.w3.org/2000/svg"><path d="M228.92,49.69a8,8,0,0,0-6.86-1.45L160.93,63.52,99.58,32.84a8,8,0,0,0-5.52-.6l-64,16A8,8,0,0,0,24,56V200a8,8,0,0,0,9.94,7.76l61.13-15.28,61.35,30.68A8.15,8.15,0,0,0,160,224a8,8,0,0,0,1.94-.24l64-16A8,8,0,0,0,232,200V56A8,8,0,0,0,228.92,49.69Z"/></svg> },
+          ].map(item => (
+            <Link key={item.to} className={`admin-nav-item${item.active?' admin-nav-active':''}`} to={item.to}>
+              {item.icon}
+            </Link>
+          ))}
         </div>
       </footer>
+
+      {/* ── Partner detail modal ── */}
+      {selectedP && (
+        <PartnerModal
+          partner={selectedP}
+          onClose={() => setSelectedP(null)}
+          onUpdate={updatePartner}
+        />
+      )}
+
+      {/* ── Reject confirmation dialog ── */}
+      {rejectTarget && activeTab !== 'pending' && (
+        <div style={M.overlay}>
+          <div style={{ ...M.modal, maxWidth:380 }}>
+            <div style={M.modalHeader}>
+              <h2 style={M.modalName}>Reject Application</h2>
+              <button style={M.closeBtn} onClick={() => { setRejectTarget(null); setRejectReason(''); }}>
+                <i className="material-icons">close</i>
+              </button>
+            </div>
+            <div style={M.body}>
+              <input type="text" placeholder="Reason (optional)" value={rejectReason} onChange={e => setRejectReason(e.target.value)} style={A.reasonInput} />
+              <div style={{ display:'flex', gap:8, marginTop:12 }}>
+                <button style={A.confirmRejectBtn} onClick={() => rejectPartner(rejectTarget)}>Confirm Reject</button>
+                <button style={A.cancelBtn} onClick={() => { setRejectTarget(null); setRejectReason(''); }}>Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
+};
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+const A = {
+  tabBar:      { display:'flex', gap:0, borderBottom:'1px solid rgba(255,255,255,0.08)', padding:'0 16px', backgroundColor:'rgba(0,0,0,0.2)' },
+  tab:         { flex:1, padding:'12px 0', background:'none', border:'none', borderBottom:'2px solid transparent', color:'#555', fontWeight:600, fontSize:'0.85rem', cursor:'pointer', fontFamily:"'Space Grotesk',sans-serif", transition:'all 0.15s', display:'flex', alignItems:'center', justifyContent:'center', gap:6 },
+  tabActive:   { color:'#68f91a', borderBottomColor:'#68f91a' },
+  badge:       { backgroundColor:'#ffb84d', color:'#16230f', borderRadius:20, padding:'2px 6px', fontSize:'0.68rem', fontWeight:800 },
+
+  statsSection:{ padding:'16px 16px 0' },
+  statsGrid:   { display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8 },
+  statCard:    { backgroundColor:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.06)', borderRadius:12, padding:'14px 10px', display:'flex', flexDirection:'column', alignItems:'center', gap:4, textAlign:'center' },
+  statVal:     { fontWeight:800, fontSize:'1.1rem', margin:0, fontVariantNumeric:'tabular-nums' },
+  statLbl:     { color:'#555', fontSize:'0.64rem', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.04em', margin:0 },
+
+  sectionH2:   { color:'#fff', fontWeight:700, fontSize:'1.05rem', margin:0 },
+  refreshBtn:  { display:'flex', alignItems:'center', gap:4, backgroundColor:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, padding:'6px 10px', color:'#888', fontSize:'0.78rem', cursor:'pointer', fontFamily:"'Space Grotesk',sans-serif" },
+
+  pendingCard: { backgroundColor:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,184,77,0.2)', borderRadius:14, padding:16, marginBottom:12 },
+  pendingHeader:{ display:'flex', alignItems:'flex-start', gap:12 },
+  partnerAvatar:{ width:42, height:42, borderRadius:'50%', backgroundColor:'rgba(104,249,26,0.15)', display:'flex', alignItems:'center', justifyContent:'center', color:'#68f91a', fontWeight:800, fontSize:'1.1rem', flexShrink:0 },
+  detailGrid:  { display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginTop:12 },
+  detailItem:  { display:'flex', flexDirection:'column', gap:2 },
+  detailLabel: { color:'#555', fontSize:'0.68rem', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.05em' },
+  detailValue: { color:'#ddd', fontSize:'0.85rem', fontWeight:600 },
+
+  approveBtn:  { display:'flex', alignItems:'center', gap:6, flex:1, justifyContent:'center', backgroundColor:'rgba(104,249,26,0.15)', border:'1px solid rgba(104,249,26,0.4)', borderRadius:10, padding:'10px 0', color:'#68f91a', fontWeight:700, fontSize:'0.88rem', cursor:'pointer', fontFamily:"'Space Grotesk',sans-serif" },
+  rejectBtn:   { display:'flex', alignItems:'center', gap:6, flex:1, justifyContent:'center', backgroundColor:'rgba(255,85,85,0.1)', border:'1px solid rgba(255,85,85,0.3)', borderRadius:10, padding:'10px 0', color:'#ff5555', fontWeight:700, fontSize:'0.88rem', cursor:'pointer', fontFamily:"'Space Grotesk',sans-serif" },
+  confirmRejectBtn:{ flex:1, backgroundColor:'#ff5555', border:'none', borderRadius:10, padding:'10px 0', color:'#fff', fontWeight:700, fontSize:'0.88rem', cursor:'pointer', fontFamily:"'Space Grotesk',sans-serif" },
+  cancelBtn:   { flex:1, backgroundColor:'rgba(255,255,255,0.08)', border:'none', borderRadius:10, padding:'10px 0', color:'#888', fontWeight:600, fontSize:'0.88rem', cursor:'pointer', fontFamily:"'Space Grotesk',sans-serif" },
+  reasonInput: { width:'100%', backgroundColor:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:10, padding:'10px 12px', color:'#fff', fontSize:'0.85rem', fontFamily:"'Space Grotesk',sans-serif", outline:'none', boxSizing:'border-box' },
+
+  searchBox:   { display:'flex', alignItems:'center', gap:8, backgroundColor:'rgba(255,255,255,0.05)', border:'1px solid rgba(104,249,26,0.15)', borderRadius:12, padding:'0 12px', marginBottom:14 },
+  searchInput: { flex:1, background:'none', border:'none', outline:'none', color:'#fff', fontSize:'0.88rem', padding:'11px 0', fontFamily:"'Space Grotesk',sans-serif" },
+
+  partnerRow:  { display:'flex', alignItems:'center', gap:12, backgroundColor:'rgba(255,255,255,0.04)', border:'1px solid rgba(104,249,26,0.08)', borderRadius:14, padding:'14px 12px', marginBottom:8, cursor:'pointer' },
+  totalsBox:   { backgroundColor:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:12, padding:'14px 16px', marginTop:16 },
+
+  viewAllBtn:  { background:'none', border:'none', color:'#68f91a', fontSize:'0.82rem', cursor:'pointer', fontFamily:"'Space Grotesk',sans-serif", textDecoration:'underline' },
+  emptyBox:    { display:'flex', flexDirection:'column', alignItems:'center', padding:'40px 20px', textAlign:'center' },
+
+  pillGreen:   { backgroundColor:'rgba(104,249,26,0.1)', color:'#68f91a', fontSize:'0.65rem', fontWeight:700, borderRadius:20, padding:'3px 8px', flexShrink:0 },
+  pillOrange:  { backgroundColor:'rgba(255,184,77,0.1)', color:'#ffb84d', fontSize:'0.65rem', fontWeight:700, borderRadius:20, padding:'3px 8px', flexShrink:0 },
+  pillRed:     { backgroundColor:'rgba(255,85,85,0.1)', color:'#ff5555', fontSize:'0.65rem', fontWeight:700, borderRadius:20, padding:'3px 8px', flexShrink:0 },
+};
+
+// Modal styles
+const M = {
+  overlay:  { position:'fixed', inset:0, backgroundColor:'rgba(0,0,0,0.75)', zIndex:1000, display:'flex', alignItems:'flex-end', justifyContent:'center', padding:0 },
+  modal:    { backgroundColor:'#1a2e10', border:'1px solid rgba(104,249,26,0.15)', borderRadius:'20px 20px 0 0', width:'100%', maxWidth:480, maxHeight:'90vh', overflowY:'auto', fontFamily:"'Space Grotesk',sans-serif" },
+  modalHeader:{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', padding:'20px 20px 0' },
+  modalName:{ color:'#fff', fontWeight:800, margin:0, fontSize:'1.2rem' },
+  modalSub: { color:'#888', margin:'4px 0 0', fontSize:'0.8rem' },
+  closeBtn: { background:'none', border:'none', color:'#555', cursor:'pointer', padding:0, display:'flex', flexShrink:0 },
+  body:     { padding:'16px 20px 32px', display:'flex', flexDirection:'column', gap:0 },
+  divider:  { height:1, backgroundColor:'rgba(255,255,255,0.07)', margin:'14px 0' },
+  row:      { display:'flex', justifyContent:'space-between', alignItems:'center', padding:'6px 0', borderBottom:'1px solid rgba(255,255,255,0.04)' },
+  lbl:      { color:'#555', fontSize:'0.78rem' },
+  val:      { color:'#ddd', fontSize:'0.82rem', fontWeight:600, textAlign:'right', maxWidth:'60%' },
+  sectionHead:{ color:'#fff', fontWeight:700, fontSize:'0.9rem', margin:'0 0 10px' },
+  statsGrid:{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:10 },
+  statBox:  { backgroundColor:'rgba(255,255,255,0.04)', borderRadius:10, padding:'12px 10px', textAlign:'center' },
+  statVal:  { fontWeight:800, fontSize:'1.1rem', margin:'0 0 2px', fontVariantNumeric:'tabular-nums' },
+  statLbl:  { color:'#555', fontSize:'0.65rem', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.04em', margin:0 },
+  lastCreditBox:{ display:'flex', alignItems:'center', gap:8, backgroundColor:'rgba(76,175,80,0.06)', borderRadius:10, padding:'10px 12px', marginBottom:8 },
+  histRow:  { display:'flex', alignItems:'center', gap:8, backgroundColor:'rgba(255,255,255,0.03)', borderRadius:8, padding:'8px 10px' },
+  inputWrap:{ display:'flex', alignItems:'center', gap:6, backgroundColor:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:10, padding:'0 12px', flex:1 },
+  input:    { flex:1, background:'none', border:'none', outline:'none', color:'#fff', fontSize:'0.88rem', padding:'10px 0', fontFamily:"'Space Grotesk',sans-serif" },
+  creditBtn:{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, width:'100%', backgroundColor:'#68f91a', color:'#16230f', border:'none', borderRadius:12, padding:'13px 0', fontSize:'0.95rem', fontWeight:700, cursor:'pointer', fontFamily:"'Space Grotesk',sans-serif", marginTop:4 },
 };
 
 export default Admin;

@@ -327,7 +327,6 @@ const YathrikaHome = () => {
           { to: '/yathrika-home', icon: 'home',          label: t.home,          active: true  },
           { to: '/order-history', icon: 'receipt_long',  label: t.orders,        active: false },
           { to: '/user-profile',  icon: 'person',        label: t.profile,       active: false },
-          { to: '/notifications', icon: 'notifications', label: t.notifications, active: false },
         ].map(item => (
           <Link key={item.to} to={item.to} style={S.navItem}>
             <span className="material-symbols-outlined" style={{ fontSize: 24, color: item.active ? '#68f91a' : '#555' }}>

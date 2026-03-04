@@ -170,10 +170,6 @@ const OrderHistory = () => {
             <span className="material-symbols-outlined">person</span>
             <span className="order-history-nav-text">{language === 'en' ? 'Profile' : 'പ്രൊഫൈൽ'}</span>
           </Link>
-          <Link className="order-history-nav-item" to="/notifications">
-            <span className="material-symbols-outlined">notifications</span>
-            <span className="order-history-nav-text">{language === 'en' ? 'Notifications' : 'അറിയിപ്പുകൾ'}</span>
-          </Link>
         </nav>
       </footer>
     </div>

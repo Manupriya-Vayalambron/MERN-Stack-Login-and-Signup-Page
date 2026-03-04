@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../CartContext';
 import '../index.css';
@@ -6,9 +6,9 @@ import '../index.css';
 const OrderSummary = () => {
   const navigate  = useNavigate();
   const location  = useLocation();
-  const { cartItems: contextItems, getTotalPrice } = useCart();
+  const { cartItems: contextItems, getTotalPrice, clearCart } = useCart();
 
-  // Read real payment data passed from Payment.jsx after success
+  // Real payment data passed from Payment.jsx after success
   const {
     paymentId,
     orderId,
@@ -17,16 +17,15 @@ const OrderSummary = () => {
     paymentMethod,
   } = location.state || {};
 
-  // Use items from navigation state (post-payment) or fall back to cart context
   const orderItems   = paidItems?.length ? paidItems : contextItems;
   const displayItems = orderItems.length ? orderItems : [
     { name: 'Order Item', quantity: 1, price: amount || 0, image: '' },
   ];
 
-  const subtotal     = displayItems.reduce((s, i) => s + (i.price * i.quantity), 0);
-  const deliveryFee  = 40;
-  const discount     = 20;
-  const total        = amount || (subtotal + deliveryFee - discount);
+  const subtotal    = displayItems.reduce((s, i) => s + (i.price * i.quantity), 0);
+  const deliveryFee = 40;
+  const discount    = 20;
+  const total       = amount || (subtotal + deliveryFee - discount);
 
   const methodLabel = {
     upi:        'UPI',
@@ -35,9 +34,100 @@ const OrderSummary = () => {
     wallet:     'Wallet',
   }[paymentMethod] || 'Online Payment';
 
-  // Short display ID
-  const shortOrderId  = orderId  ? orderId.slice(-10).toUpperCase()  : '—';
+  const shortOrderId   = orderId  ? orderId.slice(-10).toUpperCase()  : '—';
   const shortPaymentId = paymentId ? paymentId.slice(-12).toUpperCase() : '—';
+
+  // ── Bus stop from localStorage ─────────────────────────────────────────────
+  let busStop = null;
+  try { busStop = JSON.parse(localStorage.getItem('yathrika_bus_stop') || 'null'); } catch(_) {}
+  const stopName = busStop?.name || 'Not selected';
+
+  // ── Write order data to localStorage so Tracking.jsx can read it ──────────
+  useEffect(() => {
+    if (!orderId && !paidItems) return;
+    const orderData = {
+      orderId:       orderId || ('ORD' + Date.now().toString().slice(-8)),
+      paymentId:     paymentId || null,
+      amount:        total,
+      cartItems:     displayItems,
+      paymentMethod: paymentMethod || 'upi',
+      busStop,
+      createdAt:     new Date().toISOString(),
+    };
+    localStorage.setItem('yathrika_current_order', JSON.stringify(orderData));
+    // Also save cart snapshot for Tracking fallback
+    localStorage.setItem('yathrika_cart', JSON.stringify(displayItems));
+  }, [orderId, paymentId]);
+
+  // ── Generate invoice text for download / share ────────────────────────────
+  const buildInvoiceText = () => {
+    const line = '─'.repeat(40);
+    const rows = displayItems.map(i =>
+      `  ${i.name.padEnd(24)} ×${i.quantity}   ₹${(i.price * i.quantity).toString().padStart(5)}`
+    ).join('\n');
+
+    return [
+      '         YATHRIKA — ORDER INVOICE',
+      line,
+      `Order ID    : #${shortOrderId}`,
+      `Payment ID  : ${shortPaymentId}`,
+      `Date        : ${new Date().toLocaleString('en-IN')}`,
+      `Payment     : ${methodLabel}`,
+      `Delivery    : ${stopName}`,
+      line,
+      'ITEMS',
+      rows,
+      line,
+      `Subtotal                         ₹${subtotal.toString().padStart(5)}`,
+      `Delivery Fee                     ₹${deliveryFee.toString().padStart(5)}`,
+      `Discount                        -₹${discount.toString().padStart(5)}`,
+      line,
+      `TOTAL PAID                       ₹${total.toString().padStart(5)}`,
+      line,
+      '',
+      'Thank you for travelling with Yathrika!',
+      'Kerala\'s first on-route bus delivery service.',
+    ].join('\n');
+  };
+
+  // ── Download as .txt invoice (works on all browsers without libraries) ────
+  const handleDownload = () => {
+    const text = buildInvoiceText();
+    const blob  = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url   = URL.createObjectURL(blob);
+    const a     = document.createElement('a');
+    a.href      = url;
+    a.download  = `Yathrika_Invoice_${shortOrderId}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  // ── Web Share API (mobile native share sheet) ─────────────────────────────
+  const handleShare = async () => {
+    const text = buildInvoiceText();
+    const shareData = {
+      title: `Yathrika Order #${shortOrderId}`,
+      text,
+    };
+
+    try {
+      if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+        await navigator.share(shareData);
+      } else {
+        // Fallback: copy to clipboard
+        await navigator.clipboard.writeText(text);
+        alert('Invoice copied to clipboard!');
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        // Last resort: open in new tab
+        const blob = new Blob([text], { type: 'text/plain' });
+        window.open(URL.createObjectURL(blob), '_blank');
+      }
+    }
+  };
 
   return (
     <div className="order-summary-container">
@@ -54,64 +144,50 @@ const OrderSummary = () => {
 
         <main className="order-main-content">
 
-          {/* ── Payment confirmed banner ── */}
+          {/* Payment confirmed banner */}
           <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem',
-            background: 'rgba(104,249,26,0.08)',
-            border: '1px solid rgba(104,249,26,0.3)',
-            borderRadius: '12px',
-            padding: '0.875rem 1rem',
-            marginBottom: '1.25rem',
+            display:'flex', alignItems:'center', gap:'0.75rem',
+            background:'rgba(104,249,26,0.08)', border:'1px solid rgba(104,249,26,0.3)',
+            borderRadius:'12px', padding:'0.875rem 1rem', marginBottom:'1.25rem',
           }}>
-            <span className="material-icons" style={{ color: 'var(--primary)', fontSize: '28px' }}>check_circle</span>
+            <span className="material-icons" style={{ color:'var(--primary)', fontSize:'28px' }}>check_circle</span>
             <div>
-              <p style={{ margin: 0, fontWeight: 700, color: 'white', fontSize: '0.95rem' }}>Payment Confirmed</p>
-              <p style={{ margin: 0, fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>
+              <p style={{ margin:0, fontWeight:700, color:'white', fontSize:'0.95rem' }}>Payment Confirmed</p>
+              <p style={{ margin:0, fontSize:'0.75rem', color:'rgba(255,255,255,0.5)' }}>
                 ₹{total} paid via {methodLabel}
               </p>
             </div>
           </div>
 
-          {/* ── IDs ── */}
+          {/* IDs */}
           <div style={{
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.07)',
-            borderRadius: '10px',
-            padding: '0.75rem 1rem',
-            marginBottom: '1rem',
-            fontSize: '0.78rem',
-            color: 'rgba(255,255,255,0.5)',
+            background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.07)',
+            borderRadius:'10px', padding:'0.75rem 1rem', marginBottom:'1rem',
+            fontSize:'0.78rem', color:'rgba(255,255,255,0.5)',
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'0.3rem' }}>
               <span>Order ID</span>
-              <span style={{ color: 'white', fontWeight: 600, fontFamily: 'monospace' }}>#{shortOrderId}</span>
+              <span style={{ color:'white', fontWeight:600, fontFamily:'monospace' }}>#{shortOrderId}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <div style={{ display:'flex', justifyContent:'space-between' }}>
               <span>Payment ID</span>
-              <span style={{ color: 'white', fontWeight: 600, fontFamily: 'monospace' }}>{shortPaymentId}</span>
+              <span style={{ color:'white', fontWeight:600, fontFamily:'monospace' }}>{shortPaymentId}</span>
             </div>
           </div>
 
-          {/* ── Order items ── */}
+          {/* Order items */}
           <h2 className="order-id-title">Items Ordered</h2>
           <div className="order-items-section">
             {displayItems.map((item, i) => (
               <div key={i} className="order-item-card">
                 <div className="order-items-wrapper">
                   {item.image && (
-                    <div
-                      className="order-item-image"
-                      style={{ backgroundImage: `url("${item.image}")` }}
-                    ></div>
+                    <div className="order-item-image" style={{ backgroundImage:`url("${item.image}")` }}></div>
                   )}
                   <div className="order-item-info">
                     <p className="order-item-name">{item.name}</p>
-                    <p className="order-item-quantity">
-                      Qty: {item.quantity} · ₹{item.price} each
-                    </p>
-                    <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--primary)', fontWeight: 600 }}>
+                    <p className="order-item-quantity">Qty: {item.quantity} · ₹{item.price} each</p>
+                    <p style={{ margin:0, fontSize:'0.82rem', color:'var(--primary)', fontWeight:600 }}>
                       ₹{item.price * item.quantity}
                     </p>
                   </div>
@@ -120,30 +196,27 @@ const OrderSummary = () => {
             ))}
           </div>
 
-          {/* ── Price breakdown ── */}
+          {/* Price breakdown */}
           <div style={{
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.07)',
-            borderRadius: '12px',
-            padding: '1rem',
-            marginBottom: '1rem',
+            background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.07)',
+            borderRadius:'12px', padding:'1rem', marginBottom:'1rem',
           }}>
             {[
-              { label: 'Subtotal',     val: `₹${subtotal}` },
-              { label: 'Delivery Fee', val: `₹${deliveryFee}` },
-              { label: 'Discount',     val: `-₹${discount}`, green: true },
+              { label:'Subtotal',     val:`₹${subtotal}` },
+              { label:'Delivery Fee', val:`₹${deliveryFee}` },
+              { label:'Discount',     val:`-₹${discount}`, green:true },
             ].map(({ label, val, green }) => (
-              <div key={label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', fontSize: '0.85rem', color: green ? '#68f91a' : 'rgba(255,255,255,0.6)' }}>
+              <div key={label} style={{ display:'flex', justifyContent:'space-between', marginBottom:'0.4rem', fontSize:'0.85rem', color:green?'#68f91a':'rgba(255,255,255,0.6)' }}>
                 <span>{label}</span><span>{val}</span>
               </div>
             ))}
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: '0.5rem', paddingTop: '0.5rem', display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: 'white' }}>
+            <div style={{ borderTop:'1px solid rgba(255,255,255,0.08)', marginTop:'0.5rem', paddingTop:'0.5rem', display:'flex', justifyContent:'space-between', fontWeight:700, color:'white' }}>
               <span>Total Paid</span>
-              <span style={{ color: 'var(--primary)' }}>₹{total}</span>
+              <span style={{ color:'var(--primary)' }}>₹{total}</span>
             </div>
           </div>
 
-          {/* ── Delivery details ── */}
+          {/* Delivery details */}
           <h3 className="delivery-section-title">Delivery Details</h3>
           <div className="delivery-details-section">
             <div className="delivery-detail-item">
@@ -152,7 +225,7 @@ const OrderSummary = () => {
               </div>
               <div className="delivery-detail-text">
                 <p className="delivery-detail-label">Bus Stop</p>
-                <p className="delivery-detail-value">Kochi Bus Stop</p>
+                <p className="delivery-detail-value">{stopName}</p>
               </div>
             </div>
             <div className="delivery-detail-item">
@@ -166,16 +239,24 @@ const OrderSummary = () => {
             </div>
           </div>
 
-          {/* ── Actions ── */}
+          {/* Actions */}
           <div className="order-action-buttons">
-            <button className="order-secondary-button">Download</button>
-            <button className="order-secondary-button">Share</button>
+            <button className="order-secondary-button" onClick={handleDownload}>
+              <span className="material-icons" style={{ fontSize:16, verticalAlign:'middle', marginRight:4 }}>download</span>
+              Download Invoice
+            </button>
+            <button className="order-secondary-button" onClick={handleShare}>
+              <span className="material-icons" style={{ fontSize:16, verticalAlign:'middle', marginRight:4 }}>share</span>
+              Share
+            </button>
           </div>
+
           <div className="order-track-section">
             <button className="order-track-button" onClick={() => navigate('/tracking')}>
               Track Order
             </button>
           </div>
+
         </main>
       </div>
 
@@ -198,12 +279,6 @@ const OrderSummary = () => {
               <path d="M230.92,212c-15.23-26.33-38.7-45.21-66.09-54.16a72,72,0,1,0-73.66,0C63.78,166.78,40.31,185.66,25.08,212a8,8,0,1,0,13.85,8c18.84-32.56,52.14-52,89.07-52s70.23,19.44,89.07,52a8,8,0,1,0,13.85-8ZM72,96a56,56,0,1,1,56,56A56.06,56.06,0,0,1,72,96Z"></path>
             </svg>
             <p className="order-nav-text">Profile</p>
-          </Link>
-          <Link className="order-nav-item" to="/notifications">
-            <svg fill="currentColor" height="24" viewBox="0 0 256 256" width="24" xmlns="http://www.w3.org/2000/svg">
-              <path d="M221.8,175.94C216.25,166.38,208,139.33,208,104a80,80,0,1,0-160,0c0,35.34-8.26,62.38-13.81,71.94A16,16,0,0,0,48,200H88.81a40,40,0,0,0,78.38,0H208a16,16,0,0,0,13.8-24.06Z"></path>
-            </svg>
-            <p className="order-nav-text">Notifications</p>
           </Link>
         </nav>
       </footer>

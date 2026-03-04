@@ -1,120 +1,192 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useLanguage } from '../LanguageContext';
 import '../index.css';
 
-const DeliveryPartnerAuth = () => {
-  const [isLogin, setIsLogin] = useState(true);
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    password: '',
-    confirmPassword: '',
-    busStop: 'Kochi Bus Stop',
-    licenseNumber: '',
-    vehicleType: 'Bike'
-  });
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+// ─── Kerala bus stops (same list as Routes.jsx) ───────────────────────────────
+const KERALA_BUS_STOPS = [
+  { id:1,  name:'Kollam Bus Stand',          lat:8.8932,  lng:76.6141, city:'Kollam'        },
+  { id:2,  name:'Kadavoor Junction',          lat:8.9301,  lng:76.6423, city:'Kollam'        },
+  { id:3,  name:'Paravur Bus Stop',           lat:8.7876,  lng:76.6803, city:'Kollam'        },
+  { id:4,  name:'Karunagappally Stop',        lat:9.0612,  lng:76.5349, city:'Kollam'        },
+  { id:5,  name:'Ernakulam KSRTC',            lat:9.9816,  lng:76.2999, city:'Ernakulam'     },
+  { id:6,  name:'Aluva Bus Stand',            lat:10.1004, lng:76.3570, city:'Ernakulam'     },
+  { id:7,  name:'Vyttila Mobility Hub',       lat:9.9602,  lng:76.3201, city:'Ernakulam'     },
+  { id:8,  name:'Kakkanad Junction',          lat:10.0161, lng:76.3508, city:'Ernakulam'     },
+  { id:9,  name:'Thrissur Round',             lat:10.5276, lng:76.2144, city:'Thrissur'      },
+  { id:10, name:'Palakkad Bus Stand',         lat:10.7867, lng:76.6548, city:'Palakkad'      },
+  { id:11, name:'Kozhikode KSRTC',            lat:11.2588, lng:75.7804, city:'Kozhikode'     },
+  { id:12, name:'Thiruvananthapuram Central', lat:8.4855,  lng:76.9492, city:'Trivandrum'    },
+  { id:13, name:'Attingal Bus Stop',          lat:8.6951,  lng:76.8149, city:'Trivandrum'    },
+  { id:14, name:'Kottayam Bus Stand',         lat:9.5916,  lng:76.5222, city:'Kottayam'      },
+  { id:15, name:'Alappuzha Bus Stand',        lat:9.4981,  lng:76.3388, city:'Alappuzha'     },
+  { id:16, name:'Kannur Bus Stand',           lat:11.8745, lng:75.3704, city:'Kannur'        },
+  { id:17, name:'Kasaragod Bus Stand',        lat:12.4996, lng:74.9869, city:'Kasaragod'     },
+  { id:18, name:'Manjeri Bus Stand',          lat:11.1201, lng:76.1194, city:'Malappuram'    },
+  { id:19, name:'Tirur Bus Stop',             lat:10.9121, lng:75.9228, city:'Malappuram'    },
+  { id:20, name:'Pathanamthitta Bus Stand',   lat:9.2648,  lng:76.7870, city:'Pathanamthitta'},
+];
+
+const haversine = (lat1, lng1, lat2, lng2) => {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+};
+const fmtDist = (km) => km < 1 ? `${Math.round(km*1000)}m away` : `${km.toFixed(1)}km away`;
+
+// ─── Pending approval screen ──────────────────────────────────────────────────
+export const DeliveryPartnerPending = () => {
   const navigate = useNavigate();
+  const partner = (() => { try { return JSON.parse(localStorage.getItem('deliveryPartner')); } catch { return null; } })();
+  return (
+    <div style={S.page}>
+      <div style={S.centreCard}>
+        <div style={S.iconCircle}>⏳</div>
+        <h2 style={S.h2}>Application Under Review</h2>
+        <p style={S.subtext}>
+          Hi <strong style={{ color:'#fff' }}>{partner?.name || 'there'}</strong>, your delivery partner
+          application has been submitted successfully.
+        </p>
+        <p style={S.subtext}>
+          Our admin team will review your details and approve your account shortly.
+          You'll be able to access your dashboard once approved.
+        </p>
+        <div style={S.infoBox}>
+          <div style={S.infoRow}><span style={S.infoLabel}>Assigned Stop</span><span style={S.infoVal}>{partner?.assignedBusStop || '—'}</span></div>
+          <div style={S.infoRow}><span style={S.infoLabel}>Vehicle</span><span style={S.infoVal}>{partner?.vehicleType || '—'}</span></div>
+          <div style={S.infoRow}><span style={S.infoLabel}>Status</span><span style={{ ...S.infoVal, color:'#ffb84d', fontWeight:700 }}>Pending Approval</span></div>
+        </div>
+        <button style={S.ghostBtn} onClick={() => { localStorage.removeItem('deliveryPartner'); navigate('/delivery-partner-auth'); }}>
+          Back to Login
+        </button>
+      </div>
+    </div>
+  );
+};
 
-  const busStops = [
-    'Kochi Bus Stop',
-    'Ernakulam Junction', 
-    'Kakkanad',
-    'Aluva',
-    'Fort Kochi',
-    'Vyttila Junction',
-    'Edappally',
-    'University Gate',
-    'Central Station',
-    'Main Street Stop'
-  ];
+// ─── Main Auth component ──────────────────────────────────────────────────────
+const DeliveryPartnerAuth = () => {
+  const navigate = useNavigate();
+  const [isLogin, setIsLogin]   = useState(true);
+  const [formData, setFormData] = useState({
+    name:'', email:'', phone:'', password:'', confirmPassword:'',
+    licenseNumber:'', vehicleType:'Bike',
+    busStop:'', busStopLat:null, busStopLng:null,
+  });
+  const [error,   setError]   = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleInputChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+  // ── Stop picker state ─────────────────────────────────────────────────────────
+  const [locPhase,     setLocPhase]     = useState('idle'); // idle | loading | done | error
+  const [nearbyStops,  setNearbyStops]  = useState([]);
+  const [allStops,     setAllStops]     = useState(KERALA_BUS_STOPS);
+  const [stopSearch,   setStopSearch]   = useState('');
+  const [showAll,      setShowAll]      = useState(false);
+
+  const requestGeo = () => {
+    setLocPhase('loading');
+    if (!navigator.geolocation) { setLocPhase('error'); setNearbyStops(KERALA_BUS_STOPS); return; }
+    navigator.geolocation.getCurrentPosition(
+      ({ coords: { latitude: lat, longitude: lng } }) => {
+        const sorted = KERALA_BUS_STOPS
+          .map(s => ({ ...s, distance: haversine(lat, lng, s.lat, s.lng) }))
+          .sort((a, b) => a.distance - b.distance);
+        setAllStops(sorted);
+        setNearbyStops(sorted.slice(0, 6));
+        setLocPhase('done');
+      },
+      () => { setLocPhase('error'); setNearbyStops(KERALA_BUS_STOPS.slice(0, 8)); },
+      { timeout: 10000, enableHighAccuracy: true }
+    );
   };
 
+  const displayedStops = stopSearch.trim()
+    ? allStops.filter(s => s.name.toLowerCase().includes(stopSearch.toLowerCase()) || s.city.toLowerCase().includes(stopSearch.toLowerCase()))
+    : showAll ? allStops : nearbyStops;
+
+  const pickStop = (stop) => {
+    setFormData(p => ({ ...p, busStop: stop.name, busStopLat: stop.lat, busStopLng: stop.lng }));
+    setStopSearch('');
+  };
+
+  const handleChange = (e) => setFormData(p => ({ ...p, [e.target.name]: e.target.value }));
+
+  // ── Submit ────────────────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-
     try {
+      const partners = JSON.parse(localStorage.getItem('deliveryPartners') || '[]');
+
       if (isLogin) {
-        // Mock login - check if user exists in localStorage
-        const existingPartners = JSON.parse(localStorage.getItem('deliveryPartners') || '[]');
-        const partner = existingPartners.find(p => 
-          p.email === formData.email && p.password === formData.password
-        );
-        
-        if (!partner) {
-          setError('Invalid email or password');
+        const found = partners.find(p => p.email === formData.email && p.password === formData.password);
+        if (!found) { setError('Invalid email or password.'); return; }
+
+        localStorage.setItem('deliveryPartner', JSON.stringify(found));
+
+        if (found.approvalStatus === 'rejected') {
+          setError(`Application rejected. Reason: ${found.rejectReason || 'Contact admin.'}`);
           return;
         }
-        
-        // Store partner data in localStorage
-        localStorage.setItem('deliveryPartner', JSON.stringify(partner));
-        localStorage.setItem('deliveryPartnerToken', 'mock-token-' + Date.now());
-        
+        if (found.approvalStatus !== 'approved') {
+          navigate('/delivery-partner-pending');
+          return;
+        }
+        localStorage.setItem('deliveryPartnerToken', 'token-' + Date.now());
+        found.lastLoginDate = new Date().toISOString();
+        const updated = partners.map(p => p.id === found.id ? found : p);
+        localStorage.setItem('deliveryPartners', JSON.stringify(updated));
         navigate('/delivery-partner-dashboard');
+
       } else {
-        // Register partner
-        if (formData.password !== formData.confirmPassword) {
-          setError('Passwords do not match');
-          return;
-        }
+        if (formData.password !== formData.confirmPassword) { setError('Passwords do not match.'); return; }
+        if (!formData.name || !formData.email || !formData.phone || !formData.licenseNumber) { setError('Please fill all required fields.'); return; }
+        if (!formData.busStop) { setError('Please select a bus stop.'); return; }
+        if (partners.find(p => p.email === formData.email)) { setError('Email already registered.'); return; }
 
-        if (!formData.name || !formData.email || !formData.phone || !formData.licenseNumber) {
-          setError('Please fill in all required fields');
-          return;
-        }
-
-        // Check if email already exists
-        const existingPartners = JSON.parse(localStorage.getItem('deliveryPartners') || '[]');
-        if (existingPartners.find(p => p.email === formData.email)) {
-          setError('Email already registered');
-          return;
-        }
-
-        // Create new partner
         const newPartner = {
-          id: 'partner_' + Date.now(),
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone,
-          password: formData.password,
-          assignedBusStop: formData.busStop,
-          licenseNumber: formData.licenseNumber,
-          vehicleType: formData.vehicleType,
-          isOnline: false,
-          rating: 4.5,
-          totalDeliveries: 0,
-          joinedDate: new Date().toISOString()
+          id:               'partner_' + Date.now(),
+          name:             formData.name,
+          email:            formData.email,
+          phone:            formData.phone,
+          password:         formData.password,
+          assignedBusStop:  formData.busStop,
+          busStopCoords:    { lat: formData.busStopLat, lng: formData.busStopLng },
+          licenseNumber:    formData.licenseNumber,
+          vehicleType:      formData.vehicleType,
+          approvalStatus:   'pending',
+          approvedBy:       null,
+          approvedAt:       null,
+          rejectedAt:       null,
+          rejectReason:     '',
+          isActive:         false,
+          isOnline:         false,
+          rating:           5.0,
+          completedOrders:  0,
+          completedOrderLog:[],
+          totalEarnings:    0,
+          pendingEarnings:  0,
+          totalCredited:    0,
+          lastCreditAmount: 0,
+          lastCreditDate:   null,
+          creditHistory:    [],
+          joinedDate:       new Date().toISOString(),
+          lastLoginDate:    new Date().toISOString(),
         };
-
-        // Save to localStorage
-        const updatedPartners = [...existingPartners, newPartner];
-        localStorage.setItem('deliveryPartners', JSON.stringify(updatedPartners));
-        localStorage.setItem('deliveryPartner', JSON.stringify(newPartner));
-        localStorage.setItem('deliveryPartnerToken', 'mock-token-' + Date.now());
-        
-        navigate('/delivery-partner-dashboard');
+        localStorage.setItem('deliveryPartners', JSON.stringify([...partners, newPartner]));
+        localStorage.setItem('deliveryPartner',  JSON.stringify(newPartner));
+        navigate('/delivery-partner-pending');
       }
-    } catch (error) {
-      setError('Something went wrong. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+    } catch { setError('Something went wrong. Please try again.'); }
+    finally  { setLoading(false); }
   };
 
   return (
     <div className="partner-auth-container">
       <div className="partner-auth-wrapper">
+
         <header className="partner-auth-header">
           <Link to="/user-type-selection" className="partner-auth-back-button">
             <i className="material-icons">arrow_back</i>
@@ -125,174 +197,221 @@ const DeliveryPartnerAuth = () => {
 
         <main className="partner-auth-main">
           <div className="partner-auth-card">
+
+            {/* Toggle */}
             <div className="partner-auth-toggle">
-              <button
-                onClick={() => setIsLogin(true)}
-                className={`partner-auth-toggle-button ${isLogin ? 'active' : ''}`}
-              >
-                Login
-              </button>
-              <button
-                onClick={() => setIsLogin(false)}
-                className={`partner-auth-toggle-button ${!isLogin ? 'active' : ''}`}
-              >
-                Register
-              </button>
+              <button onClick={() => setIsLogin(true)}  className={`partner-auth-toggle-button ${isLogin  ? 'active':''}`}>Login</button>
+              <button onClick={() => setIsLogin(false)} className={`partner-auth-toggle-button ${!isLogin ? 'active':''}`}>Register</button>
             </div>
 
             <form onSubmit={handleSubmit} className="partner-auth-form">
               {error && (
                 <div className="partner-auth-error">
-                  <i className="material-icons">error</i>
-                  <span>{error}</span>
+                  <i className="material-icons">error</i><span>{error}</span>
                 </div>
               )}
 
-              {!isLogin && (
-                <>
-                  <div className="partner-auth-field">
-                    <label>Full Name</label>
-                    <input
-                      type="text"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleInputChange}
-                      required={!isLogin}
-                      placeholder="Enter your full name"
-                    />
-                  </div>
+              {/* ── REGISTER-ONLY FIELDS ── */}
+              {!isLogin && (<>
 
-                  <div className="partner-auth-field">
-                    <label>Phone Number</label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                      required={!isLogin}
-                      placeholder="+91 9876543210"
-                    />
-                  </div>
+                <div className="partner-auth-field">
+                  <label>Full Name *</label>
+                  <input type="text" name="name" value={formData.name} onChange={handleChange} required placeholder="Enter your full name" />
+                </div>
 
-                  <div className="partner-auth-field">
-                    <label>Assigned Bus Stop</label>
-                    <select
-                      name="busStop"
-                      value={formData.busStop}
-                      onChange={handleInputChange}
-                      required={!isLogin}
-                    >
-                      {busStops.map(stop => (
-                        <option key={stop} value={stop}>{stop}</option>
-                      ))}
-                    </select>
-                  </div>
+                <div className="partner-auth-field">
+                  <label>Phone Number *</label>
+                  <input type="tel" name="phone" value={formData.phone} onChange={handleChange} required placeholder="+91 9876543210" />
+                </div>
 
-                  <div className="partner-auth-field">
-                    <label>License Number</label>
-                    <input
-                      type="text"
-                      name="licenseNumber"
-                      value={formData.licenseNumber}
-                      onChange={handleInputChange}
-                      required={!isLogin}
-                      placeholder="DL1234567890"
-                    />
-                  </div>
+                {/* ── Geo-powered bus stop picker ── */}
+                <div className="partner-auth-field">
+                  <label>Assigned Bus Stop *</label>
 
-                  <div className="partner-auth-field">
-                    <label>Vehicle Type</label>
-                    <select
-                      name="vehicleType"
-                      value={formData.vehicleType}
-                      onChange={handleInputChange}
-                      required={!isLogin}
-                    >
-                      <option value="Bike">Bike</option>
-                      <option value="Scooter">Scooter</option>
-                      <option value="Bicycle">Bicycle</option>
-                    </select>
-                  </div>
-                </>
-              )}
+                  {formData.busStop ? (
+                    /* Selected confirmation chip */
+                    <div style={P.selectedChip}>
+                      <div style={{ flex:1 }}>
+                        <p style={{ color:'#fff', fontWeight:700, margin:0, fontSize:'0.9rem' }}>{formData.busStop}</p>
+                        <p style={{ color:'#68f91a', margin:0, fontSize:'0.72rem', fontWeight:600 }}>✓ Selected</p>
+                      </div>
+                      <button type="button" style={P.changeBtn} onClick={() => setFormData(p => ({ ...p, busStop:'', busStopLat:null, busStopLng:null }))}>
+                        Change
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={P.pickerBox}>
 
+                      {/* Location button / status */}
+                      {locPhase === 'idle' && (
+                        <button type="button" style={P.geoBtn} onClick={requestGeo}>
+                          <i className="material-icons" style={{ fontSize:18 }}>my_location</i>
+                          Suggest stops near me
+                        </button>
+                      )}
+                      {locPhase === 'loading' && (
+                        <div style={P.geoStatus}>
+                          <i className="material-icons" style={{ color:'#68f91a', fontSize:18 }}>gps_fixed</i>
+                          <span style={{ color:'#888', fontSize:'0.82rem' }}>Getting your location…</span>
+                        </div>
+                      )}
+                      {locPhase === 'done' && (
+                        <div style={P.geoStatus}>
+                          <i className="material-icons" style={{ color:'#68f91a', fontSize:16 }}>check_circle</i>
+                          <span style={{ color:'#68f91a', fontSize:'0.8rem', fontWeight:600 }}>Sorted by distance from you</span>
+                        </div>
+                      )}
+                      {locPhase === 'error' && (
+                        <p style={{ color:'#ffb84d', fontSize:'0.78rem', margin:0 }}>⚠️ Location unavailable — showing all stops</p>
+                      )}
+
+                      {/* Search */}
+                      <div style={P.searchBox}>
+                        <i className="material-icons" style={{ color:'#555', fontSize:18 }}>search</i>
+                        <input
+                          type="text"
+                          placeholder="Search stops or city…"
+                          value={stopSearch}
+                          onChange={e => setStopSearch(e.target.value)}
+                          style={P.searchInput}
+                        />
+                        {stopSearch && (
+                          <button type="button" onClick={() => setStopSearch('')} style={{ background:'none', border:'none', color:'#555', cursor:'pointer', padding:0, display:'flex' }}>
+                            <i className="material-icons" style={{ fontSize:16 }}>close</i>
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Section label */}
+                      <p style={P.sectionLabel}>
+                        {stopSearch ? `${displayedStops.length} result${displayedStops.length !== 1 ? 's' : ''}`
+                          : locPhase === 'done' ? '📍 Nearest stops'
+                          : '🚏 All stops'}
+                      </p>
+
+                      {/* Stop list */}
+                      <div style={P.stopList}>
+                        {displayedStops.length === 0 ? (
+                          <p style={{ color:'#555', fontSize:'0.82rem', textAlign:'center', padding:12 }}>No stops found</p>
+                        ) : displayedStops.map(stop => (
+                          <button key={stop.id} type="button" style={P.stopRow} onClick={() => pickStop(stop)}>
+                            <div style={P.stopIcon}>
+                              <i className="material-icons" style={{ fontSize:18, color:'#68f91a' }}>directions_bus</i>
+                            </div>
+                            <div style={{ flex:1, textAlign:'left' }}>
+                              <p style={{ color:'#fff', fontWeight:600, margin:0, fontSize:'0.85rem', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>{stop.name}</p>
+                              <p style={{ color:'#888', margin:0, fontSize:'0.72rem' }}>
+                                {stop.city}
+                                {stop.distance !== undefined && (
+                                  <span style={{ color:'#68f91a', fontWeight:700, marginLeft:6 }}>{fmtDist(stop.distance)}</span>
+                                )}
+                              </p>
+                            </div>
+                            <i className="material-icons" style={{ color:'#444', fontSize:18, flexShrink:0 }}>chevron_right</i>
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Show all toggle */}
+                      {(locPhase === 'done' || locPhase === 'idle') && !stopSearch && !showAll && (
+                        <button type="button" style={P.showAllBtn} onClick={() => setShowAll(true)}>
+                          Show all {KERALA_BUS_STOPS.length} stops →
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="partner-auth-field">
+                  <label>License Number *</label>
+                  <input type="text" name="licenseNumber" value={formData.licenseNumber} onChange={handleChange} required placeholder="KL01-2024-0001234" />
+                </div>
+
+                <div className="partner-auth-field">
+                  <label>Vehicle Type *</label>
+                  <select name="vehicleType" value={formData.vehicleType} onChange={handleChange}>
+                    <option value="Bike">Bike</option>
+                    <option value="Scooter">Scooter</option>
+                    <option value="Bicycle">Bicycle</option>
+                  </select>
+                </div>
+
+              </>)}
+
+              {/* ── COMMON FIELDS ── */}
               <div className="partner-auth-field">
-                <label>Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  required
-                  placeholder="partner@example.com"
-                />
+                <label>Email *</label>
+                <input type="email" name="email" value={formData.email} onChange={handleChange} required placeholder="partner@example.com" />
               </div>
-
               <div className="partner-auth-field">
-                <label>Password</label>
-                <input
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  required
-                  placeholder="Enter password"
-                />
+                <label>Password *</label>
+                <input type="password" name="password" value={formData.password} onChange={handleChange} required placeholder="Enter password" />
               </div>
-
               {!isLogin && (
                 <div className="partner-auth-field">
-                  <label>Confirm Password</label>
-                  <input
-                    type="password"
-                    name="confirmPassword"
-                    value={formData.confirmPassword}
-                    onChange={handleInputChange}
-                    required={!isLogin}
-                    placeholder="Confirm password"
-                  />
+                  <label>Confirm Password *</label>
+                  <input type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} required placeholder="Confirm password" />
                 </div>
               )}
 
-              <button 
-                type="submit" 
-                className="partner-auth-submit"
-                disabled={loading}
-              >
-                {loading ? (
-                  <span>Processing...</span>
-                ) : (
-                  <span>{isLogin ? 'Login' : 'Register'}</span>
-                )}
+              <button type="submit" className="partner-auth-submit" disabled={loading}>
+                {loading ? 'Processing…' : isLogin ? 'Login' : 'Submit Application'}
               </button>
             </form>
 
+            {/* Benefits */}
             <div className="partner-auth-info">
               <h3>Benefits of Being a Delivery Partner</h3>
               <div className="partner-benefits">
-                <div className="benefit-item">
-                  <i className="material-icons">local_atm</i>
-                  <span>Earn flexible income</span>
-                </div>
-                <div className="benefit-item">
-                  <i className="material-icons">schedule</i>
-                  <span>Choose your own hours</span>
-                </div>
-                <div className="benefit-item">
-                  <i className="material-icons">location_on</i>
-                  <span>Work near your preferred bus stop</span>
-                </div>
-                <div className="benefit-item">
-                  <i className="material-icons">phone</i>
-                  <span>Direct communication with customers</span>
-                </div>
+                {[
+                  { icon:'local_atm',   text:'Earn flexible income'                },
+                  { icon:'schedule',    text:'Choose your own hours'               },
+                  { icon:'location_on', text:'Work near your preferred bus stop'   },
+                  { icon:'phone',       text:'Direct communication with customers' },
+                ].map(b => (
+                  <div key={b.icon} className="benefit-item">
+                    <i className="material-icons">{b.icon}</i>
+                    <span>{b.text}</span>
+                  </div>
+                ))}
               </div>
             </div>
+
           </div>
         </main>
       </div>
     </div>
   );
+};
+
+// ─── Pending screen styles ────────────────────────────────────────────────────
+const S = {
+  page:      { minHeight:'100vh', backgroundColor:'#16230f', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:"'Space Grotesk',sans-serif", padding:24 },
+  centreCard:{ maxWidth:400, width:'100%', backgroundColor:'rgba(255,255,255,0.04)', border:'1px solid rgba(104,249,26,0.15)', borderRadius:20, padding:'40px 28px', display:'flex', flexDirection:'column', alignItems:'center', gap:14, textAlign:'center' },
+  iconCircle:{ fontSize:52, marginBottom:4 },
+  h2:        { color:'#fff', fontWeight:800, margin:0, fontSize:'1.35rem' },
+  subtext:   { color:'#888', fontSize:'0.88rem', lineHeight:1.65, margin:0 },
+  infoBox:   { width:'100%', backgroundColor:'rgba(255,255,255,0.04)', border:'1px solid rgba(104,249,26,0.1)', borderRadius:14, padding:'14px 16px', display:'flex', flexDirection:'column', gap:10, marginTop:4 },
+  infoRow:   { display:'flex', justifyContent:'space-between', alignItems:'center' },
+  infoLabel: { color:'#555', fontSize:'0.78rem' },
+  infoVal:   { color:'#fff', fontSize:'0.82rem', fontWeight:600 },
+  ghostBtn:  { background:'none', border:'none', color:'#68f91a', fontSize:'0.85rem', cursor:'pointer', textDecoration:'underline', fontFamily:"'Space Grotesk',sans-serif", marginTop:4 },
+};
+
+// ─── Stop picker inline styles ────────────────────────────────────────────────
+const P = {
+  selectedChip: { display:'flex', alignItems:'center', gap:12, backgroundColor:'rgba(104,249,26,0.08)', border:'1px solid rgba(104,249,26,0.25)', borderRadius:12, padding:'12px 14px' },
+  changeBtn:    { background:'none', border:'none', color:'#68f91a', fontSize:'0.78rem', cursor:'pointer', textDecoration:'underline', fontFamily:"'Space Grotesk',sans-serif", flexShrink:0 },
+  pickerBox:    { display:'flex', flexDirection:'column', gap:8 },
+  geoBtn:       { display:'flex', alignItems:'center', gap:8, backgroundColor:'rgba(104,249,26,0.1)', border:'1px solid rgba(104,249,26,0.3)', borderRadius:10, padding:'10px 14px', color:'#68f91a', fontSize:'0.85rem', fontWeight:600, cursor:'pointer', fontFamily:"'Space Grotesk',sans-serif" },
+  geoStatus:    { display:'flex', alignItems:'center', gap:8, padding:'4px 0' },
+  searchBox:    { display:'flex', alignItems:'center', gap:6, backgroundColor:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:10, padding:'8px 12px' },
+  searchInput:  { flex:1, background:'none', border:'none', outline:'none', color:'#fff', fontSize:'0.85rem', fontFamily:"'Space Grotesk',sans-serif" },
+  sectionLabel: { color:'#555', fontSize:'0.7rem', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.06em', margin:0 },
+  stopList:     { display:'flex', flexDirection:'column', gap:4, maxHeight:230, overflowY:'auto' },
+  stopRow:      { display:'flex', alignItems:'center', gap:10, backgroundColor:'rgba(255,255,255,0.04)', border:'1px solid rgba(104,249,26,0.08)', borderRadius:10, padding:'10px 12px', cursor:'pointer', width:'100%', transition:'border-color 0.15s' },
+  stopIcon:     { width:32, height:32, borderRadius:8, backgroundColor:'rgba(104,249,26,0.08)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 },
+  showAllBtn:   { background:'none', border:'none', color:'#68f91a', fontSize:'0.78rem', cursor:'pointer', textDecoration:'underline', fontFamily:"'Space Grotesk',sans-serif", alignSelf:'flex-start' },
 };
 
 export default DeliveryPartnerAuth;
