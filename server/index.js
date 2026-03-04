@@ -67,13 +67,25 @@ app.post('/api/delivery-partner/register', async (req, res) => {
             phone,
             password,
             assignedBusStop,
+            assignedBusStopCoords,
             licenseNumber,
             vehicleType
         } = req.body;
 
+        console.log('📝 Delivery Partner Registration Request:', {
+            name,
+            email,
+            phone: phone ? phone.substring(0, 6) + 'xxxxx' : undefined,
+            assignedBusStop,
+            assignedBusStopCoords,
+            licenseNumber,
+            vehicleType
+        });
+
         // Check if partner already exists
         const existingPartner = await DeliveryPartnerModel.findOne({ email });
         if (existingPartner) {
+            console.log('❌ Registration failed: Email already exists:', email);
             return res.status(400).json({ message: 'Partner with this email already exists' });
         }
 
@@ -84,17 +96,25 @@ app.post('/api/delivery-partner/register', async (req, res) => {
             phone,
             password, // In production, this should be hashed
             assignedBusStop,
+            assignedBusStopCoords: assignedBusStopCoords || null,
             licenseNumber,
             vehicleType
         });
 
-        await newPartner.save();
+        const savedPartner = await newPartner.save();
+        console.log('✅ Delivery Partner saved to MongoDB:', {
+            id: savedPartner._id,
+            email: savedPartner.email,
+            name: savedPartner.name,
+            assignedBusStop: savedPartner.assignedBusStop,
+            approvalStatus: savedPartner.approvalStatus
+        });
 
         // Generate simple token (in production, use JWT)
-        const token = `partner_${newPartner._id}_${Date.now()}`;
+        const token = `partner_${savedPartner._id}_${Date.now()}`;
         
         // Remove password from response
-        const partnerResponse = newPartner.toObject();
+        const partnerResponse = savedPartner.toObject();
         delete partnerResponse.password;
 
         res.status(201).json({
@@ -104,7 +124,7 @@ app.post('/api/delivery-partner/register', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Partner registration error:', error);
+        console.error('❌ Partner registration error:', error);
         res.status(500).json({ message: 'Registration failed', error: error.message });
     }
 });
@@ -201,10 +221,54 @@ app.patch('/api/delivery-partner/:id/availability', async (req, res) => {
 app.get('/api/admin/delivery-partners', async (req, res) => {
     try {
         const partners = await DeliveryPartnerModel.find({}).select('-password');
+        console.log(`📊 Admin fetching ${partners.length} delivery partners from database`);
         res.json(partners);
     } catch (error) {
         console.error('Error fetching all partners:', error);
         res.status(500).json({ message: 'Failed to fetch partners', error: error.message });
+    }
+});
+
+// DEBUG: Get database stats and collections info
+app.get('/api/debug/database-info', async (req, res) => {
+    try {
+        const db = mongoose.connection.db;
+        
+        // Get collection stats
+        const deliveryPartnerCount = await DeliveryPartnerModel.countDocuments();
+        const userCount = await UserModel.countDocuments();
+        
+        // Get recent records
+        const recentPartners = await DeliveryPartnerModel.find({})
+            .select('name email assignedBusStop approvalStatus createdAt')
+            .sort({ createdAt: -1 })
+            .limit(5);
+            
+        const recentUsers = await UserModel.find({})
+            .select('phoneNumber name orderCount isVerified createdAt')
+            .sort({ createdAt: -1 })
+            .limit(5);
+
+        res.json({
+            database: {
+                name: db.databaseName,
+                status: mongoose.connection.readyState === 1 ? '✅ Connected' : '❌ Disconnected'
+            },
+            collections: {
+                deliveryPartners: {
+                    count: deliveryPartnerCount,
+                    recentRecords: recentPartners
+                },
+                users: {
+                    count: userCount,
+                    recentRecords: recentUsers
+                }
+            },
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('❌ Database info error:', error);
+        res.status(500).json({ error: error.message });
     }
 });
 
@@ -329,7 +393,9 @@ mongoose.connect(mongoURI, {
     useUnifiedTopology: true
 })
 .then(() => {
-    console.log('Connected to MongoDB successfully');
+    console.log('✅ Connected to MongoDB successfully');
+    console.log('🗄️  Database URI:', mongoURI);
+    console.log('📊 Database Name:', mongoose.connection.name);
 })
 .catch((error) => {
     console.error('Error connecting to MongoDB:', error);
@@ -713,6 +779,8 @@ app.post('/api/user/verify-phone', async (req, res) => {
     try {
         const { phoneNumber, name } = req.body;
         
+        console.log('📱 User verification request:', { phoneNumber: phoneNumber?.substring(0, 6) + 'xxxxx', name });
+        
         if (!phoneNumber) {
             return res.status(400).json({ success: false, message: 'Phone number is required' });
         }
@@ -726,8 +794,12 @@ app.post('/api/user/verify-phone', async (req, res) => {
                 name: name || '',
                 isVerified: true
             });
-            await user.save();
-            console.log(`✅ New user created: ${phoneNumber}`);
+            const savedUser = await user.save();
+            console.log('✅ New user created and saved to MongoDB:', {
+                id: savedUser._id,
+                phoneNumber: savedUser.phoneNumber?.substring(0, 6) + 'xxxxx',
+                name: savedUser.name
+            });
         } else {
             // Update existing user verification status
             user.isVerified = true;
@@ -735,7 +807,11 @@ app.post('/api/user/verify-phone', async (req, res) => {
                 user.name = name;
             }
             await user.save();
-            console.log(`✅ Existing user verified: ${phoneNumber}`);
+            console.log('✅ Existing user verified and updated:', {
+                id: user._id,
+                phoneNumber: user.phoneNumber?.substring(0, 6) + 'xxxxx',
+                name: user.name
+            });
         }
         
         res.json({
@@ -749,7 +825,7 @@ app.post('/api/user/verify-phone', async (req, res) => {
         });
         
     } catch (error) {
-        console.error('User verification error:', error);
+        console.error('❌ User verification error:', error);
         res.status(500).json({ success: false, message: 'User verification failed', error: error.message });
     }
 });
