@@ -53,8 +53,8 @@ const OrderHistory = () => {
 
   const tabs = [
     { key: 'Food', label: language === 'en' ? 'Food' : 'ഭക്ഷണം' },
-    { key: 'Medicines', label: language === 'en' ? 'Medicines' : 'മരുന്നുകൾ' },
-    { key: 'Essentials', label: language === 'en' ? 'Essentials' : 'അത്യാവശ്യങ്ങൾ' }
+    { key: 'Health_Essentials', label: language === 'en' ? 'Health Essentials' : 'സ്വാസ്ഥ്യ അത്യാവശ്യങ്ങൾ' },
+    { key: 'Others', label: language === 'en' ? 'Others' : 'മറ്റുള്ളവ' }
   ];
 
   return (

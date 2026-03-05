@@ -461,7 +461,7 @@ const DS = {
   statsGrid:    { display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 },
   statCard:     { backgroundColor:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.06)', borderRadius:12, padding:'14px 12px', display:'flex', flexDirection:'column', alignItems:'center', gap:6, textAlign:'center' },
   statIcon:     { width:40, height:40, borderRadius:10, display:'flex', alignItems:'center', justifyContent:'center' },
-  statValue:    { color:'#fff', fontWeight:800, fontSize:'1.25rem', margin:0, fontVariantNumeric:'tabular-nums', color:'#68f91a' },
+  statValue:    { color:'#fff', fontWeight:800, fontSize:'1.25rem', margin:0, fontVariantNumeric:'tabular-nums' },
   statLabel:    { color:'#666', fontSize:'0.72rem', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.05em', margin:0 },
   creditRow:    { display:'flex', alignItems:'center', gap:8, backgroundColor:'rgba(255,255,255,0.02)', borderRadius:10, padding:'10px 12px' },
   creditHistRow:{ display:'flex', alignItems:'center', gap:8, backgroundColor:'rgba(255,255,255,0.03)', borderRadius:8, padding:'8px 10px' },

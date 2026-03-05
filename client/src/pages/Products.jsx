@@ -24,27 +24,27 @@ const ALL_PRODUCTS = [
   { id: 13, category: 'groceries',  price: 75,  name: 'Coconut Oil (500 ml)',malayalamName: 'വെളിച്ചെണ്ണ (500 മി.ലി)', image: 'https://images.apollo247.in/pub/media/catalog/product/p/a/par0804-1-apr.jpg' },
   { id: 14, category: 'groceries',  price: 28,  name: 'Eggs (6 pcs)',        malayalamName: 'മുട്ട (6 എണ്ണം)',         image: 'https://media.istockphoto.com/id/1698895776/photo/organic-brown-eggs.jpg?s=612x612&w=0&k=20&c=wQ_BwWfa7VCbI1hi_OShrCNuD89Erj7TtxAJgSJLGrc=' },
 
-  // MEDICINES
-  { id: 15, category: 'medicines',  price: 18,  name: 'Paracetamol 500mg',   malayalamName: 'പാരസെറ്റമോൾ 500mg',     image: 'https://www.doctrislifesciences.com/wp-content/uploads/2024/01/DSC00181.png' },
-  { id: 16, category: 'medicines',  price: 35,  name: 'Antacid Tablets',     malayalamName: 'ആന്റാസിഡ് ഗുളിക',       image: 'https://cdn01.pharmeasy.in/dam/products_otc/Z63893/liveasy-wellness-antacid-mint-flavour-sugar-free-bottle-of-200ml-oral-liquid-2-1695207631.jpg' },
-  { id: 17, category: 'medicines',  price: 85,  name: 'Vitamin C 500mg',     malayalamName: 'വിറ്റമിൻ സി 500mg',      image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRxeGz5kgwd5gqeYTnr5n6EG1rsXlKYwrYo1Q&s' },
-  { id: 18, category: 'medicines',  price: 40,  name: 'ORS Sachets (5 pcs)', malayalamName: 'ORS സഷേ (5 എണ്ണം)',       image: 'https://5.imimg.com/data5/SELLER/Default/2024/2/385188402/XU/LE/VE/24119759/ors-powder-sachet.jpg' },
-  { id: 19, category: 'medicines',  price: 22,  name: 'Vics Cough Drops',         malayalamName: 'ചുമ ഗുളിക',              image: 'https://m.media-amazon.com/images/I/61CqKFJv8OL.jpg' },
+  // HEALTH ESSENTIALS
+  { id: 15, category: 'health_essentials',  price: 18,  name: 'Paracetamol 500mg',   malayalamName: 'പാരസെറ്റമോൾ 500mg',     image: 'https://www.doctrislifesciences.com/wp-content/uploads/2024/01/DSC00181.png' },
+  { id: 16, category: 'health_essentials',  price: 35,  name: 'Antacid Tablets',     malayalamName: 'ആന്റാസിഡ് ഗുളിക',       image: 'https://cdn01.pharmeasy.in/dam/products_otc/Z63893/liveasy-wellness-antacid-mint-flavour-sugar-free-bottle-of-200ml-oral-liquid-2-1695207631.jpg' },
+  { id: 17, category: 'health_essentials',  price: 85,  name: 'Vitamin C 500mg',     malayalamName: 'വിറ്റമിൻ സി 500mg',      image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRxeGz5kgwd5gqeYTnr5n6EG1rsXlKYwrYo1Q&s' },
+  { id: 18, category: 'health_essentials',  price: 40,  name: 'ORS Sachets (5 pcs)', malayalamName: 'ORS സഷേ (5 എണ്ണം)',       image: 'https://5.imimg.com/data5/SELLER/Default/2024/2/385188402/XU/LE/VE/24119759/ors-powder-sachet.jpg' },
+  { id: 19, category: 'health_essentials',  price: 22,  name: 'Vics Cough Drops',         malayalamName: 'ചുമ ഗുളിക',              image: 'https://m.media-amazon.com/images/I/61CqKFJv8OL.jpg' },
 
-  // ESSENTIALS
-  { id: 20, category: 'essentials', price: 65,  name: 'Hand Sanitizer',      malayalamName: 'ഹാൻഡ് സാനിറ്റൈസർ',     image: 'https://media.istockphoto.com/id/1372350278/photo/hand-sanitizer.jpg?s=612x612&w=0&k=20&c=WVG34qN3_Rxd5jborLJR7mPL9_DaYlL-nhDoGp8_An4=' },
-  { id: 21, category: 'essentials', price: 30,  name: 'Sanitary Pads',   malayalamName: 'സാനിറ്ററി പാഡ്സ്',  image: 'https://images.ctfassets.net/aub2fvcyp2t8/1ppOEQvxzLDBGVY6S6FXin/e439206219055c86fe81b89486e8a853/cottonyxl18ssizechanged-en-in?fm=webp&w=3840' },
-  { id: 22, category: 'essentials', price: 30,  name: 'Face Mask (5 pcs)',   malayalamName: 'ഫേസ് മാസ്ക് (5 എണ്ണം)',  image: 'https://www.eourmart.com/cdn/shop/products/FaceMask4PLY.png?v=1654255252' },
-  { id: 23, category: 'essentials', price: 20,  name: 'Tissue Paper Pack',   malayalamName: 'ടിഷ്യൂ പേപ്പർ',          image: 'https://sc04.alicdn.com/kf/Hb2e98c9c5f43440389d683acb9dc8fa0i.jpg_350x350.jpg' },
-  { id: 24, category: 'essentials', price: 15,  name: 'Ballpoint Pen',       malayalamName: 'ബോൾ‌പോയിന്റ് പേന',      image: 'https://m.media-amazon.com/images/I/71RVj1XNisL.jpg' },
+  // OTHERS
+  { id: 20, category: 'others', price: 65,  name: 'Hand Sanitizer',      malayalamName: 'ഹാൻഡ് സാനിറ്റൈസർ',     image: 'https://media.istockphoto.com/id/1372350278/photo/hand-sanitizer.jpg?s=612x612&w=0&k=20&c=WVG34qN3_Rxd5jborLJR7mPL9_DaYlL-nhDoGp8_An4=' },
+  { id: 21, category: 'others', price: 30,  name: 'Sanitary Pads',   malayalamName: 'സാനിറ്ററി പാഡ്സ്',  image: 'https://images.ctfassets.net/aub2fvcyp2t8/1ppOEQvxzLDBGVY6S6FXin/e439206219055c86fe81b89486e8a853/cottonyxl18ssizechanged-en-in?fm=webp&w=3840' },
+  { id: 22, category: 'others', price: 30,  name: 'Face Mask (5 pcs)',   malayalamName: 'ഫേസ് മാസ്ക് (5 എണ്ണം)',  image: 'https://www.eourmart.com/cdn/shop/products/FaceMask4PLY.png?v=1654255252' },
+  { id: 23, category: 'others', price: 20,  name: 'Tissue Paper Pack',   malayalamName: 'ടിഷ്യൂ പേപ്പർ',          image: 'https://sc04.alicdn.com/kf/Hb2e98c9c5f43440389d683acb9dc8fa0i.jpg_350x350.jpg' },
+  { id: 24, category: 'others', price: 15,  name: 'Ballpoint Pen',       malayalamName: 'ബോൾ‌പോയിന്റ് പേന',      image: 'https://m.media-amazon.com/images/I/71RVj1XNisL.jpg' },
 ];
 
 const CATEGORY_TABS = [
   { key: 'all',        en: 'All',        ml: 'എല്ലാം' },
   { key: 'food',       en: 'Food',       ml: 'ഭക്ഷണം' },
   { key: 'groceries',  en: 'Groceries',  ml: 'പലചരക്ക്' },
-  { key: 'medicines',  en: 'Medicines',  ml: 'മരുന്നുകൾ' },
-  { key: 'essentials', en: 'Essentials', ml: 'ആവശ്യസാധനങ്ങൾ' },
+  { key: 'health_essentials',  en: 'Health Essentials',  ml: 'സ്വാസ്ഥ്യ അത്യാവശ്യങ്ങൾ' },
+  { key: 'others', en: 'Others', ml: 'മറ്റുള്ളവ' },
 ];
 
 const SORT_OPTIONS = [

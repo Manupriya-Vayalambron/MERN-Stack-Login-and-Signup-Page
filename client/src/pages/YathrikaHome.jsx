@@ -10,8 +10,8 @@ const T = {
     search:        'Search products...',
     food:          'Food',
     groceries:     'Groceries',
-    medicines:     'Medicines',
-    essentials:    'Essentials',
+    health_essentials:     'Health Essentials',
+    others:    'Others',
     yourStop:      'YOUR DELIVERY STOP',
     changeStop:    'Change',
     noStop:        'No stop selected',
@@ -44,8 +44,8 @@ const T = {
     search:        'ഉൽപ്പന്നങ്ങൾ തിരയുക...',
     food:          'ഭക്ഷണം',
     groceries:     'പലചരക്ക്',
-    medicines:     'മരുന്നുകൾ',
-    essentials:    'അത്യാവശ്യങ്ങൾ',
+    health_essentials:     'സ്വാസ്ഥ്യ അത്യാവശ്യങ്ങൾ',
+    others:    'അത്യാവശ്യങ്ങൾ',
     yourStop:      'നിങ്ങളുടെ ഡെലിവറി സ്റ്റോപ്പ്',
     changeStop:    'മാറ്റുക',
     noStop:        'സ്റ്റോപ്പ് തിരഞ്ഞെടുത്തിട്ടില്ല',
@@ -101,8 +101,8 @@ const DAY_QUOTES = {
 const CATEGORIES = [
   { key: 'food',       img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDvPcTsasbxb7K-aOsx4oRU93OzFQBf_X2Y4CiMCmbNI8fsgvCnOhbXmTJ8gnl3rwVO9Ev2zDjKQTN7CkrU2GQU5rdn_U44DMVLU7N5kLS0AUuxksxWEc0qGoWg0sTIVfWjESaAUsp5Mrjh0J6O5XgdgW6PZwW4ZJHqM-HkTQCRRnws6KnCPwTSIm9bhdfMzKMmNawS40_5zjbOrz934M94rUpoIJcHbQdEqX2yw1YPni59Tjj5E9kEzC_imqvU2NcH1iguOoKwZUI' },
   { key: 'groceries',  img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCUPrHmRoGtO7fynA-DZvmC907wa-A9nbeR11d9jnkQHMOScl0GYy1qvVEXold2DVNPBk4XhBPcr1amU810_QQpxlniMmAEaeS17F8UVnvnTgtkvnlNz-A9tud1TPnbhd1d3e1huTubW0dtMbcH8AvkTYtr7aGvgaWtJmCeahypDlmN2VGLbevTBDr1fKBFLxADwrahIrXcIFwLVAHLTtBdLNONKIyzJFToIML6gDb9McQxeezJ9F0uje1T02CCMkCJJHEHR_QyizU' },
-  { key: 'medicines',  img: 'https://media.istockphoto.com/id/1778918997/photo/background-of-a-large-group-of-assorted-capsules-pills-and-blisters.jpg?s=612x612&w=0&k=20&c=G6aeWKN1kHyaTxiNdToVW8_xGY0hcenWYIjjG_xwF_Q=' },
-  { key: 'essentials', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDAhRl5lJ64TTi7H9MLKSiyQ2bR0c5Sh-n5eUTHffpig8vQjF18w0geUoZrRB_O3Mhj6DxcWxgXTeT54N1HjdMbbyfUiCbU6VYwHXi9ZlnYWS8Kd9rZS7nBIzdA61ncSpa1RNDmuxkIaWBlZjOBY5M51SB7AtU6THGwyQaiBxeL42cTTlIQpspAQ6k-GUeYgv-0vZuApEyNzjHVxoJkmREZMKyZgC-_dgakVPGY0425F_47uL5YAIidFAEOKsWo02kFlAccoY3Zl9Q' },
+  { key: 'health_essentials',  img: 'https://media.istockphoto.com/id/1778918997/photo/background-of-a-large-group-of-assorted-capsules-pills-and-blisters.jpg?s=612x612&w=0&k=20&c=G6aeWKN1kHyaTxiNdToVW8_xGY0hcenWYIjjG_xwF_Q=' },
+  { key: 'others', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDAhRl5lJ64TTi7H9MLKSiyQ2bR0c5Sh-n5eUTHffpig8vQjF18w0geUoZrRB_O3Mhj6DxcWxgXTeT54N1HjdMbbyfUiCbU6VYwHXi9ZlnYWS8Kd9rZS7nBIzdA61ncSpa1RNDmuxkIaWBlZjOBY5M51SB7AtU6THGwyQaiBxeL42cTTlIQpspAQ6k-GUeYgv-0vZuApEyNzjHVxoJkmREZMKyZgC-_dgakVPGY0425F_47uL5YAIidFAEOKsWo02kFlAccoY3Zl9Q' },
 ];
 
 
