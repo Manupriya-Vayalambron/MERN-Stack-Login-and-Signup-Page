@@ -26,8 +26,8 @@ const ALL_PRODUCTS = [
 
   // HEALTH ESSENTIALS
   { id: 15, category: 'health_essentials',  price: 18,  name: 'Paracetamol 500mg',   malayalamName: 'പാരസെറ്റമോൾ 500mg',     image: 'https://www.doctrislifesciences.com/wp-content/uploads/2024/01/DSC00181.png' },
-  { id: 16, category: 'health_essentials',  price: 35,  name: 'Antacid Tablets',     malayalamName: 'ആന്റാസിഡ് ഗുളിക',       image: 'https://cdn01.pharmeasy.in/dam/products_otc/Z63893/liveasy-wellness-antacid-mint-flavour-sugar-free-bottle-of-200ml-oral-liquid-2-1695207631.jpg' },
-  { id: 17, category: 'health_essentials',  price: 85,  name: 'Vitamin C 500mg',     malayalamName: 'വിറ്റമിൻ സി 500mg',      image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRxeGz5kgwd5gqeYTnr5n6EG1rsXlKYwrYo1Q&s' },
+  { id: 16, category: 'health_essentials',  price: 35,  name: 'Volini Spray',     malayalamName: 'വോലിനി സ്പ്രേ',       image: 'https://m.media-amazon.com/images/I/51a6-va-ZqL.jpg' },
+  { id: 17, category: 'health_essentials',  price: 85,  name: 'Tiger Balm',     malayalamName: 'ടൈഗർ ബാലം',      image: 'https://www.tigerbalm.com/sg/wp-content/uploads/sites/7/2023/07/TB-whiteR-1.jpg' },
   { id: 18, category: 'health_essentials',  price: 40,  name: 'ORS Sachets (5 pcs)', malayalamName: 'ORS സഷേ (5 എണ്ണം)',       image: 'https://5.imimg.com/data5/SELLER/Default/2024/2/385188402/XU/LE/VE/24119759/ors-powder-sachet.jpg' },
   { id: 19, category: 'health_essentials',  price: 22,  name: 'Vics Cough Drops',         malayalamName: 'ചുമ ഗുളിക',              image: 'https://m.media-amazon.com/images/I/61CqKFJv8OL.jpg' },
 
