@@ -7,7 +7,7 @@ import '../index.css';
 /* ─── Full product catalogue ─────────────────────────────────────────────── */
 const ALL_PRODUCTS = [
   // FOOD
-  { id: 1,  category: 'food',       price: 120, name: 'Fresh Mangoes',       malayalamName: 'പച്ച മാങ്ങ',           image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBEKTFnOFahdp4MEIF6tvk1AQar29GFzItRPmYFTSkKp9CWXeaL94YqIpZKyVNa9uJItLfqYVavLIyfgUk4NGici-46S3TXVcvfJpSSPKQ1UrYVxqzEENEIh2YPbS0ELGgV_dUN8BAKwCZD1Z1guwLGRB67cimRcJ680ayuNUocNGFgqnbqGxaSQFHx61OdlweoHttrK608E1ASy48CNViaalG7KB7jCtNqsJNBZ5poGo2Yql7gI6YKVpET8Pc9iEB877IrtjZbNkM' },
+  { id: 1,  category: 'food',       price: 120, name: 'Fresh Mangoes (1kg)',       malayalamName: 'പച്ച മാങ്ങ',           image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBEKTFnOFahdp4MEIF6tvk1AQar29GFzItRPmYFTSkKp9CWXeaL94YqIpZKyVNa9uJItLfqYVavLIyfgUk4NGici-46S3TXVcvfJpSSPKQ1UrYVxqzEENEIh2YPbS0ELGgV_dUN8BAKwCZD1Z1guwLGRB67cimRcJ680ayuNUocNGFgqnbqGxaSQFHx61OdlweoHttrK608E1ASy48CNViaalG7KB7jCtNqsJNBZ5poGo2Yql7gI6YKVpET8Pc9iEB877IrtjZbNkM' },
   { id: 2,  category: 'food',       price: 20,  name: "Lay's Chips",         malayalamName: 'ലേയ്സ് ചിപ്സ്',        image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRXgZ9vu0A3VYbyHUbZBL0U-H4s0DkNzxaW0Q&s' },
   { id: 3,  category: 'food',       price: 30,  name: 'Mirinda',             malayalamName: 'മിരിൻഡ',               image: 'https://5.imimg.com/data5/SELLER/Default/2024/11/462892936/UB/IY/LJ/112583242/marinda-500x500.jpg' },
   { id: 4,  category: 'food',       price: 50,  name: 'Bread',               malayalamName: 'ബ്രെഡ്',               image: 'https://rukminim2.flixcart.com/image/480/480/xif0q/ready-meal/b/r/g/420-traditional-white-loaf-bread-pack-of-1-1-only-gluten-free-original-imaghgj6unjxgvaz.jpeg?q=90' },
@@ -17,29 +17,26 @@ const ALL_PRODUCTS = [
   { id: 8,  category: 'food',       price: 80,  name: 'Veg Sandwich',        malayalamName: 'വെജ് സാൻഡ്വിച്ച്',     image: 'https://www.indianhealthyrecipes.com/wp-content/uploads/2024/05/vegetarian-club-sandwich-recipe.jpg' },
 
   // GROCERIES
-  { id: 9,  category: 'groceries',  price: 95,  name: 'Basmati Rice (1 kg)', malayalamName: 'ബാസ്മതി അരി (1 കി.ഗ്രാ)', image: 'https://www.jiomart.com/images/product/original/490001808/india-gate-basmati-rice-classic-1-kg-product-images-o490001808-p490001808-0-202307051236.jpg' },
-  { id: 10, category: 'groceries',  price: 55,  name: 'Toor Dal (500 g)',    malayalamName: 'തൂർ പരിപ്പ് (500 ഗ്രാ)',  image: 'https://www.bigbasket.com/media/uploads/p/xxl/10000063_6-bb-royal-unpolished-toor-dal-arhar-dal.jpg' },
-  { id: 11, category: 'groceries',  price: 110, name: 'Sunflower Oil (1 L)', malayalamName: 'സൂര്യകാന്തി എണ്ണ (1 ലി)',image: 'https://images.meesho.com/images/products/250313459/pjhgb_1200.jpg' },
-  { id: 12, category: 'groceries',  price: 42,  name: 'Tomatoes (500 g)',    malayalamName: 'തക്കാളി (500 ഗ്രാ)',      image: 'https://upload.wikimedia.org/wikipedia/commons/8/89/Tomato_je.jpg' },
-  { id: 13, category: 'groceries',  price: 35,  name: 'Onions (500 g)',      malayalamName: 'സവോള (500 ഗ്രാ)',         image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Onions.jpg/640px-Onions.jpg' },
-  { id: 14, category: 'groceries',  price: 75,  name: 'Coconut Oil (500 ml)',malayalamName: 'വെളിച്ചെണ്ണ (500 മി.ലി)', image: 'https://www.jiomart.com/images/product/original/490004345/parachute-coconut-oil-500-ml-product-images-o490004345-p490004345-0-202408060751.jpg' },
-  { id: 15, category: 'groceries',  price: 28,  name: 'Eggs (6 pcs)',        malayalamName: 'മുട്ട (6 എണ്ണം)',         image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Chicken_egg_white_background_09.jpg/640px-Chicken_egg_white_background_09.jpg' },
+  { id: 9,  category: 'groceries',  price: 95,  name: 'Basmati Rice (1 kg)', malayalamName: 'ബാസ്മതി അരി (1 കി.ഗ്രാ)', image: 'https://5.imimg.com/data5/SELLER/Default/2022/8/GV/MW/WS/46819356/supreme-traditional-basmati-rice-500x500.jpg' },
+  { id: 10, category: 'groceries',  price: 110, name: 'Sunflower Oil (1 L)', malayalamName: 'സൂര്യകാന്തി എണ്ണ (1 ലി)',image: 'https://muktifresh.in/assets/frontEnd/images/product/sunflower-oil.jpg' },
+  { id: 11, category: 'groceries',  price: 42,  name: 'Tomatoes (500 g)',    malayalamName: 'തക്കാളി (500 ഗ്രാ)',      image: 'https://upload.wikimedia.org/wikipedia/commons/8/89/Tomato_je.jpg' },
+  { id: 12, category: 'groceries',  price: 35,  name: 'Onions (500 g)',      malayalamName: 'സവോള (500 ഗ്രാ)',         image: 'https://samsgardenstore.com/cdn/shop/files/OnionRedSeeds_Desi_b8496f89-a62d-44e5-9481-5c60b24ca696.webp?v=1726217577' },
+  { id: 13, category: 'groceries',  price: 75,  name: 'Coconut Oil (500 ml)',malayalamName: 'വെളിച്ചെണ്ണ (500 മി.ലി)', image: 'https://images.apollo247.in/pub/media/catalog/product/p/a/par0804-1-apr.jpg' },
+  { id: 14, category: 'groceries',  price: 28,  name: 'Eggs (6 pcs)',        malayalamName: 'മുട്ട (6 എണ്ണം)',         image: 'https://media.istockphoto.com/id/1698895776/photo/organic-brown-eggs.jpg?s=612x612&w=0&k=20&c=wQ_BwWfa7VCbI1hi_OShrCNuD89Erj7TtxAJgSJLGrc=' },
 
   // MEDICINES
-  { id: 16, category: 'medicines',  price: 18,  name: 'Paracetamol 500mg',   malayalamName: 'പാരസെറ്റമോൾ 500mg',     image: 'https://images.apollo247.in/pub/media/catalog/product/d/o/dolo-650-tab_1.jpg' },
-  { id: 17, category: 'medicines',  price: 35,  name: 'Antacid Tablets',     malayalamName: 'ആന്റാസിഡ് ഗുളിക',       image: 'https://images.apollo247.in/pub/media/catalog/product/g/e/GES0036_1.jpg' },
-  { id: 18, category: 'medicines',  price: 55,  name: 'Band-Aid (10 pcs)',   malayalamName: 'ബാൻഡ്-എയ്ഡ് (10 എണ്ണം)', image: 'https://cdn.grofers.com/cdn-cgi/image/f=auto,fit=scale-down,q=70,metadata=none,w=360/app/images/products/sliding_image/497607a.jpg' },
-  { id: 19, category: 'medicines',  price: 85,  name: 'Vitamin C 500mg',     malayalamName: 'വിറ്റമിൻ സി 500mg',      image: 'https://images.apollo247.in/pub/media/catalog/product/c/e/cevit-500mg-tablet_1.jpg' },
-  { id: 20, category: 'medicines',  price: 40,  name: 'ORS Sachets (5 pcs)', malayalamName: 'ORS സഷേ (5 എണ്ണം)',       image: 'https://images.apollo247.in/pub/media/catalog/product/e/l/electral-powder_1.jpg' },
-  { id: 21, category: 'medicines',  price: 22,  name: 'Cough Drops',         malayalamName: 'ചുമ ഗുളിക',              image: 'https://images.apollo247.in/pub/media/catalog/product/s/t/strepsils-orange_1.jpg' },
+  { id: 15, category: 'medicines',  price: 18,  name: 'Paracetamol 500mg',   malayalamName: 'പാരസെറ്റമോൾ 500mg',     image: 'https://www.doctrislifesciences.com/wp-content/uploads/2024/01/DSC00181.png' },
+  { id: 16, category: 'medicines',  price: 35,  name: 'Antacid Tablets',     malayalamName: 'ആന്റാസിഡ് ഗുളിക',       image: 'https://cdn01.pharmeasy.in/dam/products_otc/Z63893/liveasy-wellness-antacid-mint-flavour-sugar-free-bottle-of-200ml-oral-liquid-2-1695207631.jpg' },
+  { id: 17, category: 'medicines',  price: 85,  name: 'Vitamin C 500mg',     malayalamName: 'വിറ്റമിൻ സി 500mg',      image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRxeGz5kgwd5gqeYTnr5n6EG1rsXlKYwrYo1Q&s' },
+  { id: 18, category: 'medicines',  price: 40,  name: 'ORS Sachets (5 pcs)', malayalamName: 'ORS സഷേ (5 എണ്ണം)',       image: 'https://5.imimg.com/data5/SELLER/Default/2024/2/385188402/XU/LE/VE/24119759/ors-powder-sachet.jpg' },
+  { id: 19, category: 'medicines',  price: 22,  name: 'Vics Cough Drops',         malayalamName: 'ചുമ ഗുളിക',              image: 'https://m.media-amazon.com/images/I/61CqKFJv8OL.jpg' },
 
   // ESSENTIALS
-  { id: 22, category: 'essentials', price: 65,  name: 'Hand Sanitizer',      malayalamName: 'ഹാൻഡ് സാനിറ്റൈസർ',     image: 'https://www.jiomart.com/images/product/original/491580095/dettol-instant-hand-sanitizer-original-50-ml-product-images-o491580095-p491580095-0-202207141742.jpg' },
-  { id: 23, category: 'essentials', price: 30,  name: 'Face Mask (5 pcs)',   malayalamName: 'ഫേസ് മാസ്ക് (5 എണ്ണം)',  image: 'https://www.jiomart.com/images/product/original/491661050/3m-1860s-n95-particulate-respirator-mask-small-product-images-o491661050-p491661050-0-202207141813.jpg' },
-  { id: 24, category: 'essentials', price: 20,  name: 'Tissue Paper Pack',   malayalamName: 'ടിഷ്യൂ പേപ്പർ',          image: 'https://rukminim2.flixcart.com/image/480/480/xif0q/tissue/d/s/k/-original-imagzg4wghfcyxwh.jpeg?q=90' },
-  { id: 25, category: 'essentials', price: 45,  name: 'Phone Charger Cable', malayalamName: 'ഫോൺ ചാർജർ കേബിൾ',       image: 'https://m.media-amazon.com/images/I/61GIn5KAEBL._AC_SL1500_.jpg' },
-  { id: 26, category: 'essentials', price: 15,  name: 'Ballpoint Pen',       malayalamName: 'ബോൾ‌പോയിന്റ് പേന',      image: 'https://m.media-amazon.com/images/I/61hBCixzqOL._AC_SL1500_.jpg' },
-  { id: 27, category: 'essentials', price: 90,  name: 'Earphones',           malayalamName: 'ഇയർഫോൺ',                image: 'https://m.media-amazon.com/images/I/41bIBMEAH-L._AC_SL1000_.jpg' },
+  { id: 20, category: 'essentials', price: 65,  name: 'Hand Sanitizer',      malayalamName: 'ഹാൻഡ് സാനിറ്റൈസർ',     image: 'https://media.istockphoto.com/id/1372350278/photo/hand-sanitizer.jpg?s=612x612&w=0&k=20&c=WVG34qN3_Rxd5jborLJR7mPL9_DaYlL-nhDoGp8_An4=' },
+  { id: 21, category: 'essentials', price: 30,  name: 'Sanitary Pads',   malayalamName: 'സാനിറ്ററി പാഡ്സ്',  image: 'https://images.ctfassets.net/aub2fvcyp2t8/1ppOEQvxzLDBGVY6S6FXin/e439206219055c86fe81b89486e8a853/cottonyxl18ssizechanged-en-in?fm=webp&w=3840' },
+  { id: 22, category: 'essentials', price: 30,  name: 'Face Mask (5 pcs)',   malayalamName: 'ഫേസ് മാസ്ക് (5 എണ്ണം)',  image: 'https://www.eourmart.com/cdn/shop/products/FaceMask4PLY.png?v=1654255252' },
+  { id: 23, category: 'essentials', price: 20,  name: 'Tissue Paper Pack',   malayalamName: 'ടിഷ്യൂ പേപ്പർ',          image: 'https://sc04.alicdn.com/kf/Hb2e98c9c5f43440389d683acb9dc8fa0i.jpg_350x350.jpg' },
+  { id: 24, category: 'essentials', price: 15,  name: 'Ballpoint Pen',       malayalamName: 'ബോൾ‌പോയിന്റ് പേന',      image: 'https://m.media-amazon.com/images/I/71RVj1XNisL.jpg' },
 ];
 
 const CATEGORY_TABS = [
