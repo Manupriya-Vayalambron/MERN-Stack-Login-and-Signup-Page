@@ -61,29 +61,32 @@ const UserSchema = new mongoose.Schema({
     }
 });
 
-// Method to generate next order ID
+// Method to generate next order ID (fallback only — addOrder increments orderCount)
 UserSchema.methods.generateOrderId = function() {
-    this.orderCount += 1;
     const phoneDigits = this.phoneNumber.replace('+91', '');
-    return phoneDigits + this.orderCount;
+    return phoneDigits + (this.orderCount + 1);
 };
 
-// Method to add new order
+// Method to add new order.
+// If orderData.orderId is provided (pre-generated in payment/verify so that
+// Tracking.jsx and the partner dashboard share the exact same ID), use it.
+// Otherwise fall back to the old phone+count generated format.
 UserSchema.methods.addOrder = function(orderData) {
-    const orderId = this.generateOrderId();
-    
+    const orderId = orderData.orderId || this.generateOrderId();
+
     const newOrder = {
-        orderId: orderId,
-        items: orderData.items,
-        totalAmount: orderData.totalAmount,
+        orderId,
+        items:         orderData.items,
+        totalAmount:   orderData.totalAmount,
         paymentStatus: orderData.paymentStatus,
-        paymentId: orderData.paymentId,
+        paymentId:     orderData.paymentId,
         paymentMethod: orderData.paymentMethod
     };
-    
+
     this.orders.push(newOrder);
+    this.orderCount += 1;
     this.updatedAt = new Date();
-    
+
     return orderId;
 };
 

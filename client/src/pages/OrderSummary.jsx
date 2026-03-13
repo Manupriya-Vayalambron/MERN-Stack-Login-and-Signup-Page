@@ -11,11 +11,18 @@ const OrderSummary = () => {
   // Real payment data passed from Payment.jsx after success
   const {
     paymentId,
-    orderId,
+    orderId:       razorpayOrderId,   // Razorpay's order_xxx — for display only
+    customOrderId,                     // YATH-xxx — the real tracking/partner ID
     amount,
-    cartItems:   paidItems,
+    cartItems:     paidItems,
     paymentMethod,
   } = location.state || {};
+
+  // customOrderId is the ID everything (Tracking, partner dashboard, socket rooms) uses.
+  // Fall back to reading it from localStorage in case state was lost on refresh.
+  const orderId = customOrderId
+    || (() => { try { return JSON.parse(localStorage.getItem('yathrika_current_order') || 'null')?.orderId; } catch(_) { return null; } })()
+    || razorpayOrderId;
 
   const orderItems   = paidItems?.length ? paidItems : contextItems;
   const displayItems = orderItems.length ? orderItems : [
@@ -34,8 +41,8 @@ const OrderSummary = () => {
     wallet:     'Wallet',
   }[paymentMethod] || 'Online Payment';
 
-  const shortOrderId   = orderId  ? orderId.slice(-10).toUpperCase()  : '—';
-  const shortPaymentId = paymentId ? paymentId.slice(-12).toUpperCase() : '—';
+  const shortOrderId   = orderId       ? String(orderId).slice(-10).toUpperCase()       : '—';
+  const shortPaymentId = razorpayOrderId ? String(razorpayOrderId).slice(-12).toUpperCase() : '—';
 
   // ── Bus stop from localStorage ─────────────────────────────────────────────
   let busStop = null;
@@ -43,7 +50,14 @@ const OrderSummary = () => {
   const stopName = busStop?.name || 'Not selected';
 
   // ── Write order data to localStorage so Tracking.jsx can read it ──────────
+  // IMPORTANT: Payment.jsx already saved yathrika_current_order with the correct
+  // customOrderId (YATH-xxx) before navigating here. We must NOT overwrite it
+  // with the Razorpay order ID. Only write if nothing was saved yet (e.g. refresh).
   useEffect(() => {
+    const existing = (() => { try { return JSON.parse(localStorage.getItem('yathrika_current_order') || 'null'); } catch(_) { return null; } })();
+    // If existing record already has a YATH- orderId, trust it — don't overwrite
+    if (existing?.orderId?.startsWith('YATH-')) return;
+    // Otherwise write a best-effort record (e.g. user refreshed the page)
     if (!orderId && !paidItems) return;
     const orderData = {
       orderId:       orderId || ('ORD' + Date.now().toString().slice(-8)),
@@ -55,8 +69,8 @@ const OrderSummary = () => {
       createdAt:     new Date().toISOString(),
     };
     localStorage.setItem('yathrika_current_order', JSON.stringify(orderData));
-    // Also save cart snapshot for Tracking fallback
     localStorage.setItem('yathrika_cart', JSON.stringify(displayItems));
+    clearCart();
   }, [orderId, paymentId]);
 
   // ── Generate invoice text for download / share ────────────────────────────

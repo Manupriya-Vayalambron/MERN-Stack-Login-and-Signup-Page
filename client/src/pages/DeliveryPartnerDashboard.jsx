@@ -88,6 +88,7 @@ const DeliveryPartnerDashboard = () => {
   // ── Load real orders from backend (filtered by partner's assigned bus stop) ──
   const loadAvailableOrders = async (busStop) => {
     try {
+      if (!busStop) return;
       const res = await fetch(`/api/orders/pending/${encodeURIComponent(busStop)}`);
       const data = await res.json();
       setAvailableOrders(data.orders || []);
@@ -155,7 +156,7 @@ const DeliveryPartnerDashboard = () => {
   // ── Update status (HANDOVER = order complete → update earnings) ──────────────
   const updateOrderStatus = (orderId, newStatus) => {
     setAcceptedOrders(prev => prev.map(o => o.id === orderId ? { ...o, status:newStatus } : o));
-    socketService.updateOrderStatus(orderId, newStatus, { partnerId:partner.id });
+    socketService.updateOrderStatus(orderId, newStatus, { partnerId:partner._id });
 
     if (newStatus === 'handover') {
       // Find the order to get reward
@@ -337,7 +338,7 @@ const DeliveryPartnerDashboard = () => {
           <section className="partner-section">
             <div className="partner-section-header">
               <h2>Available Orders ({availableOrders.length})</h2>
-              <button onClick={loadAvailableOrders} className="partner-refresh-button">
+              <button onClick={() => loadAvailableOrders(partner?.assignedBusStop)} className="partner-refresh-button">
                 <i className="material-icons">refresh</i> Refresh
               </button>
             </div>

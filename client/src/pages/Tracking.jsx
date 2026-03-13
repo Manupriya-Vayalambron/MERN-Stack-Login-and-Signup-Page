@@ -104,8 +104,12 @@ const Tracking = () => {
   const [assignedPartner,         setAssignedPartner]         = useState(null);
   const [orderStatus,             setOrderStatus]             = useState('pending');
 
-  const cancelRef   = useRef(null);
-  const deliveryRef = useRef(null);
+  const cancelRef    = useRef(null);
+  const deliveryRef  = useRef(null);
+  const orderDataRef = useRef(null); // always points to latest orderData
+
+  // Keep ref in sync so socket callbacks always see latest orderId
+  useEffect(() => { orderDataRef.current = orderData; }, [orderData]);
 
   // Load order data — always use yathrika_current_order which has the real orderId
   useEffect(() => {
@@ -218,7 +222,8 @@ const Tracking = () => {
   // ← This is where partner acceptance unlocks the tracking UI
   const onPartnerStatus = (data) => {
     // Accept if orderId matches OR if we have no orderId yet (edge case)
-    if (orderData?.orderId && data.orderId && data.orderId !== orderData.orderId) return;
+    const currentOrder = orderDataRef.current;
+    if (currentOrder?.orderId && data.orderId && data.orderId !== currentOrder.orderId) return;
     clearInterval(cancelRef.current);
     setAssignedPartner(data.partner);
     setPartnerAccepted(true);
@@ -227,7 +232,8 @@ const Tracking = () => {
   };
 
   const onOrderStatus = (data) => {
-    if (orderData?.orderId && data.orderId && data.orderId !== orderData.orderId) return;
+    const currentOrder = orderDataRef.current;
+    if (currentOrder?.orderId && data.orderId && data.orderId !== currentOrder.orderId) return;
     setOrderStatus(data.status);
     const m = { confirmed: t.msgConfirmed, packed: t.msgPacked, partner_at_stop: t.msgPartnerStop, handover: t.msgHandover };
     toast({ type: data.status === 'handover' ? 'success' : 'info', message: m[data.status] || data.status });

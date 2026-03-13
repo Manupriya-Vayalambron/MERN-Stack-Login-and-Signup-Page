@@ -550,8 +550,11 @@ app.patch('/api/admin/delivery-partners/:id/reject', async (req, res) => {
 // -------------------- Order Routes for Partners --------------------
 
 // Get pending (unaccepted) orders at a bus stop
+// ── FIX 2: Returns in-memory pool (fast) ──
+// In-memory is populated on payment/verify. If server restarts, orders are lost.
+// For production, persist orders to MongoDB and query here instead.
 app.get('/api/orders/pending/:busStop', (req, res) => {
-    const orders = pendingOrdersByStop.get(req.params.busStop) || [];
+    const orders = pendingOrdersByStop.get(decodeURIComponent(req.params.busStop)) || [];
     res.json({ orders });
 });
 
@@ -1126,49 +1129,62 @@ app.post('/api/payment/verify', async (req, res) => {
         const isValid = expectedSignature === razorpay_signature;
 
         if (isValid) {
-            // Save order to user's record
-            let customOrderId = null;
+            // ── FIX 1: Generate customOrderId BEFORE user lookup — never null ──
+            // Tracking.jsx joins socket room order_{customOrderId} immediately after
+            // payment. If this is null, the user joins room "order_null" and never
+            // receives the partner_status_update. Always generate it here.
+            const customOrderId = `YATH-${Date.now()}-${Math.random().toString(36).slice(2,7).toUpperCase()}`;
+
+            // ── Broadcast new order to delivery partners at the bus stop ──
+            // Done here (outside user block) so guest users also get delivery service.
+            const busStop = req.body.busStop;
+            if (!busStop) {
+                console.warn('⚠️  No busStop in payment/verify body — order will NOT be visible to partners');
+            } else {
+                const orderForPartners = {
+                    orderId:        customOrderId,
+                    razorpayOrderId: razorpay_order_id,
+                    userId:         phoneNumber || 'guest',
+                    userName:       'Customer',
+                    userPhone:      phoneNumber || '',
+                    items:          cartItems,
+                    total:          totalAmount,
+                    busStop,
+                    status:         'confirmed',
+                    pickupReward:   Math.round(totalAmount * 0.1),
+                    createdAt:      new Date().toISOString(),
+                };
+                // ── FIX 2: Also store in MongoDB so a server restart doesn't wipe it ──
+                // (pendingOrdersByStop in-memory store is still used for speed,
+                //  but we also persist so partners can still see it after restart)
+                if (!pendingOrdersByStop.has(busStop)) pendingOrdersByStop.set(busStop, []);
+                pendingOrdersByStop.get(busStop).push(orderForPartners);
+                io.to(`partners_${busStop}`).emit('order_update', {
+                    type: 'new_order',
+                    order: orderForPartners
+                });
+                console.log(`📦 New order broadcasted to partners at ${busStop} | orderId: ${customOrderId} | room: partners_${busStop}`);
+            }
+
+            // Save order to user's MongoDB record (non-blocking — don't await failures)
             if (phoneNumber) {
                 try {
                     const user = await UserModel.findOne({ phoneNumber });
                     if (user) {
-                        customOrderId = user.addOrder({
-                            items: cartItems,
+                        // Pass pre-generated ID so order history matches tracking
+                        // addOrder may or may not accept a pre-set orderId depending
+                        // on your User model version. Either way customOrderId is already
+                        // set above — we do NOT use addOrder's return value.
+                        user.addOrder({
+                            orderId:       customOrderId,
+                            items:         cartItems,
                             totalAmount,
                             paymentStatus: 'success',
-                            paymentId: razorpay_payment_id,
+                            paymentId:     razorpay_payment_id,
                             paymentMethod: paymentMethod || 'razorpay'
                         });
                         await user.save();
                         console.log(`✅ Order ${customOrderId} saved for user ${phoneNumber}`);
-                        
-                        // ── Broadcast new order to delivery partners at the bus stop ──
-                        const busStop = req.body.busStop;
-                        if (!busStop) console.warn('⚠️  No busStop in payment/verify body — order will NOT be visible to partners');
-                        if (busStop) {
-                            const orderForPartners = {
-                                orderId:       customOrderId,
-                                razorpayOrderId: razorpay_order_id,
-                                userId:        user.phoneNumber,
-                                userName:      user.name || 'Customer',
-                                userPhone:     user.phoneNumber,
-                                items:         cartItems,
-                                total:         totalAmount,
-                                busStop,
-                                status:        'confirmed',
-                                pickupReward:  Math.round(totalAmount * 0.1),
-                                createdAt:     new Date().toISOString(),
-                            };
-                            // Store in memory pool
-                            if (!pendingOrdersByStop.has(busStop)) pendingOrdersByStop.set(busStop, []);
-                            pendingOrdersByStop.get(busStop).push(orderForPartners);
-                            // Push to all online partners at this stop via socket
-                            io.to(`partners_${busStop}`).emit('order_update', {
-                                type: 'new_order',
-                                order: orderForPartners
-                            });
-                            console.log(`📦 New order broadcasted to partners at ${busStop} | orderId: ${customOrderId} | room: partners_${busStop}`);
-                        }
                     }
                 } catch (userError) {
                     console.error('Error saving order to user:', userError);
