@@ -699,6 +699,7 @@ app.post('/api/orders/:orderId/accept', (req, res) => {
     orderRuntimeStateById.set(orderId, {
         status: 'confirmed',
         partner: resolvedPartner,
+        reward: Number(order?.pickupReward || 0),
     });
 
     pendingOrdersByStop.set(busStop, orders.filter(o => o.orderId !== orderId));
@@ -726,6 +727,28 @@ app.post('/api/orders/:orderId/accept', (req, res) => {
 
     console.log(`✅ Order ${orderId} accepted by partner ${partnerInfo?.partnerId} — emitted to room order_${orderId}`);
     res.json({ success: true, order });
+});
+
+// Get partner performance + history (for dashboard)
+app.get('/api/delivery-partner/:id/performance', async (req, res) => {
+    try {
+        const partner = await DeliveryPartnerModel.findById(req.params.id).select('-password');
+        if (!partner) return res.status(404).json({ message: 'Partner not found' });
+        res.json({
+            success: true,
+            partner,
+            performance: {
+                completedOrders: partner.completedOrders || 0,
+                totalEarnings: partner.totalEarnings || 0,
+                pendingEarnings: partner.pendingEarnings || 0,
+                totalCredited: partner.totalCredited || 0,
+                completedOrderLog: partner.completedOrderLog || [],
+                creditHistory: partner.creditHistory || [],
+            },
+        });
+    } catch (err) {
+        res.status(500).json({ message: 'Failed to get partner performance', error: err.message });
+    }
 });
 
 // -------------------- Location Tracking API Routes --------------------
@@ -1016,11 +1039,11 @@ io.on('connection', (socket) => {
     });
 
     // Handle order status updates from delivery partners
-    socket.on('order_status_update', (data) => {
+    socket.on('order_status_update', async (data) => {
         const { orderId, status } = data;
         const orderRoomName = `order_${orderId}`;
 
-        const existingState = orderRuntimeStateById.get(orderId) || { status: 'pending', partner: null };
+        const existingState = orderRuntimeStateById.get(orderId) || { status: 'pending', partner: null, reward: 0 };
         const partnerFromSocket = existingState.partner || {
             partnerId: socket.partnerId,
             name: socket.userData?.partnerName || socket.userData?.name || 'Delivery Partner',
@@ -1028,9 +1051,11 @@ io.on('connection', (socket) => {
             vehicleType: socket.userData?.vehicleType || 'Bike',
             busStop: socket.userData?.busStop || '',
         };
+        const resolvedReward = Number(data.reward ?? existingState.reward ?? 0);
         orderRuntimeStateById.set(orderId, {
             status,
             partner: partnerFromSocket,
+            reward: resolvedReward,
         });
         
         // Broadcast status update to all tracking the order
@@ -1070,6 +1095,23 @@ io.on('connection', (socket) => {
                 type: 'order_status'
             }
         }).catch((err) => console.error('Push notify error:', err.message));
+
+        if (status === 'handover') {
+            try {
+                const partnerId = data.partnerId || partnerFromSocket?.partnerId || socket.partnerId;
+                if (partnerId) {
+                    const partnerDoc = await DeliveryPartnerModel.findById(partnerId);
+                    if (partnerDoc) {
+                        const alreadyRecorded = (partnerDoc.completedOrderLog || []).some((entry) => entry.orderId === orderId);
+                        if (!alreadyRecorded) {
+                            await partnerDoc.recordCompletedOrder(orderId, resolvedReward);
+                        }
+                    }
+                }
+            } catch (persistErr) {
+                console.error('Failed to persist partner earnings:', persistErr.message);
+            }
+        }
 
         if (status === 'handover' || status === 'cancelled') {
             orderOwnerById.delete(orderId);

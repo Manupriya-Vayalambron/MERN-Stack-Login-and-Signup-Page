@@ -119,6 +119,19 @@ const DeliveryPartnerDashboard = () => {
     }
   };
 
+  const syncPartnerFromServer = async (partnerId) => {
+    if (!partnerId) return;
+    try {
+      const res = await fetch(`/api/delivery-partner/${partnerId}/performance`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data?.partner) {
+        setPartner(data.partner);
+        localStorage.setItem('deliveryPartner', JSON.stringify(data.partner));
+      }
+    } catch (_) {}
+  };
+
   useEffect(() => {
     if (!partner?._id) return;
     localStorage.setItem(
@@ -194,23 +207,15 @@ const DeliveryPartnerDashboard = () => {
   // ── Update status (HANDOVER = order complete → update earnings) ──────────────
   const updateOrderStatus = (orderId, newStatus) => {
     const normalizedOrderId = String(orderId);
+    const order = acceptedOrders.find(o => getOrderId(o) === normalizedOrderId);
+    const reward = Number(order?.pickupReward || 0);
+
     setAcceptedOrders(prev => prev.map(o => getOrderId(o) === normalizedOrderId ? { ...o, status:newStatus } : o));
-    socketService.updateOrderStatus(orderId, newStatus, { partnerId:partner._id });
+    socketService.updateOrderStatus(orderId, newStatus, { partnerId:partner._id, reward });
 
     if (newStatus === 'handover') {
-      // Find the order to get reward
-      const order = acceptedOrders.find(o => getOrderId(o) === normalizedOrderId);
-      const reward = order?.pickupReward || 0;
-
-      const updated = {
-        ...partner,
-        completedOrders:   (partner.completedOrders  || 0) + 1,
-        totalEarnings:     (partner.totalEarnings    || 0) + reward,
-        pendingEarnings:   (partner.pendingEarnings  || 0) + reward,
-        completedOrderLog: [...(partner.completedOrderLog || []), { orderId, reward, completedAt: new Date().toISOString() }],
-      };
-      setPartner(updated);
-      persistPartner(updated);
+      setAcceptedOrders(prev => prev.filter(o => getOrderId(o) !== normalizedOrderId));
+      syncPartnerFromServer(partner?._id);
       toast({ type:'success', message:`Order complete! +₹${reward} earned` });
     } else {
       toast({ type:'info', message:`Status → ${newStatus.replace(/_/g,' ').toUpperCase()}` });
@@ -460,6 +465,34 @@ const DeliveryPartnerDashboard = () => {
                       <button onClick={() => window.open(`tel:${order.userPhone}`)} className="partner-action-button secondary">
                         <i className="material-icons">call</i> Call Customer
                       </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* ── COMPLETED ORDERS HISTORY (from MongoDB) ─────────────────────── */}
+          {(partner?.completedOrderLog?.length || 0) > 0 && (
+            <section className="partner-section">
+              <div className="partner-section-header">
+                <h2>Completed Orders ({partner.completedOrderLog.length})</h2>
+              </div>
+              <div className="partner-orders-grid">
+                {[...(partner.completedOrderLog || [])].slice().reverse().slice(0, 12).map((entry) => (
+                  <div key={`${entry.orderId}_${entry.completedAt}`} className="partner-order-card accepted">
+                    <div className="order-header">
+                      <div>
+                        <h3 className="order-id">#{String(entry.orderId).slice(-6)}</h3>
+                        <p className="order-customer">Delivered</p>
+                      </div>
+                      <div className="order-status handover">HANDOVER</div>
+                    </div>
+                    <div className="order-details">
+                      <div className="order-info">
+                        <span>Reward: ₹{fmt(entry.reward || 0)}</span>
+                        <span>{entry.completedAt ? new Date(entry.completedAt).toLocaleString('en-IN') : '—'}</span>
+                      </div>
                     </div>
                   </div>
                 ))}
