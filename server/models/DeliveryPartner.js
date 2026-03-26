@@ -13,6 +13,7 @@ const CreditEntrySchema = new mongoose.Schema({
 const CompletedOrderEntrySchema = new mongoose.Schema({
   orderId:     { type: String, required: true },
   reward:      { type: Number, required: true },
+  handoverProofImageUrl: { type: String, default: '' },
   completedAt: { type: Date,   default: Date.now },
 }, { _id: true });
 
@@ -33,6 +34,7 @@ const DeliveryPartnerSchema = new mongoose.Schema({
 
   licenseNumber: { type: String, required: true, trim: true },
   vehicleType:   { type: String, required: true, enum: ['Bike', 'Scooter', 'Bicycle'], default: 'Bike' },
+  aadharCardImageUrl: { type: String, default: '' },
 
   // ── Admin approval ────────────────────────────────────────────────────────────
   approvalStatus: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending', index: true },
@@ -67,11 +69,15 @@ DeliveryPartnerSchema.index({ assignedBusStop: 1, isActive: 1, isOnline: 1 });
 DeliveryPartnerSchema.index({ email: 1 });
 
 // Call when partner completes a delivery (from order-complete API)
-DeliveryPartnerSchema.methods.recordCompletedOrder = async function (orderId, reward) {
+DeliveryPartnerSchema.methods.recordCompletedOrder = async function (orderId, reward, meta = {}) {
   this.completedOrders  += 1;
   this.totalEarnings    += reward;
   this.pendingEarnings  += reward;
-  this.completedOrderLog.push({ orderId, reward });
+  this.completedOrderLog.push({
+    orderId,
+    reward,
+    handoverProofImageUrl: meta.handoverProofImageUrl || '',
+  });
   return this.save();
 };
 

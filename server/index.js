@@ -361,6 +361,8 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
 const { Server } = require('socket.io');
 const http = require('http');
 const EmployeeModel = require('./models/Employee');
@@ -378,6 +380,42 @@ const io = new Server(server, {
 
 app.use(express.json());
 app.use(cors({ origin: '*' }));
+app.use(express.urlencoded({ extended: true }));
+
+const uploadsRoot = path.join(__dirname, 'uploads');
+const aadharUploadDir = path.join(uploadsRoot, 'aadhar');
+const handoverUploadDir = path.join(uploadsRoot, 'handover');
+[uploadsRoot, aadharUploadDir, handoverUploadDir].forEach((dir) => {
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+});
+app.use('/uploads', express.static(uploadsRoot));
+
+const allowedMimeTypes = new Set([
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'application/pdf',
+]);
+
+const safeFileName = (value) => String(value || 'file').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 50) || 'file';
+const createUploader = (destination, namePrefix) => multer({
+    storage: multer.diskStorage({
+        destination: (_req, _file, cb) => cb(null, destination),
+        filename: (req, file, cb) => {
+            const idPart = safeFileName(req.body.partnerId || req.body.phone || req.params.orderId || 'partner');
+            const ext = path.extname(file.originalname || '').toLowerCase() || '.jpg';
+            cb(null, `${namePrefix}_${idPart}_${Date.now()}${ext}`);
+        },
+    }),
+    limits: { fileSize: 7 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+        if (allowedMimeTypes.has(file.mimetype)) return cb(null, true);
+        cb(new Error('Only JPG, PNG, WEBP, or PDF files are allowed'));
+    },
+});
+
+const uploadAadhar = createUploader(aadharUploadDir, 'aadhar');
+const uploadHandoverProof = createUploader(handoverUploadDir, 'handover');
 
 // In-memory store: orders pending partner acceptance
 // Key: busStop string  ->  Value: array of order objects
@@ -388,6 +426,8 @@ const orderOwnerById = new Map();
 
 // Key: orderId -> { status, partner }
 const orderRuntimeStateById = new Map();
+// Key: orderId -> handover proof image URL
+const orderHandoverProofById = new Map();
 
 // In-memory push subscription registry
 // Key: userId (phone number) -> Map(endpoint, subscription)
@@ -469,17 +509,18 @@ mongoose.connection.on('disconnected', () => console.log('Mongoose disconnected 
 
 // -------------------- Delivery Partner Auth Routes --------------------
 
-app.post('/api/delivery-partner/register', async (req, res) => {
+app.post('/api/delivery-partner/register', uploadAadhar.single('aadharCard'), async (req, res) => {
     try {
-        const { name, email, phone, password, assignedBusStop, assignedBusStopCoords, licenseNumber, vehicleType } = req.body;
+        const { name, email, phone, password, assignedBusStop, assignedBusStopLat, assignedBusStopLng, licenseNumber, vehicleType } = req.body;
+        if (!req.file) {
+            return res.status(400).json({ message: 'Aadhaar upload is required for verification' });
+        }
         const existing = await DeliveryPartnerModel.findOne({ email });
         if (existing) return res.status(400).json({ message: 'Partner with this email already exists' });
-        // Safely parse coords — null/undefined coords are omitted so Mongoose doesn't reject them
-        const coords = assignedBusStopCoords && 
-            (assignedBusStopCoords.lat != null) && 
-            (assignedBusStopCoords.lng != null)
-            ? { lat: Number(assignedBusStopCoords.lat), lng: Number(assignedBusStopCoords.lng) }
+        const coords = (assignedBusStopLat != null) && (assignedBusStopLng != null)
+            ? { lat: Number(assignedBusStopLat), lng: Number(assignedBusStopLng) }
             : { lat: null, lng: null };
+        const aadharCardImageUrl = `/uploads/aadhar/${req.file.filename}`;
 
         const partner = await new DeliveryPartnerModel({
             name: name?.trim(),
@@ -489,7 +530,8 @@ app.post('/api/delivery-partner/register', async (req, res) => {
             assignedBusStop: assignedBusStop?.trim(),
             assignedBusStopCoords: coords,
             licenseNumber: licenseNumber?.trim(),
-            vehicleType: vehicleType || 'Bike'
+            vehicleType: vehicleType || 'Bike',
+            aadharCardImageUrl,
         }).save();
         const token = `partner_${partner._id}_${Date.now()}`;
         const resp = partner.toObject(); delete resp.password;
@@ -498,6 +540,32 @@ app.post('/api/delivery-partner/register', async (req, res) => {
     } catch (err) {
         console.error('❌ Partner registration error:', err.message, err.errors ? JSON.stringify(err.errors) : '');
         res.status(500).json({ message: 'Registration failed', error: err.message });
+    }
+});
+
+app.post('/api/orders/:orderId/handover-proof', uploadHandoverProof.single('busPhoto'), (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const { partnerId } = req.body;
+        if (!partnerId) {
+            return res.status(400).json({ success: false, message: 'partnerId is required' });
+        }
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'Bus photo proof is required' });
+        }
+
+        const handoverProofImageUrl = `/uploads/handover/${req.file.filename}`;
+        orderHandoverProofById.set(orderId, handoverProofImageUrl);
+
+        const runtime = orderRuntimeStateById.get(orderId) || { status: 'confirmed', partner: null, reward: 0 };
+        orderRuntimeStateById.set(orderId, {
+            ...runtime,
+            handoverProofImageUrl,
+        });
+
+        res.json({ success: true, orderId, handoverProofImageUrl });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Failed to upload handover proof', error: err.message });
     }
 });
 
@@ -1043,7 +1111,7 @@ io.on('connection', (socket) => {
         const { orderId, status } = data;
         const orderRoomName = `order_${orderId}`;
 
-        const existingState = orderRuntimeStateById.get(orderId) || { status: 'pending', partner: null, reward: 0 };
+        const existingState = orderRuntimeStateById.get(orderId) || { status: 'pending', partner: null, reward: 0, handoverProofImageUrl: '' };
         const partnerFromSocket = existingState.partner || {
             partnerId: socket.partnerId,
             name: socket.userData?.partnerName || socket.userData?.name || 'Delivery Partner',
@@ -1052,10 +1120,22 @@ io.on('connection', (socket) => {
             busStop: socket.userData?.busStop || '',
         };
         const resolvedReward = Number(data.reward ?? existingState.reward ?? 0);
+        const resolvedHandoverProof = data.handoverProofImageUrl || existingState.handoverProofImageUrl || orderHandoverProofById.get(orderId) || '';
+
+        if (status === 'handover' && !resolvedHandoverProof) {
+            socket.emit('order_status_error', {
+                orderId,
+                status,
+                message: 'Bus handover photo proof is required before completing delivery',
+            });
+            return;
+        }
+
         orderRuntimeStateById.set(orderId, {
             status,
             partner: partnerFromSocket,
             reward: resolvedReward,
+            handoverProofImageUrl: resolvedHandoverProof,
         });
         
         // Broadcast status update to all tracking the order
@@ -1104,7 +1184,9 @@ io.on('connection', (socket) => {
                     if (partnerDoc) {
                         const alreadyRecorded = (partnerDoc.completedOrderLog || []).some((entry) => entry.orderId === orderId);
                         if (!alreadyRecorded) {
-                            await partnerDoc.recordCompletedOrder(orderId, resolvedReward);
+                            await partnerDoc.recordCompletedOrder(orderId, resolvedReward, {
+                                handoverProofImageUrl: resolvedHandoverProof,
+                            });
                         }
                     }
                 }
@@ -1116,6 +1198,7 @@ io.on('connection', (socket) => {
         if (status === 'handover' || status === 'cancelled') {
             orderOwnerById.delete(orderId);
             orderRuntimeStateById.delete(orderId);
+            orderHandoverProofById.delete(orderId);
         }
 
         console.log(`Order ${orderId} status updated to: ${status} by partner ${socket.partnerId}`);
@@ -1280,6 +1363,41 @@ app.get('/api/user/:phoneNumber', async (req, res) => {
     }
 });
 
+// Get one specific order for a specific user (Order Summary source of truth)
+app.get('/api/user/:phoneNumber/orders/:orderId', async (req, res) => {
+    try {
+        const { phoneNumber, orderId } = req.params;
+
+        const user = await UserModel.findOne({ phoneNumber }).lean();
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        const order = (user.orders || []).find((o) => String(o.orderId) === String(orderId));
+        if (!order) {
+            return res.status(404).json({ success: false, message: 'Order not found for this user' });
+        }
+
+        res.json({
+            success: true,
+            order: {
+                orderId: order.orderId,
+                items: order.items || [],
+                totalAmount: order.totalAmount || 0,
+                paymentStatus: order.paymentStatus || 'pending',
+                paymentId: order.paymentId || null,
+                razorpayOrderId: order.razorpayOrderId || null,
+                paymentMethod: order.paymentMethod || null,
+                busStop: order.busStop || null,
+                orderDate: order.orderDate || null,
+            }
+        });
+    } catch (error) {
+        console.error('Get user order error:', error);
+        res.status(500).json({ success: false, message: 'Failed to get order details', error: error.message });
+    }
+});
+
 // Update user name
 app.patch('/api/user/update-name', async (req, res) => {
     try {
@@ -1411,7 +1529,8 @@ app.post('/api/payment/verify', async (req, res) => {
             totalAmount,
             userId,
             phoneNumber,
-            paymentMethod
+            paymentMethod,
+            busStop
         } = req.body;
 
         // HMAC-SHA256 signature check
@@ -1432,7 +1551,6 @@ app.post('/api/payment/verify', async (req, res) => {
 
             // ── Broadcast new order to delivery partners at the bus stop ──
             // Done here (outside user block) so guest users also get delivery service.
-            const busStop = req.body.busStop;
             if (!busStop) {
                 console.warn('⚠️  No busStop in payment/verify body — order will NOT be visible to partners');
             } else {
@@ -1484,7 +1602,9 @@ app.post('/api/payment/verify', async (req, res) => {
                             totalAmount,
                             paymentStatus: 'success',
                             paymentId:     razorpay_payment_id,
-                            paymentMethod: paymentMethod || 'razorpay'
+                            razorpayOrderId: razorpay_order_id,
+                            paymentMethod: paymentMethod || 'razorpay',
+                            busStop,
                         });
                         await user.save();
                         console.log(`✅ Order ${customOrderId} saved for user ${phoneNumber}`);
@@ -1584,7 +1704,7 @@ app.post('/api/payment/verify', async (req, res) => {
 
 // 3. Payment Failed / Cancelled
 app.post('/api/payment/failed', async (req, res) => {
-    const { orderId, error, cartItems, totalAmount, userId, phoneNumber, paymentMethod } = req.body;
+    const { orderId, error, cartItems, totalAmount, userId, phoneNumber, paymentMethod, busStop, razorpay_order_id } = req.body;
 
     // Save failed payment to user's record
     if (phoneNumber) {
@@ -1596,7 +1716,9 @@ app.post('/api/payment/failed', async (req, res) => {
                     totalAmount,
                     paymentStatus: 'failed',
                     paymentId: null,
-                    paymentMethod: paymentMethod || 'razorpay'
+                    razorpayOrderId: razorpay_order_id || null,
+                    paymentMethod: paymentMethod || 'razorpay',
+                    busStop,
                 });
                 await user.save();
                 console.log(`❌ Failed order ${failedOrderId} saved for user ${phoneNumber}`);

@@ -1,12 +1,16 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../CartContext';
+import { useUser } from '../UserContext';
 import '../index.css';
 
 const OrderSummary = () => {
   const navigate  = useNavigate();
   const location  = useLocation();
   const { cartItems: contextItems, getTotalPrice, clearCart } = useCart();
+  const { user } = useUser();
+  const [dbOrder, setDbOrder] = useState(null);
+  const [isFetchingOrder, setIsFetchingOrder] = useState(false);
 
   // Real payment data passed from Payment.jsx after success
   const {
@@ -24,7 +28,39 @@ const OrderSummary = () => {
     || (() => { try { return JSON.parse(localStorage.getItem('yathrika_current_order') || 'null')?.orderId; } catch(_) { return null; } })()
     || razorpayOrderId;
 
-  const orderItems   = paidItems?.length ? paidItems : contextItems;
+  const userPhoneNumber = useMemo(() => {
+    if (user?.phoneNumber) return user.phoneNumber;
+    try {
+      return JSON.parse(localStorage.getItem('yathrika_user') || 'null')?.phoneNumber || null;
+    } catch {
+      return null;
+    }
+  }, [user?.phoneNumber]);
+
+  useEffect(() => {
+    if (!orderId || !userPhoneNumber) return;
+    let cancelled = false;
+
+    const fetchOrder = async () => {
+      try {
+        setIsFetchingOrder(true);
+        const res = await fetch(`/api/user/${encodeURIComponent(userPhoneNumber)}/orders/${encodeURIComponent(orderId)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled && data?.success && data?.order) {
+          setDbOrder(data.order);
+        }
+      } catch (_) {
+      } finally {
+        if (!cancelled) setIsFetchingOrder(false);
+      }
+    };
+
+    fetchOrder();
+    return () => { cancelled = true; };
+  }, [orderId, userPhoneNumber]);
+
+  const orderItems   = dbOrder?.items?.length ? dbOrder.items : (paidItems?.length ? paidItems : contextItems);
   const displayItems = orderItems.length ? orderItems : [
     { name: 'Order Item', quantity: 1, price: amount || 0, image: '' },
   ];
@@ -32,22 +68,24 @@ const OrderSummary = () => {
   const subtotal    = displayItems.reduce((s, i) => s + (i.price * i.quantity), 0);
   const deliveryFee = 40;
   const discount    = 20;
-  const total       = amount || (subtotal + deliveryFee - discount);
+  const total       = dbOrder?.totalAmount || amount || (subtotal + deliveryFee - discount);
 
   const methodLabel = {
     upi:        'UPI',
     card:       'Debit / Credit Card',
     netbanking: 'Netbanking',
     wallet:     'Wallet',
-  }[paymentMethod] || 'Online Payment';
+  }[dbOrder?.paymentMethod || paymentMethod] || 'Online Payment';
 
-  const shortOrderId   = orderId       ? String(orderId).slice(-10).toUpperCase()       : '—';
-  const shortPaymentId = razorpayOrderId ? String(razorpayOrderId).slice(-12).toUpperCase() : '—';
+  const finalOrderId = dbOrder?.orderId || orderId;
+  const finalPaymentId = dbOrder?.paymentId || paymentId || razorpayOrderId;
+  const shortOrderId   = finalOrderId ? String(finalOrderId).slice(-10).toUpperCase() : '—';
+  const shortPaymentId = finalPaymentId ? String(finalPaymentId).slice(-12).toUpperCase() : '—';
 
   // ── Bus stop from localStorage ─────────────────────────────────────────────
   let busStop = null;
   try { busStop = JSON.parse(localStorage.getItem('yathrika_bus_stop') || 'null'); } catch(_) {}
-  const stopName = busStop?.name || 'Not selected';
+  const stopName = dbOrder?.busStop || busStop?.name || 'Not selected';
 
   // ── Write order data to localStorage so Tracking.jsx can read it ──────────
   // IMPORTANT: Payment.jsx already saved yathrika_current_order with the correct
@@ -58,20 +96,20 @@ const OrderSummary = () => {
     // If existing record already has a YATH- orderId, trust it — don't overwrite
     if (existing?.orderId?.startsWith('YATH-')) return;
     // Otherwise write a best-effort record (e.g. user refreshed the page)
-    if (!orderId && !paidItems) return;
+    if (!finalOrderId && !paidItems) return;
     const orderData = {
-      orderId:       orderId || ('ORD' + Date.now().toString().slice(-8)),
-      paymentId:     paymentId || null,
+      orderId:       finalOrderId || ('ORD' + Date.now().toString().slice(-8)),
+      paymentId:     finalPaymentId || null,
       amount:        total,
       cartItems:     displayItems,
-      paymentMethod: paymentMethod || 'upi',
+      paymentMethod: dbOrder?.paymentMethod || paymentMethod || 'upi',
       busStop,
       createdAt:     new Date().toISOString(),
     };
     localStorage.setItem('yathrika_current_order', JSON.stringify(orderData));
     localStorage.setItem('yathrika_cart', JSON.stringify(displayItems));
     clearCart();
-  }, [orderId, paymentId]);
+  }, [finalOrderId, finalPaymentId, dbOrder]);
 
   // ── Generate invoice text for download / share ────────────────────────────
   const buildInvoiceText = () => {
@@ -172,6 +210,12 @@ const OrderSummary = () => {
               </p>
             </div>
           </div>
+
+          {isFetchingOrder && (
+            <p style={{ marginTop:'-0.35rem', marginBottom:'0.8rem', color:'rgba(255,255,255,0.55)', fontSize:'0.75rem' }}>
+              Syncing latest order details from server...
+            </p>
+          )}
 
           {/* IDs */}
           <div style={{

@@ -310,7 +310,10 @@ const Tracking = () => {
     toast({ type: data.status === 'handover' ? 'success' : 'info', message: m[data.status] || data.status });
     // Clear stored order after successful handover
     if (data.status === 'handover') {
-      setTimeout(() => localStorage.removeItem('yathrika_current_order'), 3000);
+      setTimeout(() => {
+        localStorage.removeItem('yathrika_current_order');
+        navigate('/yathrika-home');
+      }, 2500);
     }
   };
 

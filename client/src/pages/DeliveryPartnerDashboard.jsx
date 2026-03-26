@@ -34,6 +34,7 @@ const DeliveryPartnerDashboard = () => {
   const [selectedOrder,  setSelectedOrder]  = useState(null);
   const [partnerLocation,setPartnerLocation]= useState(null);
   const [userLocations,  setUserLocations]  = useState({});
+  const [handoverProofFiles, setHandoverProofFiles] = useState({});
   const [isOnline,       setIsOnline]       = useState(false);
   const [notifications,  setNotifications]  = useState([]);
 
@@ -69,6 +70,7 @@ const DeliveryPartnerDashboard = () => {
         socketService.onOrderUpdate(handleOrderUpdate);
         socketService.onUserLocationUpdate(handleUserLocationUpdate);
         socketService.onOrderStatusUpdate(handleOrderStatusUpdate);
+        socketService.onOrderStatusError(handleOrderStatusError);
       })
       .catch(() => {
         // Network error: use cached value but still guard
@@ -82,6 +84,7 @@ const DeliveryPartnerDashboard = () => {
         socketService.onOrderUpdate(handleOrderUpdate);
         socketService.onUserLocationUpdate(handleUserLocationUpdate);
         socketService.onOrderStatusUpdate(handleOrderStatusUpdate);
+        socketService.onOrderStatusError(handleOrderStatusError);
       });
 
     return () => socketService.removeAllListeners();
@@ -153,6 +156,27 @@ const DeliveryPartnerDashboard = () => {
     setUserLocations(prev => ({ ...prev, [orderId]: location }));
   const handleOrderStatusUpdate = ({ orderId, status }) =>
     setAcceptedOrders(prev => prev.map(o => getOrderId(o) === String(orderId) ? { ...o, status } : o));
+  const handleOrderStatusError = ({ message }) => {
+    toast({ type:'error', message: message || 'Unable to update order status' });
+  };
+
+  const uploadHandoverProof = async (orderId, file) => {
+    const payload = new FormData();
+    payload.append('partnerId', partner._id);
+    payload.append('busPhoto', file);
+
+    const res = await fetch(`/api/orders/${orderId}/handover-proof`, {
+      method: 'POST',
+      body: payload,
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || 'Failed to upload handover proof');
+    }
+
+    return data.handoverProofImageUrl;
+  };
 
   // ── Accept order — calls backend, broadcasts via socket ─────────────────────
   const acceptOrder = async (order) => {
@@ -205,13 +229,32 @@ const DeliveryPartnerDashboard = () => {
   };
 
   // ── Update status (HANDOVER = order complete → update earnings) ──────────────
-  const updateOrderStatus = (orderId, newStatus) => {
+  const updateOrderStatus = async (orderId, newStatus) => {
     const normalizedOrderId = String(orderId);
     const order = acceptedOrders.find(o => getOrderId(o) === normalizedOrderId);
     const reward = Number(order?.pickupReward || 0);
+    let handoverProofImageUrl = '';
+
+    if (newStatus === 'handover') {
+      const proofFile = handoverProofFiles[normalizedOrderId];
+      if (!proofFile) {
+        toast({ type:'error', message:'Upload a bus handover photo before marking HANDOVER' });
+        return;
+      }
+      try {
+        handoverProofImageUrl = await uploadHandoverProof(normalizedOrderId, proofFile);
+      } catch (err) {
+        toast({ type:'error', message: err.message || 'Failed to upload handover proof' });
+        return;
+      }
+    }
 
     setAcceptedOrders(prev => prev.map(o => getOrderId(o) === normalizedOrderId ? { ...o, status:newStatus } : o));
-    socketService.updateOrderStatus(orderId, newStatus, { partnerId:partner._id, reward });
+    socketService.updateOrderStatus(orderId, newStatus, {
+      partnerId:partner._id,
+      reward,
+      handoverProofImageUrl,
+    });
 
     if (newStatus === 'handover') {
       setAcceptedOrders(prev => prev.filter(o => getOrderId(o) !== normalizedOrderId));
@@ -449,6 +492,17 @@ const DeliveryPartnerDashboard = () => {
                       <div className="order-info"><span>Total: ₹{order.total}</span><span>Reward: ₹{order.pickupReward}</span></div>
                       {userLocations[getOrderId(order)] && <div className="order-tracking-info"><i className="material-icons">near_me</i><span>Customer approaching</span></div>}
                     </div>
+                    <div className="partner-auth-field" style={{ marginTop:8 }}>
+                      <label style={{ color:'#ffb84d' }}>Bus Photo Proof (required for HANDOVER)</label>
+                      <input
+                        type="file"
+                        accept="image/*,.pdf"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] || null;
+                          setHandoverProofFiles(prev => ({ ...prev, [getOrderId(order)]: file }));
+                        }}
+                      />
+                    </div>
                     <div className="order-status-buttons">
                       {statusButtons.map(({ status, label, color }) => (
                         <button key={status}
@@ -493,6 +547,13 @@ const DeliveryPartnerDashboard = () => {
                         <span>Reward: ₹{fmt(entry.reward || 0)}</span>
                         <span>{entry.completedAt ? new Date(entry.completedAt).toLocaleString('en-IN') : '—'}</span>
                       </div>
+                      {entry.handoverProofImageUrl && (
+                        <div className="order-info" style={{ marginTop:6 }}>
+                          <a href={entry.handoverProofImageUrl} target="_blank" rel="noreferrer" style={{ color:'#68f91a', fontSize:'0.78rem', textDecoration:'underline' }}>
+                            View handover proof
+                          </a>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}

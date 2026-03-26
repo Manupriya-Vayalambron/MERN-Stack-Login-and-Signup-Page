@@ -91,6 +91,14 @@ const PartnerModal = ({ partner, onClose, onUpdate }) => {
           <div style={M.row}><span style={M.lbl}>Email</span><span style={M.val}>{partner.email}</span></div>
           <div style={M.row}><span style={M.lbl}>Phone</span><span style={M.val}>{partner.phone}</span></div>
           <div style={M.row}><span style={M.lbl}>License</span><span style={M.val}>{partner.licenseNumber}</span></div>
+          <div style={M.row}>
+            <span style={M.lbl}>Aadhaar Proof</span>
+            <span style={M.val}>
+              {partner.aadharCardImageUrl
+                ? <a href={partner.aadharCardImageUrl} target="_blank" rel="noreferrer" style={{ color:'#68f91a', textDecoration:'underline' }}>View Uploaded Proof</a>
+                : 'Not uploaded'}
+            </span>
+          </div>
           <div style={M.row}><span style={M.lbl}>Joined</span><span style={M.val}>{fmtDate(partner.joinedDate)}</span></div>
           <div style={M.row}><span style={M.lbl}>Rating</span><span style={M.val}>{'⭐'.repeat(Math.round(partner.rating || 5))} {(partner.rating||5).toFixed(1)}</span></div>
 
@@ -136,6 +144,30 @@ const PartnerModal = ({ partner, onClose, onUpdate }) => {
                     <span style={{ color:'#4CAF50', fontWeight:700, fontSize:'0.82rem', flexShrink:0 }}>+₹{fmt(c.amount)}</span>
                     <span style={{ color:'#888', fontSize:'0.78rem', flex:1 }}>{c.note||'—'}</span>
                     <span style={{ color:'#555', fontSize:'0.72rem', flexShrink:0 }}>{fmtDate(c.creditedAt)}</span>
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
+
+          {/* Completed order proof history */}
+          {partner.completedOrderLog?.length > 0 && (
+            <details style={{ marginTop:8 }}>
+              <summary style={{ color:'#4da6ff', fontSize:'0.78rem', cursor:'pointer', fontWeight:600 }}>
+                Completed deliveries ({partner.completedOrderLog.length})
+              </summary>
+              <div style={{ display:'flex', flexDirection:'column', gap:4, marginTop:6 }}>
+                {[...partner.completedOrderLog].reverse().slice(0, 20).map((entry, i) => (
+                  <div key={`${entry.orderId}_${i}`} style={M.histRow}>
+                    <span style={{ color:'#2196F3', fontWeight:700, fontSize:'0.78rem', flexShrink:0 }}>#{String(entry.orderId).slice(-6)}</span>
+                    <span style={{ color:'#888', fontSize:'0.76rem', flex:1 }}>₹{fmt(entry.reward || 0)}</span>
+                    {entry.handoverProofImageUrl ? (
+                      <a href={entry.handoverProofImageUrl} target="_blank" rel="noreferrer" style={{ color:'#68f91a', fontSize:'0.72rem', textDecoration:'underline', flexShrink:0 }}>
+                        Proof
+                      </a>
+                    ) : (
+                      <span style={{ color:'#555', fontSize:'0.72rem', flexShrink:0 }}>No proof</span>
+                    )}
                   </div>
                 ))}
               </div>

@@ -254,6 +254,12 @@ class SocketService {
     }
   }
 
+  onOrderStatusError(callback) {
+    if (this.socket) {
+      this.socket.on('order_status_error', callback);
+    }
+  }
+
   // Listen for partner status updates
   onPartnerStatusUpdate(callback) {
     if (this.socket) {
@@ -264,6 +270,19 @@ class SocketService {
   onTrackingSnapshot(callback) {
     if (this.socket) {
       this.socket.on('tracking_snapshot', callback);
+    }
+  }
+
+  // Partner approval status events (pending screen)
+  watchApproval(partnerId) {
+    if (this.socket) {
+      this.socket.emit('watch_approval', { partnerId });
+    }
+  }
+
+  onApprovalStatusChanged(callback) {
+    if (this.socket) {
+      this.socket.on('approval_status_changed', callback);
     }
   }
 

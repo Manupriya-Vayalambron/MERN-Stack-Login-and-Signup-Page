@@ -90,16 +90,20 @@ export const DeliveryPartnerPending = () => {
     };
   }, [navigate, partner?._id]);
 
+  const isApproved = partner?.approvalStatus === 'approved';
   const isRejected = partner?.approvalStatus === 'rejected';
+  const statusLabel = isApproved ? 'Approved' : isRejected ? 'Rejected' : 'Pending Approval';
 
   return (
     <div style={S.page}>
       <div style={S.centreCard}>
-        <div style={S.iconCircle}>{isRejected ? '\u274c' : '\u23f3'}</div>
-        <h2 style={S.h2}>{isRejected ? 'Application Rejected' : 'Application Under Review'}</h2>
+        <div style={S.iconCircle}>{isApproved ? '\u2705' : isRejected ? '\u274c' : '\u23f3'}</div>
+        <h2 style={S.h2}>{isApproved ? 'Application Approved' : isRejected ? 'Application Rejected' : 'Application Under Review'}</h2>
         <p style={S.subtext}>
           Hi <strong style={{ color:'#fff' }}>{partner?.name || 'there'}</strong>,{' '}
-          {isRejected
+          {isApproved
+            ? 'your account has been approved by admin.'
+            : isRejected
             ? 'your application was not approved at this time.'
             : 'your delivery partner application has been submitted successfully.'}
         </p>
@@ -107,8 +111,9 @@ export const DeliveryPartnerPending = () => {
           <p style={{ ...S.subtext, color: isRejected ? '#ff5555' : '#68f91a', fontWeight: 700 }}>{statusMsg}</p>
         ) : (
           <p style={S.subtext}>
-            Our admin team will review your details and approve your account shortly.
-            You'll be able to access your dashboard once approved.
+            {isApproved
+              ? 'Redirecting you to your dashboard now.'
+              : 'Our admin team will review your details and approve your account shortly. You\'ll be able to access your dashboard once approved.'}
           </p>
         )}
         <div style={S.infoBox}>
@@ -116,15 +121,15 @@ export const DeliveryPartnerPending = () => {
           <div style={S.infoRow}><span style={S.infoLabel}>Vehicle</span><span style={S.infoVal}>{partner?.vehicleType || '\u2014'}</span></div>
           <div style={S.infoRow}>
             <span style={S.infoLabel}>Status</span>
-            <span style={{ ...S.infoVal, color: isRejected ? '#ff5555' : '#ffb84d', fontWeight:700 }}>
-              {isRejected ? 'Rejected' : 'Pending Approval'}
+            <span style={{ ...S.infoVal, color: isApproved ? '#68f91a' : isRejected ? '#ff5555' : '#ffb84d', fontWeight:700 }}>
+              {statusLabel}
             </span>
           </div>
           {isRejected && partner?.rejectReason && (
             <div style={S.infoRow}><span style={S.infoLabel}>Reason</span><span style={{ ...S.infoVal, color:'#ff5555' }}>{partner.rejectReason}</span></div>
           )}
         </div>
-        {!isRejected && (
+        {!isRejected && !isApproved && (
           <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:4 }}>
             <div style={S.pulsingDot} />
             <span style={{ color:'#888', fontSize:'0.78rem' }}>Checking for updates automatically\u2026</span>
@@ -149,6 +154,7 @@ const DeliveryPartnerAuth = () => {
   });
   const [error,   setError]   = useState('');
   const [loading, setLoading] = useState(false);
+  const [aadharCardFile, setAadharCardFile] = useState(null);
 
   // ── Stop picker state ─────────────────────────────────────────────────────────
   const [locPhase,     setLocPhase]     = useState('idle'); // idle | loading | done | error
@@ -259,26 +265,27 @@ const DeliveryPartnerAuth = () => {
           setError('Please select a bus stop.');
           return;
         }
+        if (!aadharCardFile) {
+          setError('Please upload Aadhaar card proof.');
+          return;
+        }
+
+        const payload = new FormData();
+        payload.append('name', formData.name);
+        payload.append('email', formData.email);
+        payload.append('phone', formData.phone);
+        payload.append('password', formData.password);
+        payload.append('assignedBusStop', formData.busStop);
+        if (formData.busStopLat != null) payload.append('assignedBusStopLat', String(formData.busStopLat));
+        if (formData.busStopLng != null) payload.append('assignedBusStopLng', String(formData.busStopLng));
+        payload.append('licenseNumber', formData.licenseNumber);
+        payload.append('vehicleType', formData.vehicleType);
+        payload.append('aadharCard', aadharCardFile);
 
         // Register via API
         const response = await fetch('/api/delivery-partner/register', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            name: formData.name,
-            email: formData.email,
-            phone: formData.phone,
-            password: formData.password,
-            assignedBusStop: formData.busStop,
-            assignedBusStopCoords: {
-              lat: formData.busStopLat,
-              lng: formData.busStopLng
-            },
-            licenseNumber: formData.licenseNumber,
-            vehicleType: formData.vehicleType
-          }),
+          body: payload,
         });
 
         const data = await parseApiResponse(response);
@@ -453,6 +460,19 @@ const DeliveryPartnerAuth = () => {
                     <option value="Scooter">Scooter</option>
                     <option value="Bicycle">Bicycle</option>
                   </select>
+                </div>
+
+                <div className="partner-auth-field">
+                  <label>Aadhaar Card Proof *</label>
+                  <input
+                    type="file"
+                    accept="image/*,.pdf"
+                    required={!isLogin}
+                    onChange={(e) => setAadharCardFile(e.target.files?.[0] || null)}
+                  />
+                  <p style={{ color:'#888', fontSize:'0.72rem', margin:'6px 0 0' }}>
+                    Upload clear Aadhaar image/PDF for admin verification.
+                  </p>
                 </div>
 
               </>)}

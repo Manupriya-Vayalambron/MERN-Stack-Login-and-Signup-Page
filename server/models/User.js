@@ -22,7 +22,9 @@ const OrderSchema = new mongoose.Schema({
         required: true
     },
     paymentId: String,
+    razorpayOrderId: String,
     paymentMethod: String,
+    busStop: String,
     orderDate: {
         type: Date,
         default: Date.now
@@ -80,7 +82,9 @@ UserSchema.methods.addOrder = function(orderData) {
         totalAmount:   orderData.totalAmount,
         paymentStatus: orderData.paymentStatus,
         paymentId:     orderData.paymentId,
-        paymentMethod: orderData.paymentMethod
+        razorpayOrderId: orderData.razorpayOrderId,
+        paymentMethod: orderData.paymentMethod,
+        busStop:       orderData.busStop,
     };
 
     this.orders.push(newOrder);
