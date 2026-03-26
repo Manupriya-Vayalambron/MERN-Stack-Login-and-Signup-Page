@@ -25,7 +25,8 @@ const persistPartner = (updated) => {
 // ─── Component ────────────────────────────────────────────────────────────────
 const DeliveryPartnerDashboard = () => {
   const navigate = useNavigate();
-  const getOrderId = (order) => order?.orderId || order?.id;
+  const getOrderId = (order) => String(order?.orderId || order?.id || '');
+  const acceptedOrdersStorageKey = (partnerId) => `yathrika_partner_accepted_${partnerId}`;
 
   const [partner,        setPartner]        = useState(null);
   const [availableOrders,setAvailableOrders]= useState([]);
@@ -97,7 +98,34 @@ const DeliveryPartnerDashboard = () => {
       console.error('Failed to load orders:', err);
     }
   };
-  const loadAcceptedOrders = () => setAcceptedOrders([]);
+  const loadAcceptedOrders = (partnerId) => {
+    if (!partnerId) {
+      setAcceptedOrders([]);
+      return;
+    }
+    try {
+      const saved = localStorage.getItem(acceptedOrdersStorageKey(partnerId));
+      if (!saved) {
+        setAcceptedOrders([]);
+        return;
+      }
+      const parsed = JSON.parse(saved);
+      const activeOrders = Array.isArray(parsed)
+        ? parsed.filter((o) => !['handover', 'cancelled'].includes(o?.status))
+        : [];
+      setAcceptedOrders(activeOrders);
+    } catch {
+      setAcceptedOrders([]);
+    }
+  };
+
+  useEffect(() => {
+    if (!partner?._id) return;
+    localStorage.setItem(
+      acceptedOrdersStorageKey(partner._id),
+      JSON.stringify(acceptedOrders)
+    );
+  }, [acceptedOrders, partner?._id]);
 
   // ── Socket handlers ──────────────────────────────────────────────────────────
   const handleOrderUpdate = (data) => {
@@ -105,13 +133,13 @@ const DeliveryPartnerDashboard = () => {
       setAvailableOrders(prev => [data.order, ...prev]);
       toast({ type:'new_order', message:`New order: ₹${data.order.total}` });
     } else if (data.type === 'order_accepted') {
-      setAvailableOrders(prev => prev.filter(o => getOrderId(o) !== data.orderId));
+      setAvailableOrders(prev => prev.filter(o => getOrderId(o) !== String(data.orderId)));
     }
   };
   const handleUserLocationUpdate = ({ orderId, location }) =>
     setUserLocations(prev => ({ ...prev, [orderId]: location }));
   const handleOrderStatusUpdate = ({ orderId, status }) =>
-    setAcceptedOrders(prev => prev.map(o => getOrderId(o) === orderId ? { ...o, status } : o));
+    setAcceptedOrders(prev => prev.map(o => getOrderId(o) === String(orderId) ? { ...o, status } : o));
 
   // ── Accept order — calls backend, broadcasts via socket ─────────────────────
   const acceptOrder = async (order) => {
@@ -138,9 +166,18 @@ const DeliveryPartnerDashboard = () => {
         return;
       }
 
-      const ao = { ...order, id: orderId, orderId, acceptedAt: new Date(), partnerId: partner._id, partnerName: partner.name, partnerPhone: partner.phone };
+      const ao = {
+        ...order,
+        id: orderId,
+        orderId,
+        status: 'confirmed',
+        acceptedAt: new Date().toISOString(),
+        partnerId: partner._id,
+        partnerName: partner.name,
+        partnerPhone: partner.phone,
+      };
       setAcceptedOrders(prev => [ao, ...prev]);
-      setAvailableOrders(prev => prev.filter(o => (o.orderId || o.id) !== orderId));
+      setAvailableOrders(prev => prev.filter(o => String(o.orderId || o.id) !== String(orderId)));
 
       // Join the tracking room so we can receive user location updates
       socketService.joinTrackingRoom(orderId, 'delivery_partner', {
@@ -156,12 +193,13 @@ const DeliveryPartnerDashboard = () => {
 
   // ── Update status (HANDOVER = order complete → update earnings) ──────────────
   const updateOrderStatus = (orderId, newStatus) => {
-    setAcceptedOrders(prev => prev.map(o => getOrderId(o) === orderId ? { ...o, status:newStatus } : o));
+    const normalizedOrderId = String(orderId);
+    setAcceptedOrders(prev => prev.map(o => getOrderId(o) === normalizedOrderId ? { ...o, status:newStatus } : o));
     socketService.updateOrderStatus(orderId, newStatus, { partnerId:partner._id });
 
     if (newStatus === 'handover') {
       // Find the order to get reward
-      const order = acceptedOrders.find(o => getOrderId(o) === orderId);
+      const order = acceptedOrders.find(o => getOrderId(o) === normalizedOrderId);
       const reward = order?.pickupReward || 0;
 
       const updated = {

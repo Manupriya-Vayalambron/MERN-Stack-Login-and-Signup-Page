@@ -37,7 +37,7 @@ class SocketService {
 
   // Join a tracking room (order-based)
   joinTrackingRoom(orderId, userType, userData = {}) {
-    if (this.socket && this.isConnected) {
+    if (this.socket) {
       this.socket.emit('join_tracking', {
         orderId,
         userType, // 'user' or 'delivery_partner'
@@ -48,14 +48,14 @@ class SocketService {
 
   // Leave a tracking room
   leaveTrackingRoom(orderId) {
-    if (this.socket && this.isConnected) {
+    if (this.socket) {
       this.socket.emit('leave_tracking', { orderId });
     }
   }
 
   // Send location update
   updateLocation(orderId, locationData) {
-    if (this.socket && this.isConnected) {
+    if (this.socket) {
       this.socket.emit('location_update', {
         orderId,
         location: locationData,
@@ -80,7 +80,7 @@ class SocketService {
 
   // Send user journey status (boarding bus, in transit, approaching stop)
   updateJourneyStatus(orderId, status, additionalData = {}) {
-    if (this.socket && this.isConnected) {
+    if (this.socket) {
       this.socket.emit('journey_status_update', {
         orderId,
         status,
@@ -99,7 +99,7 @@ class SocketService {
 
   // Send delivery partner status
   updateDeliveryStatus(orderId, status, location = null) {
-    if (this.socket && this.isConnected) {
+    if (this.socket) {
       this.socket.emit('delivery_status_update', {
         orderId,
         status,
@@ -118,7 +118,7 @@ class SocketService {
 
   // Send ETA updates
   updateETA(orderId, eta, distance) {
-    if (this.socket && this.isConnected) {
+    if (this.socket) {
       this.socket.emit('eta_update', {
         orderId,
         eta,
@@ -137,7 +137,7 @@ class SocketService {
 
   // Emergency or alert functions
   sendAlert(orderId, alertType, message) {
-    if (this.socket && this.isConnected) {
+    if (this.socket) {
       this.socket.emit('tracking_alert', {
         orderId,
         alertType,
@@ -156,7 +156,7 @@ class SocketService {
 
   // Get list of users in tracking room
   getTrackingRoomUsers(orderId) {
-    if (this.socket && this.isConnected) {
+    if (this.socket) {
       this.socket.emit('get_tracking_users', { orderId });
     }
   }
@@ -186,7 +186,7 @@ class SocketService {
 
   // Partner-specific methods
   joinPartnerRoom(busStop, partnerId) {
-    if (this.socket && this.isConnected) {
+    if (this.socket) {
       this.socket.emit('join_partner_room', {
         busStop,
         partnerId,
@@ -197,7 +197,7 @@ class SocketService {
 
   // Notify other partners when order is accepted
   notifyOrderAccepted(orderId, busStop) {
-    if (this.socket && this.isConnected) {
+    if (this.socket) {
       this.socket.emit('order_accepted', {
         orderId,
         busStop,
@@ -208,7 +208,7 @@ class SocketService {
 
   // Update partner availability status
   updatePartnerAvailability(partnerId, isAvailable) {
-    if (this.socket && this.isConnected) {
+    if (this.socket) {
       this.socket.emit('partner_availability_update', {
         partnerId,
         isAvailable,
@@ -219,7 +219,7 @@ class SocketService {
 
   // Update order status (for delivery partners)
   updateOrderStatus(orderId, status, additionalData = {}) {
-    if (this.socket && this.isConnected) {
+    if (this.socket) {
       this.socket.emit('order_status_update', {
         orderId,
         status,

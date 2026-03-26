@@ -120,6 +120,10 @@ const Tracking = () => {
       const saved = localStorage.getItem('yathrika_current_order');
       if (saved) {
         const order = JSON.parse(saved);
+        if (!order.createdAt) {
+          order.createdAt = new Date().toISOString();
+          localStorage.setItem('yathrika_current_order', JSON.stringify(order));
+        }
         // Merge busStop from dedicated key if not present in order
         if (!order.busStop) {
           order.busStop = JSON.parse(localStorage.getItem('yathrika_bus_stop') || 'null');
@@ -135,17 +139,28 @@ const Tracking = () => {
     } catch (_) {}
   }, []);
 
-  // 2-min auto-cancel countdown
+  // 2-min auto-cancel countdown (resumes correctly after refresh)
   useEffect(() => {
-    if (partnerAccepted || orderCancelled) return;
-    cancelRef.current = setInterval(() => {
-      setCancelSecs(prev => {
-        if (prev <= 1) { clearInterval(cancelRef.current); setOrderCancelled(true); setOrderStatus('cancelled'); return 0; }
-        return prev - 1;
-      });
-    }, 1000);
+    if (!orderData || partnerAccepted || orderCancelled) return;
+
+    const createdAtMs = new Date(orderData.createdAt || Date.now()).getTime();
+    const deadlineMs = createdAtMs + (CANCEL_SECS * 1000);
+
+    const tick = () => {
+      const remainingSecs = Math.max(0, Math.ceil((deadlineMs - Date.now()) / 1000));
+      setCancelSecs(remainingSecs);
+
+      if (remainingSecs <= 0) {
+        clearInterval(cancelRef.current);
+        setOrderCancelled(true);
+        setOrderStatus('cancelled');
+      }
+    };
+
+    tick();
+    cancelRef.current = setInterval(tick, 1000);
     return () => clearInterval(cancelRef.current);
-  }, [partnerAccepted, orderCancelled]);
+  }, [orderData, partnerAccepted, orderCancelled]);
 
   // Delivery countdown — starts only after partner accepts
   useEffect(() => {
