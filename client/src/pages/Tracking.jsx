@@ -135,7 +135,7 @@ const Tracking = () => {
       const busStop   = JSON.parse(localStorage.getItem('yathrika_bus_stop') || 'null');
       const cartItems = JSON.parse(localStorage.getItem('yathrika_cart') || '[]');
       const subtotal  = cartItems.reduce((s, i) => s + i.price * i.quantity, 0);
-      setOrderData({ orderId: null, paymentId: null, amount: subtotal + 40 - 20, cartItems, paymentMethod: 'upi', busStop });
+      setOrderData({ orderId: null, paymentId: null, amount: subtotal + 5, cartItems, paymentMethod: 'upi', busStop });
     } catch (_) {}
   }, []);
 

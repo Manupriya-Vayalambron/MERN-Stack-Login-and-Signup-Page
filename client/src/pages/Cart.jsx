@@ -198,16 +198,16 @@ const Cart = () => {
                   </div>
                   <div className="price-line">
                     <p>{language === 'en' ? "Delivery Fee" : "ഡെലിവറി ചാർജ്"}</p>
-                    <p>₹40</p>
+                    <p>₹5</p>
                   </div>
                   <div className="price-line">
                     <p>{language === 'en' ? "Discount" : "കിഴിവ്"}</p>
-                    <p className="discount-amount">-₹20</p>
+                    <p className="discount-amount">-₹0</p>
                   </div>
                   <div className="price-divider"></div>
                   <div className="price-total">
                     <p>{language === 'en' ? "Total Amount" : "ആകെ തുക"}</p>
-                    <p>₹{getTotalPrice() + 40 - 20}</p>
+                    <p>₹{getTotalPrice() + 5}</p>
                   </div>
                 </div>
               </div>

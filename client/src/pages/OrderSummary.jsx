@@ -66,8 +66,8 @@ const OrderSummary = () => {
   ];
 
   const subtotal    = displayItems.reduce((s, i) => s + (i.price * i.quantity), 0);
-  const deliveryFee = 40;
-  const discount    = 20;
+  const deliveryFee = 5;
+  const discount    = 0;
   const total       = dbOrder?.totalAmount || amount || (subtotal + deliveryFee - discount);
 
   const methodLabel = {

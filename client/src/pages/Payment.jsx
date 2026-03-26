@@ -34,8 +34,8 @@ const Payment = () => {
 
   // Amount: use cart total + delivery - discount, or fallback from location state
   const subtotal   = getTotalPrice();
-  const delivery   = 40;
-  const discount   = 20;
+  const delivery   = 5;
+  const discount   = 0;
   const totalAmount = subtotal > 0 ? subtotal + delivery - discount
                                    : (location.state?.amount || 599);
 
