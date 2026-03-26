@@ -1,8 +1,23 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useNotification } from '../NotificationContext';
 import '../index.css';
 
 const Settings = () => {
+  const { browserPermission, requestBrowserPermission, subscribeForPush } = useNotification();
+
+  const handleEnableNotifications = async () => {
+    const permission = await requestBrowserPermission();
+    if (permission === 'granted') {
+      try {
+        const user = JSON.parse(localStorage.getItem('yathrika_user') || 'null');
+        if (user?.phoneNumber) {
+          await subscribeForPush(user.phoneNumber);
+        }
+      } catch (_) {}
+    }
+  };
+
   const settingsGroups = [
     {
       title: 'Account',
@@ -69,10 +84,31 @@ const Settings = () => {
                     <path d="M221.8,175.94C216.25,166.38,208,139.33,208,104a80,80,0,1,0-160,0c0,35.34-8.26,62.38-13.81,71.94A16,16,0,0,0,48,200H88.81a40,40,0,0,0,78.38,0H208a16,16,0,0,0,13.8-24.06ZM128,216a24,24,0,0,1-22.62-16h45.24A24,24,0,0,1,128,216ZM48,184c7.7-13.24,16-43.92,16-80a64,64,0,1,1,128,0c0,36.05,8.28,66.73,16,80Z"></path>
                   </svg>
                 </div>
-                <p className="settings-item-title-solo">Notifications</p>
-                <svg className="settings-chevron-icon" fill="currentColor" height="20" viewBox="0 0 256 256" width="20" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z"></path>
-                </svg>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: 1 }}>
+                  <p className="settings-item-title-solo" style={{ margin: 0 }}>Notifications</p>
+                  <p style={{ margin: 0, fontSize: '0.72rem', color: 'rgba(255,255,255,0.55)' }}>
+                    {browserPermission === 'granted' ? 'Enabled for this browser' :
+                     browserPermission === 'denied' ? 'Blocked by browser settings' :
+                     browserPermission === 'unsupported' ? 'Not supported on this device' : 'Tap to enable push alerts'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleEnableNotifications}
+                  disabled={browserPermission === 'granted' || browserPermission === 'unsupported'}
+                  style={{
+                    border: '1px solid rgba(104,249,26,0.35)',
+                    background: browserPermission === 'granted' ? 'rgba(104,249,26,0.18)' : 'rgba(255,255,255,0.04)',
+                    color: browserPermission === 'granted' ? '#68f91a' : '#e5e7eb',
+                    borderRadius: '10px',
+                    padding: '6px 10px',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    cursor: (browserPermission === 'granted' || browserPermission === 'unsupported') ? 'default' : 'pointer',
+                  }}
+                >
+                  {browserPermission === 'granted' ? 'Enabled' : 'Enable'}
+                </button>
               </div>
 
               <div className="settings-item">

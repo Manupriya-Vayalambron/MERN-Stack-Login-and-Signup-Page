@@ -185,6 +185,19 @@ const DeliveryPartnerAuth = () => {
 
   const handleChange = (e) => setFormData(p => ({ ...p, [e.target.name]: e.target.value }));
 
+  const parseApiResponse = async (response) => {
+    const raw = await response.text();
+    if (!raw) {
+      return { message: 'Empty response from server' };
+    }
+
+    try {
+      return JSON.parse(raw);
+    } catch {
+      throw new Error(`Invalid server response (${response.status}). Check API server connection.`);
+    }
+  };
+
   // ── Submit ────────────────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -205,7 +218,7 @@ const DeliveryPartnerAuth = () => {
           }),
         });
 
-        const data = await response.json();
+        const data = await parseApiResponse(response);
 
         if (!response.ok) {
           throw new Error(data.message || 'Login failed');
@@ -268,7 +281,7 @@ const DeliveryPartnerAuth = () => {
           }),
         });
 
-        const data = await response.json();
+        const data = await parseApiResponse(response);
 
         if (!response.ok) {
           throw new Error(data.message || 'Registration failed');

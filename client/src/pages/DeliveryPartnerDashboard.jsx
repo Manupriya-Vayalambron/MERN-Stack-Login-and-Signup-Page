@@ -25,6 +25,7 @@ const persistPartner = (updated) => {
 // ─── Component ────────────────────────────────────────────────────────────────
 const DeliveryPartnerDashboard = () => {
   const navigate = useNavigate();
+  const getOrderId = (order) => order?.orderId || order?.id;
 
   const [partner,        setPartner]        = useState(null);
   const [availableOrders,setAvailableOrders]= useState([]);
@@ -104,13 +105,13 @@ const DeliveryPartnerDashboard = () => {
       setAvailableOrders(prev => [data.order, ...prev]);
       toast({ type:'new_order', message:`New order: ₹${data.order.total}` });
     } else if (data.type === 'order_accepted') {
-      setAvailableOrders(prev => prev.filter(o => o.id !== data.orderId));
+      setAvailableOrders(prev => prev.filter(o => getOrderId(o) !== data.orderId));
     }
   };
   const handleUserLocationUpdate = ({ orderId, location }) =>
     setUserLocations(prev => ({ ...prev, [orderId]: location }));
   const handleOrderStatusUpdate = ({ orderId, status }) =>
-    setAcceptedOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
+    setAcceptedOrders(prev => prev.map(o => getOrderId(o) === orderId ? { ...o, status } : o));
 
   // ── Accept order — calls backend, broadcasts via socket ─────────────────────
   const acceptOrder = async (order) => {
@@ -155,12 +156,12 @@ const DeliveryPartnerDashboard = () => {
 
   // ── Update status (HANDOVER = order complete → update earnings) ──────────────
   const updateOrderStatus = (orderId, newStatus) => {
-    setAcceptedOrders(prev => prev.map(o => o.id === orderId ? { ...o, status:newStatus } : o));
+    setAcceptedOrders(prev => prev.map(o => getOrderId(o) === orderId ? { ...o, status:newStatus } : o));
     socketService.updateOrderStatus(orderId, newStatus, { partnerId:partner._id });
 
     if (newStatus === 'handover') {
       // Find the order to get reward
-      const order = acceptedOrders.find(o => o.id === orderId);
+      const order = acceptedOrders.find(o => getOrderId(o) === orderId);
       const reward = order?.pickupReward || 0;
 
       const updated = {
@@ -181,7 +182,7 @@ const DeliveryPartnerDashboard = () => {
   const toggleOnline = () => {
     const next = !isOnline;
     setIsOnline(next);
-    socketService.updatePartnerAvailability(partner.id, next);
+    socketService.updatePartnerAvailability(partner._id, next);
     toast({ type:'info', message:`You are now ${next ? 'Online' : 'Offline'}` });
   };
 
@@ -352,10 +353,10 @@ const DeliveryPartnerDashboard = () => {
             ) : (
               <div className="partner-orders-grid">
                 {availableOrders.map(order => (
-                  <div key={order.id} className="partner-order-card available">
+                  <div key={getOrderId(order)} className="partner-order-card available">
                     <div className="order-header">
                       <div>
-                        <h3 className="order-id">#{order.id.slice(-6)}</h3>
+                        <h3 className="order-id">#{String(getOrderId(order)).slice(-6)}</h3>
                         <p className="order-customer">{order.userName}</p>
                         <p className="order-time">{Math.floor((new Date()-order.createdAt)/60000)} min ago</p>
                       </div>
@@ -390,10 +391,10 @@ const DeliveryPartnerDashboard = () => {
               </div>
               <div className="partner-orders-grid">
                 {acceptedOrders.map(order => (
-                  <div key={order.id} className="partner-order-card accepted">
+                  <div key={getOrderId(order)} className="partner-order-card accepted">
                     <div className="order-header">
                       <div>
-                        <h3 className="order-id">#{order.id.slice(-6)}</h3>
+                        <h3 className="order-id">#{String(getOrderId(order)).slice(-6)}</h3>
                         <p className="order-customer">{order.userName}</p>
                       </div>
                       <div className={`order-status ${order.status}`}>
@@ -403,12 +404,12 @@ const DeliveryPartnerDashboard = () => {
                     <div className="order-details">
                       <div className="order-items">{order.items.map((item,i) => <span key={i} className="order-item">{item.name} ×{item.quantity}</span>)}</div>
                       <div className="order-info"><span>Total: ₹{order.total}</span><span>Reward: ₹{order.pickupReward}</span></div>
-                      {userLocations[order.id] && <div className="order-tracking-info"><i className="material-icons">near_me</i><span>Customer approaching</span></div>}
+                      {userLocations[getOrderId(order)] && <div className="order-tracking-info"><i className="material-icons">near_me</i><span>Customer approaching</span></div>}
                     </div>
                     <div className="order-status-buttons">
                       {statusButtons.map(({ status, label, color }) => (
                         <button key={status}
-                          onClick={() => updateOrderStatus(order.id, status)}
+                          onClick={() => updateOrderStatus(getOrderId(order), status)}
                           className={`status-button ${order.status===status?'active':''}`}
                           style={{ borderColor:color, backgroundColor:order.status===status?color:'transparent', color:order.status===status?'white':color }}
                         >{label}</button>
@@ -432,16 +433,16 @@ const DeliveryPartnerDashboard = () => {
           {selectedOrder && (
             <section className="partner-section">
               <div className="partner-section-header">
-                <h3>Tracking Order #{selectedOrder.id.slice(-6)}</h3>
+                <h3>Tracking Order #{String(getOrderId(selectedOrder)).slice(-6)}</h3>
                 <button onClick={() => setSelectedOrder(null)} className="partner-close-button">
                   <i className="material-icons">close</i>
                 </button>
               </div>
-              <LiveMap height="400px" userLocation={userLocations[selectedOrder.id]} busStopLocation={getBusStopCoordinates(partner.assignedBusStop)} deliveryPartnerLocation={partnerLocation} className="partner-tracking-map" />
-              {userLocations[selectedOrder.id] && (
+              <LiveMap height="400px" userLocation={userLocations[getOrderId(selectedOrder)]} busStopLocation={getBusStopCoordinates(partner.assignedBusStop)} deliveryPartnerLocation={partnerLocation} className="partner-tracking-map" />
+              {userLocations[getOrderId(selectedOrder)] && (
                 <div className="partner-map-info">
                   <div className="partner-map-stats">
-                    <div className="partner-stat"><i className="material-icons">person</i><div><p>{selectedOrder.userName}</p><p>Last seen: {new Date(userLocations[selectedOrder.id].timestamp).toLocaleTimeString()}</p></div></div>
+                    <div className="partner-stat"><i className="material-icons">person</i><div><p>{selectedOrder.userName}</p><p>Last seen: {new Date(userLocations[getOrderId(selectedOrder)].timestamp).toLocaleTimeString()}</p></div></div>
                     <div className="partner-stat"><i className="material-icons">local_shipping</i><div><p>Status</p><p>{selectedOrder.status.replace(/_/g,' ').toUpperCase()}</p></div></div>
                   </div>
                 </div>

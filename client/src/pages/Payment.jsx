@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../CartContext';
 import { useUser } from '../UserContext';
+import { useNotification } from '../NotificationContext';
 import '../index.css';
 
 // ─── Backend API base URL ──────────────────────────────────────────────────────
@@ -24,6 +25,7 @@ const Payment = () => {
   const location   = useLocation();
   const { cartItems, getTotalPrice, getTotalCount } = useCart();
   const { user } = useUser();
+  const { notify } = useNotification();
 
   const [selectedMethod, setSelectedMethod] = useState('upi');
   const [isProcessing, setIsProcessing]     = useState(false);
@@ -36,6 +38,15 @@ const Payment = () => {
   const discount   = 20;
   const totalAmount = subtotal > 0 ? subtotal + delivery - discount
                                    : (location.state?.amount || 599);
+
+  const getSelectedBusStopName = () => {
+    if (location.state?.busStop?.name) return location.state.busStop.name;
+    try {
+      return JSON.parse(localStorage.getItem('yathrika_bus_stop') || 'null')?.name || null;
+    } catch {
+      return null;
+    }
+  };
 
   // ─── Main payment handler ────────────────────────────────────────────────
   const handlePayment = async () => {
@@ -61,7 +72,7 @@ const Payment = () => {
           cartItems:   cartItems,
           userId:      user?.phoneNumber || 'guest',
           phoneNumber: user?.phoneNumber,
-          busStop:     location.state?.busStop?.name || localStorage.getItem('yathrika_bus_stop') ? JSON.parse(localStorage.getItem('yathrika_bus_stop') || 'null')?.name : null,
+          busStop:     getSelectedBusStopName(),
         }),
       });
 
@@ -115,7 +126,7 @@ const Payment = () => {
                 userId:              user?.phoneNumber || 'guest',
                 phoneNumber:         user?.phoneNumber,
                 paymentMethod:       selectedMethod,
-                busStop:             location.state?.busStop?.name || (() => { try { return JSON.parse(localStorage.getItem('yathrika_bus_stop') || 'null')?.name; } catch { return null; } })(),
+                busStop:             getSelectedBusStopName(),
               }),
             });
 
@@ -145,6 +156,7 @@ const Payment = () => {
               localStorage.setItem('yathrika_current_order', JSON.stringify(currentOrder));
 
               setPaymentState('success');
+              notify.paymentSuccess(totalAmount);
               setTimeout(() => navigate('/order-summary', {
                 state: {
                   paymentId:   response.razorpay_payment_id,
@@ -164,6 +176,7 @@ const Payment = () => {
             console.error('\n❌ PAYMENT VERIFY ERROR (frontend):', verifyErr.message);
             setPaymentState('failed');
             setFailReason('Payment could not be verified. Contact support.');
+            notify.paymentFailed('Payment could not be verified. Please try again.');
             setIsProcessing(false);
           }
         },
@@ -247,6 +260,7 @@ const Payment = () => {
 
         setPaymentState('failed');
         setFailReason(errInfo.description || 'Payment was declined. Please try again.');
+        notify.paymentFailed(errInfo.description || 'Payment was declined. Please try again.');
         setIsProcessing(false);
       });
 
@@ -256,6 +270,7 @@ const Payment = () => {
       console.error('\n❌ PAYMENT INIT ERROR (frontend):', err.message);
       setPaymentState('failed');
       setFailReason('Could not initiate payment. Please try again.');
+      notify.paymentFailed('Could not initiate payment. Please try again.');
       setIsProcessing(false);
     }
   };

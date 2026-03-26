@@ -13,6 +13,12 @@ const fetchAllPartners = async () => {
   return response.json();
 };
 
+const fetchAdminOverview = async () => {
+  const response = await fetch('/api/admin/overview');
+  if (!response.ok) throw new Error('Failed to fetch admin overview');
+  return response.json();
+};
+
 const approvePartner = async (id) => {
   const response = await fetch(`/api/admin/delivery-partners/${id}/approve`, {
     method: 'PATCH',
@@ -30,6 +36,12 @@ const rejectPartner = async (id, rejectReason) => {
   });
   if (!response.ok) throw new Error('Failed to reject partner');
   return response.json();
+};
+
+const statusColor = (status) => {
+  if (status === 'success') return '#4CAF50';
+  if (status === 'failed') return '#ff5555';
+  return '#ffb84d';
 };
 
 // ─── Sub-component: Partner detail/credit modal ────────────────────────────────
@@ -167,36 +179,45 @@ const PartnerModal = ({ partner, onClose, onUpdate }) => {
 
 // ─── Main Admin Component ─────────────────────────────────────────────────────
 const Admin = () => {
-  const [activeTab,    setActiveTab]    = useState('dashboard');  // dashboard | partners | pending
+  const [activeTab,    setActiveTab]    = useState('dashboard');  // dashboard | partners | pending | data
   const [partners,     setPartners]     = useState([]);
+  const [orders,       setOrders]       = useState([]);
+  const [users,        setUsers]        = useState([]);
+  const [overview,     setOverview]     = useState(null);
+  const [loading,      setLoading]      = useState(true);
   const [selectedP,    setSelectedP]    = useState(null);
   const [rejectTarget, setRejectTarget] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
   const [searchQ,      setSearchQ]      = useState('');
+  const [orderSearchQ, setOrderSearchQ] = useState('');
 
-  // Load partners from backend API
-  useEffect(() => {
-    const loadPartners = async () => {
+  const loadAdminData = async () => {
+    setLoading(true);
+    try {
+      const data = await fetchAdminOverview();
+      setOverview(data.overview || null);
+      setPartners(data.partners || []);
+      setUsers(data.users || []);
+      setOrders(data.orders || []);
+    } catch (error) {
+      console.error('Error loading admin overview:', error);
       try {
         const allPartners = await fetchAllPartners();
         setPartners(allPartners);
-      } catch (error) {
-        console.error('Error loading partners:', error);
-        // Fallback to localStorage for backwards compatibility
-        const localPartners = JSON.parse(localStorage.getItem('deliveryPartners') || '[]');
-        setPartners(localPartners);
+      } catch (partnersError) {
+        console.error('Error loading partners fallback:', partnersError);
       }
-    };
-    loadPartners();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadAdminData();
   }, []);
 
   const reload = async () => {
-    try {
-      const allPartners = await fetchAllPartners();
-      setPartners(allPartners);
-    } catch (error) {
-      console.error('Error reloading partners:', error);
-    }
+    await loadAdminData();
   };
 
   // Approve
@@ -276,12 +297,30 @@ const Admin = () => {
   const totalEarnings  = approved.reduce((s,p) => s+(p.totalEarnings||0), 0);
   const totalPending   = approved.reduce((s,p) => s+(p.pendingEarnings||0), 0);
   const totalCredited  = approved.reduce((s,p) => s+(p.totalCredited||0), 0);
-  const totalOrders    = approved.reduce((s,p) => s+(p.completedOrders||0), 0);
 
-  const liveOrders = [
-    { id:'12345', busStop:'Central Station' },
-    { id:'67890', busStop:'University' },
-  ];
+  const summary = {
+    totalUsers: overview?.totalUsers ?? users.length,
+    verifiedUsers: overview?.verifiedUsers ?? users.filter(u => u.isVerified).length,
+    totalOrders: overview?.totalOrders ?? orders.length,
+    successOrders: overview?.successOrders ?? orders.filter(o => o.paymentStatus === 'success').length,
+    failedOrders: overview?.failedOrders ?? orders.filter(o => o.paymentStatus === 'failed').length,
+    pendingOrders: overview?.pendingOrders ?? orders.filter(o => o.paymentStatus === 'pending').length,
+    successRevenue: overview?.successRevenue ?? orders.filter(o => o.paymentStatus === 'success').reduce((s, o) => s + (o.totalAmount || 0), 0),
+    pendingPoolCount: overview?.pendingPoolCount ?? 0,
+  };
+
+  const pendingPoolOrders = overview?.pendingPoolOrders || [];
+  const recentOrders = orders.slice(0, 8);
+  const filteredOrders = orders.filter(o => {
+    if (!orderSearchQ.trim()) return true;
+    const q = orderSearchQ.toLowerCase();
+    return (
+      String(o.orderId || '').toLowerCase().includes(q) ||
+      String(o.userPhoneNumber || '').toLowerCase().includes(q) ||
+      String(o.userName || '').toLowerCase().includes(q) ||
+      String(o.paymentStatus || '').toLowerCase().includes(q)
+    );
+  });
 
   return (
     <div className="admin-page-container">
@@ -306,6 +345,7 @@ const Admin = () => {
             { key:'dashboard', label:'Dashboard' },
             { key:'pending',   label:`Pending${pending.length ? ` (${pending.length})` : ''}` },
             { key:'partners',  label:'Partners' },
+            { key:'data',      label:'Orders & Users' },
           ].map(tab => (
             <button key={tab.key} style={{ ...A.tab, ...(activeTab===tab.key ? A.tabActive : {}) }} onClick={() => setActiveTab(tab.key)}>
               {tab.label}
@@ -315,6 +355,10 @@ const Admin = () => {
             </button>
           ))}
         </div>
+
+        {loading && (
+          <div style={{ color:'#888', fontSize:'0.82rem', padding:'10px 16px 0' }}>Loading live admin data…</div>
+        )}
 
         <main className="admin-main-content">
 
@@ -326,11 +370,12 @@ const Admin = () => {
               <div style={A.statsGrid}>
                 {[
                   { label:'Active Partners',  value: approved.length,       icon:'people',             color:'#2196F3' },
-                  { label:'Orders Completed', value: fmt(totalOrders),       icon:'local_shipping',     color:'#68f91a' },
-                  { label:'Total Earned',     value:`₹${fmt(totalEarnings)}`, icon:'account_balance_wallet', color:'#68f91a' },
+                  { label:'Total Orders',     value: fmt(summary.totalOrders), icon:'local_shipping',     color:'#68f91a' },
+                  { label:'Revenue (Success)',value:`₹${fmt(summary.successRevenue)}`, icon:'account_balance_wallet', color:'#68f91a' },
                   { label:'Total Credited',   value:`₹${fmt(totalCredited)}`, icon:'payments',          color:'#4CAF50' },
                   { label:'Pending Payout',   value:`₹${fmt(totalPending)}`,  icon:'pending',           color:'#ffb84d' },
                   { label:'Pending Approval', value: pending.length,          icon:'hourglass_top',     color:'#ffb84d' },
+                  { label:'Verified Users',   value: fmt(summary.verifiedUsers), icon:'verified_user',  color:'#4da6ff' },
                 ].map(s => (
                   <div key={s.label} style={A.statCard}>
                     <i className="material-icons" style={{ color:s.color, fontSize:24 }}>{s.icon}</i>
@@ -343,16 +388,49 @@ const Admin = () => {
 
             {/* Live orders */}
             <section className="admin-live-orders-section">
-              <h2 className="admin-section-title">Live Orders</h2>
+              <h2 className="admin-section-title">Pending Partner Acceptance ({summary.pendingPoolCount})</h2>
               <div className="admin-orders-list">
-                {liveOrders.map(order => (
+                {pendingPoolOrders.length === 0 && (
+                  <div style={A.emptyBox}>
+                    <i className="material-icons" style={{ fontSize:36, color:'#444' }}>inbox</i>
+                    <p style={{ color:'#666', marginTop:8 }}>No pending queue orders</p>
+                  </div>
+                )}
+                {pendingPoolOrders.map(order => (
                   <div key={order.id} className="admin-order-card">
                     <div className="admin-order-details">
                       <div className="admin-order-info">
-                        <p className="admin-order-number">Order #{order.id}</p>
+                        <p className="admin-order-number">Order #{order.orderId}</p>
                         <p className="admin-bus-stop">Bus Stop: {order.busStop}</p>
+                        <p className="admin-bus-stop">Amount: ₹{order.totalAmount}</p>
                       </div>
                       <Link to="/tracking" className="admin-track-button">Track Live</Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* Recent orders from DB */}
+            <section className="admin-live-orders-section">
+              <h2 className="admin-section-title">Recent Orders (Database)</h2>
+              <div className="admin-orders-list">
+                {recentOrders.length === 0 ? (
+                  <div style={A.emptyBox}>
+                    <i className="material-icons" style={{ fontSize:36, color:'#444' }}>receipt_long</i>
+                    <p style={{ color:'#666', marginTop:8 }}>No orders found in database</p>
+                  </div>
+                ) : recentOrders.map(order => (
+                  <div key={`${order.userPhoneNumber}_${order.orderId}_${order.orderDate}`} className="admin-order-card">
+                    <div className="admin-order-details">
+                      <div className="admin-order-info">
+                        <p className="admin-order-number">Order #{order.orderId}</p>
+                        <p className="admin-bus-stop">{order.userName || 'User'} · {order.userPhoneNumber}</p>
+                        <p className="admin-bus-stop">{fmtDate(order.orderDate)} · ₹{fmt(order.totalAmount)} · {order.itemCount} items</p>
+                      </div>
+                      <span style={{ ...A.pillGreen, color: statusColor(order.paymentStatus), border:`1px solid ${statusColor(order.paymentStatus)}33`, background:'transparent' }}>
+                        {String(order.paymentStatus || 'pending').toUpperCase()}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -554,22 +632,94 @@ const Admin = () => {
             </section>
           )}
 
+          {/* ══════════════════ DATA TAB ══════════════════ */}
+          {activeTab === 'data' && (
+            <section style={{ padding:'0 0 24px' }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
+                <h2 style={A.sectionH2}>Database Snapshot</h2>
+                <button onClick={reload} style={A.refreshBtn}>
+                  <i className="material-icons" style={{ fontSize:16 }}>refresh</i>
+                </button>
+              </div>
+
+              <div style={A.totalsBox}>
+                <p style={{ color:'#555', fontSize:'0.72rem', fontWeight:700, textTransform:'uppercase', margin:'0 0 8px', letterSpacing:'0.06em' }}>Overview</p>
+                <div style={{ display:'flex', gap:14, flexWrap:'wrap' }}>
+                  <span style={{ color:'#4da6ff', fontSize:'0.82rem' }}>Users: <strong>{fmt(summary.totalUsers)}</strong></span>
+                  <span style={{ color:'#68f91a', fontSize:'0.82rem' }}>Orders: <strong>{fmt(summary.totalOrders)}</strong></span>
+                  <span style={{ color:'#4CAF50', fontSize:'0.82rem' }}>Success: <strong>{fmt(summary.successOrders)}</strong></span>
+                  <span style={{ color:'#ff5555', fontSize:'0.82rem' }}>Failed: <strong>{fmt(summary.failedOrders)}</strong></span>
+                  <span style={{ color:'#ffb84d', fontSize:'0.82rem' }}>Pending: <strong>{fmt(summary.pendingOrders)}</strong></span>
+                </div>
+              </div>
+
+              <div style={{ ...A.searchBox, marginTop:14 }}>
+                <i className="material-icons" style={{ color:'#555', fontSize:18 }}>search</i>
+                <input
+                  type="text"
+                  placeholder="Search orders by ID, user, phone, status…"
+                  value={orderSearchQ}
+                  onChange={e => setOrderSearchQ(e.target.value)}
+                  style={A.searchInput}
+                />
+              </div>
+
+              <h3 style={{ color:'#ddd', margin:'14px 0 10px', fontSize:'0.92rem' }}>Orders ({filteredOrders.length})</h3>
+              {filteredOrders.length === 0 ? (
+                <div style={A.emptyBox}>
+                  <i className="material-icons" style={{ fontSize:34, color:'#444' }}>receipt</i>
+                  <p style={{ color:'#666', marginTop:8 }}>No matching orders</p>
+                </div>
+              ) : (
+                <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                  {filteredOrders.map(order => (
+                    <div key={`${order.userPhoneNumber}_${order.orderId}_${order.orderDate}`} style={A.partnerRow}>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <p style={{ color:'#fff', fontWeight:700, margin:0, fontSize:'0.88rem' }}>#{order.orderId}</p>
+                        <p style={{ color:'#888', margin:'2px 0 0', fontSize:'0.75rem' }}>{order.userName || 'User'} · {order.userPhoneNumber}</p>
+                        <p style={{ color:'#888', margin:'3px 0 0', fontSize:'0.73rem' }}>{fmtDate(order.orderDate)} · ₹{fmt(order.totalAmount)} · {order.itemCount} items · {order.paymentMethod || '—'}</p>
+                      </div>
+                      <span style={{ ...A.pillGreen, color: statusColor(order.paymentStatus), border:`1px solid ${statusColor(order.paymentStatus)}33`, background:'transparent' }}>
+                        {String(order.paymentStatus || 'pending').toUpperCase()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <h3 style={{ color:'#ddd', margin:'18px 0 10px', fontSize:'0.92rem' }}>Users ({users.length})</h3>
+              {users.length === 0 ? (
+                <div style={A.emptyBox}>
+                  <i className="material-icons" style={{ fontSize:34, color:'#444' }}>group</i>
+                  <p style={{ color:'#666', marginTop:8 }}>No users found in database</p>
+                </div>
+              ) : (
+                <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                  {users.map(u => (
+                    <div key={u.phoneNumber} style={A.partnerRow}>
+                      <div style={A.partnerAvatar}>{(u.name || 'U').charAt(0).toUpperCase()}</div>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <p style={{ color:'#fff', fontWeight:700, margin:0, fontSize:'0.88rem' }}>{u.name || 'Unnamed User'}</p>
+                        <p style={{ color:'#888', margin:'2px 0 0', fontSize:'0.75rem' }}>{u.phoneNumber}</p>
+                        <p style={{ color:'#888', margin:'3px 0 0', fontSize:'0.73rem' }}>Orders: {u.orderCount || 0} · Joined: {fmtDate(u.createdAt)}</p>
+                      </div>
+                      <span style={u.isVerified ? A.pillGreen : A.pillOrange}>{u.isVerified ? 'VERIFIED' : 'UNVERIFIED'}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
         </main>
       </div>
 
       {/* ── Footer nav ── */}
       <footer className="admin-footer-nav">
         <div className="admin-nav-container">
-          {[
-            { to:'/admin',     icon:<svg fill="currentColor" height="28" viewBox="0 0 256 256" width="28" xmlns="http://www.w3.org/2000/svg"><path d="M224,115.55V208a16,16,0,0,1-16,16H168a16,16,0,0,1-16-16V168a8,8,0,0,0-8-8H112a8,8,0,0,0-8,8v40a16,16,0,0,1-16,16H48a16,16,0,0,1-16-16V115.55a16,16,0,0,1,5.17-11.78l80-75.48.11-.11a16,16,0,0,1,21.53,0l.11.11,80,75.48A16,16,0,0,1,224,115.55Z"/></svg>, active:true },
-            { to:'/analytics', icon:<svg fill="currentColor" height="28" viewBox="0 0 256 256" width="28" xmlns="http://www.w3.org/2000/svg"><path d="M232,208a8,8,0,0,1-8,8H32a8,8,0,0,1-8-8V48a8,8,0,0,1,16,0v94.37L90.73,98a8,8,0,0,1,10.07-.38l58.81,44.11L218.73,90a8,8,0,1,1,10.54,12l-64,56a8,8,0,0,1-10.07.38L96.39,114.29,40,163.63V200H224A8,8,0,0,1,232,208Z"/></svg> },
-            { to:'/users',     icon:<svg fill="currentColor" height="28" viewBox="0 0 256 256" width="28" xmlns="http://www.w3.org/2000/svg"><path d="M117.25,157.92a60,60,0,1,0-66.5,0A95.83,95.83,0,0,0,3.53,195.63a8,8,0,1,0,13.4,8.74,80,80,0,0,1,134.14,0,8,8,0,0,0,13.4-8.74A95.83,95.83,0,0,0,117.25,157.92ZM40,108a44,44,0,1,1,44,44A44.05,44.05,0,0,1,40,108Z"/></svg> },
-            { to:'/routes',    icon:<svg fill="currentColor" height="28" viewBox="0 0 256 256" width="28" xmlns="http://www.w3.org/2000/svg"><path d="M228.92,49.69a8,8,0,0,0-6.86-1.45L160.93,63.52,99.58,32.84a8,8,0,0,0-5.52-.6l-64,16A8,8,0,0,0,24,56V200a8,8,0,0,0,9.94,7.76l61.13-15.28,61.35,30.68A8.15,8.15,0,0,0,160,224a8,8,0,0,0,1.94-.24l64-16A8,8,0,0,0,232,200V56A8,8,0,0,0,228.92,49.69Z"/></svg> },
-          ].map(item => (
-            <Link key={item.to} className={`admin-nav-item${item.active?' admin-nav-active':''}`} to={item.to}>
-              {item.icon}
-            </Link>
-          ))}
+          <Link className="admin-nav-item admin-nav-active" to="/admin">
+            <svg fill="currentColor" height="28" viewBox="0 0 256 256" width="28" xmlns="http://www.w3.org/2000/svg"><path d="M224,115.55V208a16,16,0,0,1-16,16H168a16,16,0,0,1-16-16V168a8,8,0,0,0-8-8H112a8,8,0,0,0-8,8v40a16,16,0,0,1-16,16H48a16,16,0,0,1-16-16V115.55a16,16,0,0,1,5.17-11.78l80-75.48.11-.11a16,16,0,0,1,21.53,0l.11.11,80,75.48A16,16,0,0,1,224,115.55Z"/></svg>
+          </Link>
         </div>
       </footer>
 

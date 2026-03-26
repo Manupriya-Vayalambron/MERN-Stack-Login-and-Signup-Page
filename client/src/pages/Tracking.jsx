@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import LiveMap from '../components/LiveMap';
 import socketService from '../services/socketService';
 import { useLanguage } from '../LanguageContext';
+import { useNotification } from '../NotificationContext';
 import {
   calculateDistance, formatDistance, calculateETA,
   getCurrentLocation, watchLocation, stopWatchingLocation,
@@ -83,6 +84,7 @@ const CANCEL_SECS = 120;
 const Tracking = () => {
   const navigate = useNavigate();
   const { language } = useLanguage();
+  const { notify, showNotification } = useNotification();
   const t = T[language] || T.en;
 
   const [orderData,               setOrderData]               = useState(null);
@@ -107,6 +109,7 @@ const Tracking = () => {
   const cancelRef    = useRef(null);
   const deliveryRef  = useRef(null);
   const orderDataRef = useRef(null); // always points to latest orderData
+  const lastNotifiedStatusRef = useRef('');
 
   // Keep ref in sync so socket callbacks always see latest orderId
   useEffect(() => { orderDataRef.current = orderData; }, [orderData]);
@@ -170,6 +173,7 @@ const Tracking = () => {
     socketService.onAlert(onAlert);
     socketService.onPartnerStatusUpdate(onPartnerStatus);
     socketService.onOrderStatusUpdate(onOrderStatus);
+    socketService.onTrackingSnapshot(onTrackingSnapshot);
     return () => {
       if (watchId) stopWatchingLocation(watchId);
       socketService.leaveTrackingRoom(orderData.orderId);
@@ -228,14 +232,66 @@ const Tracking = () => {
     setAssignedPartner(data.partner);
     setPartnerAccepted(true);
     setOrderStatus('confirmed');
+    notify.partnerAssigned(data.partner?.name || 'Partner');
     toast({ type: 'success', message: `${t.partnerAssigned} ${data.partner?.name || 'Partner'}` });
+  };
+
+  const onTrackingSnapshot = (data) => {
+    const currentOrder = orderDataRef.current;
+    if (currentOrder?.orderId && data.orderId && data.orderId !== currentOrder.orderId) return;
+
+    if (data.partner) {
+      setAssignedPartner(data.partner);
+      setPartnerAccepted(true);
+      clearInterval(cancelRef.current);
+    }
+
+    if (data.status && data.status !== 'pending') {
+      setOrderStatus(data.status);
+      setPartnerAccepted(true);
+      clearInterval(cancelRef.current);
+    }
   };
 
   const onOrderStatus = (data) => {
     const currentOrder = orderDataRef.current;
     if (currentOrder?.orderId && data.orderId && data.orderId !== currentOrder.orderId) return;
+
+    // Prevent duplicate notifications when socket retries send repeated status.
+    if (lastNotifiedStatusRef.current === data.status) {
+      setOrderStatus(data.status);
+      return;
+    }
+
     setOrderStatus(data.status);
+    if (['confirmed', 'packed', 'partner_at_stop', 'handover'].includes(data.status)) {
+      setPartnerAccepted(true);
+      clearInterval(cancelRef.current);
+    }
+    if (data.partner && !assignedPartner) {
+      setAssignedPartner(data.partner);
+    }
     const m = { confirmed: t.msgConfirmed, packed: t.msgPacked, partner_at_stop: t.msgPartnerStop, handover: t.msgHandover };
+    const titleMap = {
+      confirmed: t.statusConfirmed,
+      packed: t.statusPacked,
+      partner_at_stop: t.statusPartnerStop,
+      handover: t.statusHandover,
+    };
+
+    showNotification({
+      type: data.status === 'handover' ? 'success' : 'info',
+      title: titleMap[data.status] || 'Order Update',
+      message: m[data.status] || data.status,
+      system: true,
+      data: {
+        url: '/tracking',
+        type: 'tracking_status',
+        tag: `tracking_${currentOrder?.orderId || 'order'}_${data.status}`,
+      },
+    });
+
+    lastNotifiedStatusRef.current = data.status;
     toast({ type: data.status === 'handover' ? 'success' : 'info', message: m[data.status] || data.status });
     // Clear stored order after successful handover
     if (data.status === 'handover') {

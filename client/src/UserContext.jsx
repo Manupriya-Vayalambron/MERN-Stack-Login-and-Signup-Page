@@ -53,9 +53,10 @@ export const UserProvider = ({ children }) => {
   const signIn = async (phoneNumber, userData = {}) => {
     try {
       console.log('🔄 Attempting to sign in user:', phoneNumber);
+      const API_BASE = import.meta.env.VITE_API_URL?.replace(/\/$/, '') || '';
       
       // Call backend to create/verify user
-      const response = await fetch('http://localhost:3001/api/user/verify-phone', {
+      const response = await fetch(`${API_BASE}/api/user/verify-phone`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -137,7 +138,8 @@ export const UserProvider = ({ children }) => {
     }
 
     try {
-      const response = await fetch('http://localhost:3001/api/user/update-name', {
+      const API_BASE = import.meta.env.VITE_API_URL?.replace(/\/$/, '') || '';
+      const response = await fetch(`${API_BASE}/api/user/update-name`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -175,7 +177,8 @@ export const UserProvider = ({ children }) => {
       return { success: false, error: 'No user to refresh' };
     }
 
-    try {
+    try {API_BASE = import.meta.env.VITE_API_URL?.replace(/\/$/, '') || '';
+      const response = await fetch(`${API_BASE}
       const response = await fetch(`http://localhost:3001/api/user/${encodeURIComponent(user.phoneNumber)}`);
       const result = await response.json();
 

@@ -1,13 +1,15 @@
 // Socket service for real-time location tracking
 import { io } from 'socket.io-client';
 
+const SOCKET_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, '') || 'http://localhost:3001';
+
 class SocketService {
   constructor() {
     this.socket = null;
     this.isConnected = false;
   }
 
-  connect(serverUrl = 'http://localhost:3001') {
+  connect(serverUrl = SOCKET_URL) {
     if (this.socket && this.isConnected) {
       return this.socket;
     }
@@ -237,7 +239,11 @@ class SocketService {
   // Listen for user location updates (for partners tracking customers)
   onUserLocationUpdate(callback) {
     if (this.socket) {
-      this.socket.on('user_location_update', callback);
+      this.socket.on('location_updated', (data) => {
+        if (data.userType === 'user') {
+          callback({ orderId: data.orderId, location: data.location });
+        }
+      });
     }
   }
 
@@ -252,6 +258,12 @@ class SocketService {
   onPartnerStatusUpdate(callback) {
     if (this.socket) {
       this.socket.on('partner_status_update', callback);
+    }
+  }
+
+  onTrackingSnapshot(callback) {
+    if (this.socket) {
+      this.socket.on('tracking_snapshot', callback);
     }
   }
 

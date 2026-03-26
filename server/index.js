@@ -368,6 +368,7 @@ const DeliveryPartnerModel = require('./models/DeliveryPartner');
 const UserModel = require('./models/User');
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
+const webpush = require('web-push');
 
 const app = express();
 const server = http.createServer(app);
@@ -381,6 +382,58 @@ app.use(cors({ origin: '*' }));
 // In-memory store: orders pending partner acceptance
 // Key: busStop string  ->  Value: array of order objects
 const pendingOrdersByStop = new Map();
+
+// Key: orderId -> { userId, busStop }
+const orderOwnerById = new Map();
+
+// Key: orderId -> { status, partner }
+const orderRuntimeStateById = new Map();
+
+// In-memory push subscription registry
+// Key: userId (phone number) -> Map(endpoint, subscription)
+const pushSubscriptionsByUser = new Map();
+
+const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY;
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY;
+const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:support@yathrika.local';
+const PUSH_ENABLED = Boolean(VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY);
+
+if (PUSH_ENABLED) {
+    webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+    console.log('✅ Web Push notifications enabled');
+} else {
+    console.warn('⚠️  Web Push disabled: set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY in server .env');
+}
+
+const sendPushToUser = async (userId, payload) => {
+    if (!PUSH_ENABLED || !userId) return;
+
+    const subscriptionsMap = pushSubscriptionsByUser.get(userId);
+    if (!subscriptionsMap || subscriptionsMap.size === 0) return;
+
+    const removeEndpoints = [];
+    await Promise.all(
+        [...subscriptionsMap.entries()].map(async ([endpoint, subscription]) => {
+            try {
+                await webpush.sendNotification(subscription, JSON.stringify(payload));
+            } catch (err) {
+                // 404/410 means subscription is no longer valid.
+                if (err.statusCode === 404 || err.statusCode === 410) {
+                    removeEndpoints.push(endpoint);
+                } else {
+                    console.error('Push send error:', err.message);
+                }
+            }
+        })
+    );
+
+    if (removeEndpoints.length > 0) {
+        removeEndpoints.forEach((endpoint) => subscriptionsMap.delete(endpoint));
+        if (subscriptionsMap.size === 0) {
+            pushSubscriptionsByUser.delete(userId);
+        }
+    }
+};
 
 // -------------------- Razorpay Instance --------------------
 const razorpay = new Razorpay({
@@ -509,6 +562,75 @@ app.get('/api/admin/delivery-partners/pending', async (req, res) => {
     }
 });
 
+app.get('/api/admin/overview', async (req, res) => {
+    try {
+        const [partners, users] = await Promise.all([
+            DeliveryPartnerModel.find({}).select('-password').lean(),
+            UserModel.find({}).select('phoneNumber name orderCount isVerified createdAt orders').lean(),
+        ]);
+
+        const orders = [];
+        for (const user of users) {
+            const userOrders = user.orders || [];
+            for (const order of userOrders) {
+                orders.push({
+                    orderId: order.orderId,
+                    totalAmount: order.totalAmount || 0,
+                    paymentStatus: order.paymentStatus || 'pending',
+                    paymentId: order.paymentId || null,
+                    paymentMethod: order.paymentMethod || null,
+                    orderDate: order.orderDate,
+                    itemCount: Array.isArray(order.items) ? order.items.length : 0,
+                    userPhoneNumber: user.phoneNumber,
+                    userName: user.name || '',
+                });
+            }
+        }
+
+        orders.sort((a, b) => new Date(b.orderDate || 0) - new Date(a.orderDate || 0));
+
+        const pendingPoolOrders = [];
+        for (const [busStop, queue] of pendingOrdersByStop.entries()) {
+            for (const order of queue) {
+                pendingPoolOrders.push({
+                    orderId: order.orderId,
+                    busStop,
+                    totalAmount: order.total || 0,
+                    createdAt: order.createdAt || null,
+                });
+            }
+        }
+        pendingPoolOrders.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+        const totalOrders = orders.length;
+        const successOrders = orders.filter(o => o.paymentStatus === 'success').length;
+        const failedOrders = orders.filter(o => o.paymentStatus === 'failed').length;
+        const pendingOrders = orders.filter(o => o.paymentStatus === 'pending').length;
+        const successRevenue = orders
+            .filter(o => o.paymentStatus === 'success')
+            .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+
+        res.json({
+            partners,
+            users,
+            orders,
+            overview: {
+                totalUsers: users.length,
+                verifiedUsers: users.filter(u => u.isVerified).length,
+                totalOrders,
+                successOrders,
+                failedOrders,
+                pendingOrders,
+                successRevenue,
+                pendingPoolCount: pendingPoolOrders.length,
+                pendingPoolOrders,
+            },
+        });
+    } catch (err) {
+        res.status(500).json({ message: 'Failed to fetch admin overview', error: err.message });
+    }
+});
+
 app.patch('/api/admin/delivery-partners/:id/approve', async (req, res) => {
     try {
         const partner = await DeliveryPartnerModel.findByIdAndUpdate(
@@ -565,13 +687,43 @@ app.post('/api/orders/:orderId/accept', (req, res) => {
     const orders = pendingOrdersByStop.get(busStop) || [];
     const order = orders.find(o => o.orderId === orderId);
     if (!order) return res.status(404).json({ message: 'Order not found or already accepted' });
+
+    const resolvedPartner = {
+        partnerId: partnerInfo?.partnerId,
+        name: partnerInfo?.name || partnerInfo?.partnerName || 'Delivery Partner',
+        phone: partnerInfo?.phone || '',
+        vehicleType: partnerInfo?.vehicleType || 'Bike',
+        busStop: partnerInfo?.busStop || busStop,
+    };
+
+    orderRuntimeStateById.set(orderId, {
+        status: 'confirmed',
+        partner: resolvedPartner,
+    });
+
     pendingOrdersByStop.set(busStop, orders.filter(o => o.orderId !== orderId));
     // Tell all partners at stop: this order is gone
     io.to(`partners_${busStop}`).emit('order_update', { type: 'order_accepted', orderId, acceptedBy: partnerInfo?.partnerId });
     // Tell user's tracking room: partner assigned (this is the key real-time event)
-    io.to(`order_${orderId}`).emit('partner_status_update', { orderId, partner: partnerInfo });
+    io.to(`order_${orderId}`).emit('partner_status_update', { orderId, partner: resolvedPartner });
     // Also emit first status update so tracking progress bar moves
-    io.to(`order_${orderId}`).emit('order_status_updated', { orderId, status: 'confirmed' });
+    io.to(`order_${orderId}`).emit('order_status_updated', { orderId, status: 'confirmed', partner: resolvedPartner });
+
+    const owner = orderOwnerById.get(orderId);
+    sendPushToUser(owner?.userId, {
+        title: 'Delivery Partner Assigned',
+        body: `${resolvedPartner.name || 'A delivery partner'} accepted your order.`,
+        icon: '/vite.svg',
+        badge: '/vite.svg',
+        tag: `partner_assigned_${orderId}`,
+        data: {
+            url: '/tracking',
+            orderId,
+            status: 'confirmed',
+            type: 'partner_assigned'
+        }
+    }).catch((err) => console.error('Push notify error:', err.message));
+
     console.log(`✅ Order ${orderId} accepted by partner ${partnerInfo?.partnerId} — emitted to room order_${orderId}`);
     res.json({ success: true, order });
 });
@@ -667,6 +819,15 @@ io.on('connection', (socket) => {
         // Send current locations to the new user
         if (userLocations.has(orderId)) {
             socket.emit('initial_locations', userLocations.get(orderId));
+        }
+
+        const runtimeState = orderRuntimeStateById.get(orderId);
+        if (runtimeState) {
+            socket.emit('tracking_snapshot', {
+                orderId,
+                status: runtimeState.status,
+                partner: runtimeState.partner,
+            });
         }
     });
 
@@ -858,15 +1019,62 @@ io.on('connection', (socket) => {
     socket.on('order_status_update', (data) => {
         const { orderId, status } = data;
         const orderRoomName = `order_${orderId}`;
+
+        const existingState = orderRuntimeStateById.get(orderId) || { status: 'pending', partner: null };
+        const partnerFromSocket = existingState.partner || {
+            partnerId: socket.partnerId,
+            name: socket.userData?.partnerName || socket.userData?.name || 'Delivery Partner',
+            phone: socket.userData?.phone || '',
+            vehicleType: socket.userData?.vehicleType || 'Bike',
+            busStop: socket.userData?.busStop || '',
+        };
+        orderRuntimeStateById.set(orderId, {
+            status,
+            partner: partnerFromSocket,
+        });
         
         // Broadcast status update to all tracking the order
         io.to(orderRoomName).emit('order_status_updated', {
             orderId,
             status,
             partnerId: socket.partnerId,
+            partner: partnerFromSocket,
             ...data,
             timestamp: new Date()
         });
+
+        const owner = orderOwnerById.get(orderId);
+        const statusTitleMap = {
+            confirmed: 'Order Confirmed',
+            packed: 'Order Packed',
+            partner_at_stop: 'Partner Waiting at Stop',
+            handover: 'Order Delivered'
+        };
+        const statusBodyMap = {
+            confirmed: 'Your order is confirmed and is being prepared.',
+            packed: 'Your order has been packed and is ready for pickup.',
+            partner_at_stop: 'Your delivery partner is waiting at your selected stop.',
+            handover: 'Your order has been handed over successfully.'
+        };
+
+        sendPushToUser(owner?.userId, {
+            title: statusTitleMap[status] || 'Order Update',
+            body: statusBodyMap[status] || `Order status changed to ${status}`,
+            icon: '/vite.svg',
+            badge: '/vite.svg',
+            tag: `order_status_${orderId}_${status}`,
+            data: {
+                url: '/tracking',
+                orderId,
+                status,
+                type: 'order_status'
+            }
+        }).catch((err) => console.error('Push notify error:', err.message));
+
+        if (status === 'handover' || status === 'cancelled') {
+            orderOwnerById.delete(orderId);
+            orderRuntimeStateById.delete(orderId);
+        }
 
         console.log(`Order ${orderId} status updated to: ${status} by partner ${socket.partnerId}`);
     });
@@ -1065,6 +1273,51 @@ app.patch('/api/user/update-name', async (req, res) => {
     }
 });
 
+// -------------------- Browser Push Notification Routes --------------------
+
+app.post('/api/notifications/subscribe', (req, res) => {
+    try {
+        const { userId, subscription } = req.body;
+
+        if (!PUSH_ENABLED) {
+            return res.status(503).json({ success: false, message: 'Push notifications are not configured on server' });
+        }
+        if (!userId || !subscription?.endpoint) {
+            return res.status(400).json({ success: false, message: 'userId and subscription are required' });
+        }
+
+        if (!pushSubscriptionsByUser.has(userId)) {
+            pushSubscriptionsByUser.set(userId, new Map());
+        }
+
+        pushSubscriptionsByUser.get(userId).set(subscription.endpoint, subscription);
+        return res.json({ success: true, message: 'Subscription registered' });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: 'Failed to register subscription', error: error.message });
+    }
+});
+
+app.post('/api/notifications/unsubscribe', (req, res) => {
+    try {
+        const { userId, endpoint } = req.body;
+        if (!userId || !endpoint) {
+            return res.status(400).json({ success: false, message: 'userId and endpoint are required' });
+        }
+
+        const map = pushSubscriptionsByUser.get(userId);
+        if (!map) return res.json({ success: true, message: 'No active subscription found' });
+
+        map.delete(endpoint);
+        if (map.size === 0) {
+            pushSubscriptionsByUser.delete(userId);
+        }
+
+        return res.json({ success: true, message: 'Subscription removed' });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: 'Failed to remove subscription', error: error.message });
+    }
+});
+
 // -------------------- Razorpay Payment Routes --------------------
 
 // 1. Create Order
@@ -1159,6 +1412,14 @@ app.post('/api/payment/verify', async (req, res) => {
                 //  but we also persist so partners can still see it after restart)
                 if (!pendingOrdersByStop.has(busStop)) pendingOrdersByStop.set(busStop, []);
                 pendingOrdersByStop.get(busStop).push(orderForPartners);
+                orderOwnerById.set(customOrderId, {
+                    userId: phoneNumber || null,
+                    busStop,
+                });
+                orderRuntimeStateById.set(customOrderId, {
+                    status: 'pending',
+                    partner: null,
+                });
                 io.to(`partners_${busStop}`).emit('order_update', {
                     type: 'new_order',
                     order: orderForPartners
@@ -1214,6 +1475,21 @@ app.post('/api/payment/verify', async (req, res) => {
             console.log('══════════════════════════════════════');
             console.log(JSON.stringify(paymentRecord, null, 2));
             console.log('══════════════════════════════════════\n');
+
+            // Browser push alert for payment success.
+            sendPushToUser(phoneNumber, {
+                title: 'Payment Successful',
+                body: `Rs.${totalAmount} paid successfully. Order ${customOrderId} confirmed.`,
+                icon: '/vite.svg',
+                badge: '/vite.svg',
+                tag: `payment_success_${customOrderId}`,
+                data: {
+                    url: '/order-summary',
+                    orderId: customOrderId,
+                    paymentId: razorpay_payment_id,
+                    type: 'payment_success'
+                }
+            }).catch((err) => console.error('Push notify error:', err.message));
 
             res.json({ 
                 success: true, 

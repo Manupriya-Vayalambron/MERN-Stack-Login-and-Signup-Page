@@ -19,6 +19,7 @@
     "nodemon": "^3.1.10",
     "razorpay": "^2.9.2",
     "socket.io": "^4.8.3",
-    "twilio": "^5.11.2"
+    "twilio": "^5.11.2",
+    "web-push": "^3.6.7"
   }
 }
