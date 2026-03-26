@@ -32,7 +32,7 @@ const TYPE_CONFIG = {
   },
 };
 
-const API_BASE = import.meta.env.VITE_API_URL?.replace(/\/$/, '') || 'http://localhost:3001';
+const API_BASE = import.meta.env.VITE_API_URL?.replace(/\/$/, '') || '';
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || '';
 
 const base64ToUint8Array = (base64String) => {
