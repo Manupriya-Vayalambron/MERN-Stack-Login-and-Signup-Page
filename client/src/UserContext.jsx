@@ -177,9 +177,9 @@ export const UserProvider = ({ children }) => {
       return { success: false, error: 'No user to refresh' };
     }
 
-    try {API_BASE = import.meta.env.VITE_API_URL?.replace(/\/$/, '') || '';
-      const response = await fetch(`${API_BASE}
-      const response = await fetch(`http://localhost:3001/api/user/${encodeURIComponent(user.phoneNumber)}`);
+    try {
+      const API_BASE = import.meta.env.VITE_API_URL?.replace(/\/$/, '') || '';
+      const response = await fetch(`${API_BASE}/api/user/${encodeURIComponent(user.phoneNumber)}`);
       const result = await response.json();
 
       if (result.success) {
