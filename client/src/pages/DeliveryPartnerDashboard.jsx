@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import LiveMap from '../components/LiveMap';
 import socketService from '../services/socketService';
@@ -37,9 +37,54 @@ const DeliveryPartnerDashboard = () => {
   const [handoverProofFiles, setHandoverProofFiles] = useState({});
   const [isOnline,       setIsOnline]       = useState(false);
   const [notifications,  setNotifications]  = useState([]);
+  const acceptedOrdersRef = useRef([]);
+
+  useEffect(() => {
+    acceptedOrdersRef.current = acceptedOrders;
+  }, [acceptedOrders]);
 
   // ── Auth + approval guard (checks live from backend) ────────────────────────
   useEffect(() => {
+    let reconnectHandler = null;
+
+    const startRealtime = (fresh) => {
+      setPartner(fresh);
+      setIsOnline(Boolean(fresh?.isOnline));
+
+      const coords = getBusStopCoordinates(fresh.assignedBusStop);
+      if (coords) setPartnerLocation({ latitude: coords.lat, longitude: coords.lng });
+
+      socketService.connect();
+      socketService.joinPartnerRoom(fresh.assignedBusStop, fresh._id);
+      loadAvailableOrders(fresh.assignedBusStop);
+      loadAcceptedOrders(fresh._id).then((orders) => {
+        orders.forEach((o) => {
+          socketService.joinTrackingRoom(getOrderId(o), 'delivery_partner', {
+            partnerId: fresh._id,
+            partnerName: fresh.name,
+            busStop: fresh.assignedBusStop,
+          });
+        });
+      });
+
+      reconnectHandler = () => {
+        socketService.joinPartnerRoom(fresh.assignedBusStop, fresh._id);
+        acceptedOrdersRef.current.forEach((o) => {
+          socketService.joinTrackingRoom(getOrderId(o), 'delivery_partner', {
+            partnerId: fresh._id,
+            partnerName: fresh.name,
+            busStop: fresh.assignedBusStop,
+          });
+        });
+      };
+      socketService.onConnect(reconnectHandler);
+
+      socketService.onOrderUpdate(handleOrderUpdate);
+      socketService.onUserLocationUpdate(handleUserLocationUpdate);
+      socketService.onOrderStatusUpdate(handleOrderStatusUpdate);
+      socketService.onOrderStatusError(handleOrderStatusError);
+    };
+
     const raw   = localStorage.getItem('deliveryPartner');
     const token = localStorage.getItem('deliveryPartnerToken');
     if (!raw || !token) { navigate('/delivery-partner-auth'); return; }
@@ -57,37 +102,19 @@ const DeliveryPartnerDashboard = () => {
         if (fresh.approvalStatus === 'pending')  { navigate('/delivery-partner-pending'); return; }
         if (fresh.approvalStatus === 'rejected') { navigate('/delivery-partner-auth');    return; }
 
-        setPartner(fresh);
-
-        const coords = getBusStopCoordinates(fresh.assignedBusStop);
-        if (coords) setPartnerLocation({ latitude: coords.lat, longitude: coords.lng });
-
-        socketService.connect();
-        socketService.joinPartnerRoom(fresh.assignedBusStop, fresh._id);
-        loadAvailableOrders(fresh.assignedBusStop);
-        loadAcceptedOrders();
-
-        socketService.onOrderUpdate(handleOrderUpdate);
-        socketService.onUserLocationUpdate(handleUserLocationUpdate);
-        socketService.onOrderStatusUpdate(handleOrderStatusUpdate);
-        socketService.onOrderStatusError(handleOrderStatusError);
+        startRealtime(fresh);
       })
       .catch(() => {
         // Network error: use cached value but still guard
         const fresh = p;
         if (fresh.approvalStatus !== 'approved') { navigate('/delivery-partner-auth'); return; }
-        setPartner(fresh);
-        socketService.connect();
-        socketService.joinPartnerRoom(fresh.assignedBusStop, fresh._id);
-        loadAvailableOrders(fresh.assignedBusStop);
-        loadAcceptedOrders();
-        socketService.onOrderUpdate(handleOrderUpdate);
-        socketService.onUserLocationUpdate(handleUserLocationUpdate);
-        socketService.onOrderStatusUpdate(handleOrderStatusUpdate);
-        socketService.onOrderStatusError(handleOrderStatusError);
+        startRealtime(fresh);
       });
 
-    return () => socketService.removeAllListeners();
+    return () => {
+      if (reconnectHandler) socketService.offConnect(reconnectHandler);
+      socketService.removeAllListeners();
+    };
   }, [navigate]);
 
   // ── Load real orders from backend (filtered by partner's assigned bus stop) ──
@@ -101,24 +128,38 @@ const DeliveryPartnerDashboard = () => {
       console.error('Failed to load orders:', err);
     }
   };
-  const loadAcceptedOrders = (partnerId) => {
+  const loadAcceptedOrders = async (partnerId) => {
     if (!partnerId) {
       setAcceptedOrders([]);
-      return;
+      return [];
     }
+
+    try {
+      const res = await fetch(`/api/orders/partner/${encodeURIComponent(partnerId)}/active`);
+      if (res.ok) {
+        const data = await res.json();
+        const activeFromServer = Array.isArray(data?.orders) ? data.orders : [];
+        setAcceptedOrders(activeFromServer);
+        localStorage.setItem(acceptedOrdersStorageKey(partnerId), JSON.stringify(activeFromServer));
+        return activeFromServer;
+      }
+    } catch (_) {}
+
     try {
       const saved = localStorage.getItem(acceptedOrdersStorageKey(partnerId));
       if (!saved) {
         setAcceptedOrders([]);
-        return;
+        return [];
       }
       const parsed = JSON.parse(saved);
       const activeOrders = Array.isArray(parsed)
         ? parsed.filter((o) => !['handover', 'cancelled'].includes(o?.status))
         : [];
       setAcceptedOrders(activeOrders);
+      return activeOrders;
     } catch {
       setAcceptedOrders([]);
+      return [];
     }
   };
 
@@ -150,12 +191,21 @@ const DeliveryPartnerDashboard = () => {
       toast({ type:'new_order', message:`New order: ₹${data.order.total}` });
     } else if (data.type === 'order_accepted') {
       setAvailableOrders(prev => prev.filter(o => getOrderId(o) !== String(data.orderId)));
+    } else if (data.type === 'order_cancelled') {
+      setAvailableOrders(prev => prev.filter(o => getOrderId(o) !== String(data.orderId)));
+      setAcceptedOrders(prev => prev.filter(o => getOrderId(o) !== String(data.orderId)));
+      toast({ type:'info', message:`Order #${String(data.orderId).slice(-6)} was cancelled by user` });
     }
   };
   const handleUserLocationUpdate = ({ orderId, location }) =>
     setUserLocations(prev => ({ ...prev, [orderId]: location }));
   const handleOrderStatusUpdate = ({ orderId, status }) =>
-    setAcceptedOrders(prev => prev.map(o => getOrderId(o) === String(orderId) ? { ...o, status } : o));
+    setAcceptedOrders((prev) => {
+      if (['handover', 'cancelled'].includes(status)) {
+        return prev.filter((o) => getOrderId(o) !== String(orderId));
+      }
+      return prev.map((o) => getOrderId(o) === String(orderId) ? { ...o, status } : o);
+    });
   const handleOrderStatusError = ({ message }) => {
     toast({ type:'error', message: message || 'Unable to update order status' });
   };

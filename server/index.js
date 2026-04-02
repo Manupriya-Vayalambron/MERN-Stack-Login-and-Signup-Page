@@ -385,7 +385,8 @@ app.use(express.urlencoded({ extended: true }));
 const uploadsRoot = path.join(__dirname, 'uploads');
 const aadharUploadDir = path.join(uploadsRoot, 'aadhar');
 const handoverUploadDir = path.join(uploadsRoot, 'handover');
-[uploadsRoot, aadharUploadDir, handoverUploadDir].forEach((dir) => {
+const creditProofUploadDir = path.join(uploadsRoot, 'credit-proof');
+[uploadsRoot, aadharUploadDir, handoverUploadDir, creditProofUploadDir].forEach((dir) => {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
 app.use('/uploads', express.static(uploadsRoot));
@@ -398,6 +399,14 @@ const allowedMimeTypes = new Set([
 ]);
 
 const safeFileName = (value) => String(value || 'file').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 50) || 'file';
+const phoneDigits = (value) => String(value || '').replace(/\D/g, '');
+const phonesMatch = (a, b) => {
+    const first = phoneDigits(a);
+    const second = phoneDigits(b);
+    if (!first || !second) return false;
+    if (first === second) return true;
+    return first.slice(-10) === second.slice(-10);
+};
 const createUploader = (destination, namePrefix) => multer({
     storage: multer.diskStorage({
         destination: (_req, _file, cb) => cb(null, destination),
@@ -416,6 +425,7 @@ const createUploader = (destination, namePrefix) => multer({
 
 const uploadAadhar = createUploader(aadharUploadDir, 'aadhar');
 const uploadHandoverProof = createUploader(handoverUploadDir, 'handover');
+const uploadCreditProof = createUploader(creditProofUploadDir, 'creditproof');
 
 // In-memory store: orders pending partner acceptance
 // Key: busStop string  ->  Value: array of order objects
@@ -428,6 +438,133 @@ const orderOwnerById = new Map();
 const orderRuntimeStateById = new Map();
 // Key: orderId -> handover proof image URL
 const orderHandoverProofById = new Map();
+
+// Admin auth (no DB): token sessions stored in memory.
+const ADMIN_PASSWORD = String(process.env.ADMIN_PASSWORD || '').trim();
+const ADMIN_SESSION_TTL_MS = 12 * 60 * 60 * 1000;
+const adminSessions = new Map(); // token -> { expiresAt }
+
+const hasWhitespace = (v) => /\s/.test(String(v || ''));
+const createAdminToken = () => crypto.randomBytes(24).toString('hex');
+
+if (!ADMIN_PASSWORD) {
+    throw new Error('ADMIN_PASSWORD is required in environment variables');
+}
+if (hasWhitespace(ADMIN_PASSWORD)) {
+    throw new Error('ADMIN_PASSWORD must not contain spaces');
+}
+
+const requireAdminAuth = (req, res, next) => {
+    const authHeader = req.headers.authorization || '';
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+    if (!token) return res.status(401).json({ message: 'Admin authentication required' });
+
+    const session = adminSessions.get(token);
+    if (!session || session.expiresAt < Date.now()) {
+        adminSessions.delete(token);
+        return res.status(401).json({ message: 'Admin session expired. Please login again.' });
+    }
+
+    // Sliding expiry while active.
+    session.expiresAt = Date.now() + ADMIN_SESSION_TTL_MS;
+    adminSessions.set(token, session);
+    next();
+};
+
+const ACTIVE_ORDER_STATUSES = new Set(['confirmed', 'packed', 'partner_at_stop']);
+
+const normalizePartnerInfo = (partnerInfo = {}, fallbackBusStop = '') => ({
+    partnerId: partnerInfo?.partnerId || null,
+    name: partnerInfo?.name || partnerInfo?.partnerName || 'Delivery Partner',
+    phone: partnerInfo?.phone || '',
+    vehicleType: partnerInfo?.vehicleType || 'Bike',
+    busStop: partnerInfo?.busStop || fallbackBusStop || '',
+});
+
+const hydratePendingOrdersFromDb = async (busStop) => {
+    const normalizedBusStop = String(busStop || '').trim();
+    if (!normalizedBusStop) return [];
+
+    const rows = await UserModel.aggregate([
+        { $unwind: '$orders' },
+        {
+            $match: {
+                'orders.paymentStatus': 'success',
+                'orders.busStop': normalizedBusStop,
+                $or: [
+                    { 'orders.orderStatus': { $exists: false } },
+                    { 'orders.orderStatus': 'pending' },
+                ],
+            },
+        },
+        {
+            $project: {
+                _id: 0,
+                phoneNumber: 1,
+                name: 1,
+                order: '$orders',
+            },
+        },
+    ]);
+
+    const hydrated = rows.map((row) => ({
+        orderId: row.order.orderId,
+        razorpayOrderId: row.order.razorpayOrderId,
+        userId: row.phoneNumber || 'guest',
+        userName: row.name || 'Customer',
+        userPhone: row.phoneNumber || '',
+        items: row.order.items || [],
+        total: row.order.totalAmount || 0,
+        busStop: row.order.busStop || normalizedBusStop,
+        status: 'pending',
+        pickupReward: Number(row.order.pickupReward || Math.round((row.order.totalAmount || 0) * 0.1)),
+        createdAt: row.order.orderDate ? new Date(row.order.orderDate).toISOString() : new Date().toISOString(),
+    }));
+
+    hydrated.forEach((order) => {
+        orderOwnerById.set(order.orderId, { userId: order.userPhone || null, busStop: normalizedBusStop });
+        if (!orderRuntimeStateById.has(order.orderId)) {
+            orderRuntimeStateById.set(order.orderId, { status: 'pending', partner: null });
+        }
+    });
+
+    pendingOrdersByStop.set(normalizedBusStop, hydrated);
+    return hydrated;
+};
+
+const getRuntimeStateFromDb = async (orderId) => {
+    const doc = await UserModel.findOne(
+        { 'orders.orderId': orderId },
+        { phoneNumber: 1, name: 1, orders: { $elemMatch: { orderId } } }
+    ).lean();
+
+    const order = doc?.orders?.[0];
+    if (!order) return null;
+
+    const status = order.orderStatus || 'pending';
+    const partner = order.partnerInfo || null;
+    const reward = Number(order.pickupReward || 0);
+    const handoverProofImageUrl = order.handoverProofImageUrl || '';
+
+    orderOwnerById.set(orderId, { userId: doc.phoneNumber || null, busStop: order.busStop || '' });
+    orderRuntimeStateById.set(orderId, { status, partner, reward, handoverProofImageUrl });
+    if (handoverProofImageUrl) {
+        orderHandoverProofById.set(orderId, handoverProofImageUrl);
+    }
+
+    return {
+        status,
+        partner,
+        reward,
+        handoverProofImageUrl,
+        userPhone: doc.phoneNumber || '',
+        userName: doc.name || 'Customer',
+        busStop: order.busStop || '',
+        total: order.totalAmount || 0,
+        items: order.items || [],
+        paymentId: order.paymentId || null,
+    };
+};
 
 // In-memory push subscription registry
 // Key: userId (phone number) -> Map(endpoint, subscription)
@@ -489,10 +626,7 @@ const userLocations = new Map();
 // -------------------- MongoDB Setup --------------------
 const mongoURI = process.env.MONGO_URI
 
-mongoose.connect(mongoURI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-})
+mongoose.connect(mongoURI)
 .then(() => {
     console.log('✅ Connected to MongoDB successfully');
     console.log('🗄️  Database URI:', mongoURI);
@@ -612,7 +746,31 @@ app.patch('/api/delivery-partner/:id/availability', async (req, res) => {
 
 // -------------------- Admin Delivery Partner Routes --------------------
 
-app.get('/api/admin/delivery-partners', async (req, res) => {
+app.post('/api/admin/login', (req, res) => {
+    const { password } = req.body || {};
+    if (typeof password !== 'string' || !password.length) {
+        return res.status(400).json({ message: 'Password is required' });
+    }
+    if (hasWhitespace(password)) {
+        return res.status(400).json({ message: 'Password must not contain spaces' });
+    }
+    if (password !== ADMIN_PASSWORD) {
+        return res.status(401).json({ message: 'Invalid admin password' });
+    }
+
+    const token = createAdminToken();
+    adminSessions.set(token, { expiresAt: Date.now() + ADMIN_SESSION_TTL_MS });
+    res.json({ success: true, token, expiresInMs: ADMIN_SESSION_TTL_MS });
+});
+
+app.post('/api/admin/logout', requireAdminAuth, (req, res) => {
+    const authHeader = req.headers.authorization || '';
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+    if (token) adminSessions.delete(token);
+    res.json({ success: true });
+});
+
+app.get('/api/admin/delivery-partners', requireAdminAuth, async (req, res) => {
     try {
         const partners = await DeliveryPartnerModel.find({}).select('-password');
         res.json(partners);
@@ -621,7 +779,7 @@ app.get('/api/admin/delivery-partners', async (req, res) => {
     }
 });
 
-app.get('/api/admin/delivery-partners/pending', async (req, res) => {
+app.get('/api/admin/delivery-partners/pending', requireAdminAuth, async (req, res) => {
     try {
         const partners = await DeliveryPartnerModel.find({ approvalStatus: 'pending' }).select('-password');
         res.json(partners);
@@ -630,7 +788,7 @@ app.get('/api/admin/delivery-partners/pending', async (req, res) => {
     }
 });
 
-app.get('/api/admin/overview', async (req, res) => {
+app.get('/api/admin/overview', requireAdminAuth, async (req, res) => {
     try {
         const [partners, users] = await Promise.all([
             DeliveryPartnerModel.find({}).select('-password').lean(),
@@ -645,8 +803,13 @@ app.get('/api/admin/overview', async (req, res) => {
                     orderId: order.orderId,
                     totalAmount: order.totalAmount || 0,
                     paymentStatus: order.paymentStatus || 'pending',
+                    orderStatus: order.orderStatus || 'pending',
                     paymentId: order.paymentId || null,
                     paymentMethod: order.paymentMethod || null,
+                    cancellationReason: order.cancellationReason || '',
+                    cancelledAt: order.cancelledAt || null,
+                    refundStatus: order.refundStatus || 'not_required',
+                    refundRequestedAt: order.refundRequestedAt || null,
                     orderDate: order.orderDate,
                     itemCount: Array.isArray(order.items) ? order.items.length : 0,
                     userPhoneNumber: user.phoneNumber,
@@ -677,6 +840,7 @@ app.get('/api/admin/overview', async (req, res) => {
         const successRevenue = orders
             .filter(o => o.paymentStatus === 'success')
             .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+        const refundRequests = orders.filter((o) => o.orderStatus === 'cancelled' && o.refundStatus === 'pending').length;
 
         res.json({
             partners,
@@ -689,6 +853,7 @@ app.get('/api/admin/overview', async (req, res) => {
                 successOrders,
                 failedOrders,
                 pendingOrders,
+                refundRequests,
                 successRevenue,
                 pendingPoolCount: pendingPoolOrders.length,
                 pendingPoolOrders,
@@ -699,7 +864,7 @@ app.get('/api/admin/overview', async (req, res) => {
     }
 });
 
-app.patch('/api/admin/delivery-partners/:id/approve', async (req, res) => {
+app.patch('/api/admin/delivery-partners/:id/approve', requireAdminAuth, async (req, res) => {
     try {
         const partner = await DeliveryPartnerModel.findByIdAndUpdate(
             req.params.id,
@@ -717,7 +882,7 @@ app.patch('/api/admin/delivery-partners/:id/approve', async (req, res) => {
     }
 });
 
-app.patch('/api/admin/delivery-partners/:id/reject', async (req, res) => {
+app.patch('/api/admin/delivery-partners/:id/reject', requireAdminAuth, async (req, res) => {
     try {
         const { rejectReason } = req.body;
         const partner = await DeliveryPartnerModel.findByIdAndUpdate(
@@ -737,64 +902,356 @@ app.patch('/api/admin/delivery-partners/:id/reject', async (req, res) => {
     }
 });
 
+app.patch('/api/admin/delivery-partners/:id/credit-proof', requireAdminAuth, uploadCreditProof.single('paymentProof'), async (req, res) => {
+    try {
+        const { id } = req.params;
+        const amount = Number(req.body?.amount || 0);
+        const note = String(req.body?.note || '').trim();
+        const paidToPhone = String(req.body?.paidToPhone || '').trim();
+
+        if (!amount || amount <= 0) {
+            return res.status(400).json({ message: 'Valid credit amount is required' });
+        }
+        if (!req.file) {
+            return res.status(400).json({ message: 'UPI payment screenshot is required' });
+        }
+
+        const partner = await DeliveryPartnerModel.findById(id);
+        if (!partner) {
+            return res.status(404).json({ message: 'Partner not found' });
+        }
+
+        if (!phonesMatch(paidToPhone, partner.phone)) {
+            return res.status(400).json({
+                message: 'Paid-to phone must match the delivery partner phone number',
+                expectedPhone: partner.phone,
+            });
+        }
+
+        const paymentProofImageUrl = `/uploads/credit-proof/${req.file.filename}`;
+        await partner.creditAmount(amount, note || 'UPI payout credited by admin', 'admin', {
+            paidToPhone,
+            paymentProofImageUrl,
+        });
+
+        const updatedPartner = await DeliveryPartnerModel.findById(id).select('-password');
+        return res.json({
+            message: 'Credit added after proof verification',
+            partner: updatedPartner,
+            credit: {
+                amount,
+                paidToPhone,
+                paymentProofImageUrl,
+                note,
+            },
+        });
+    } catch (err) {
+        return res.status(500).json({ message: 'Failed to credit partner with proof', error: err.message });
+    }
+});
+
+app.patch('/api/admin/orders/:orderId/refund-status', requireAdminAuth, async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const { refundStatus } = req.body || {};
+        const allowedStatuses = new Set(['pending', 'processing', 'completed']);
+        if (!allowedStatuses.has(refundStatus)) {
+            return res.status(400).json({ success: false, message: 'Invalid refund status' });
+        }
+
+        const orderDoc = await UserModel.findOne(
+            { 'orders.orderId': orderId },
+            { phoneNumber: 1, orders: { $elemMatch: { orderId } } }
+        ).lean();
+        const order = orderDoc?.orders?.[0];
+        if (!order) {
+            return res.status(404).json({ success: false, message: 'Order not found' });
+        }
+        if (order.orderStatus !== 'cancelled') {
+            return res.status(400).json({ success: false, message: 'Refund status can only be updated for cancelled orders' });
+        }
+
+        await UserModel.updateOne(
+            { 'orders.orderId': orderId },
+            {
+                $set: {
+                    'orders.$.refundStatus': refundStatus,
+                    'orders.$.lastStatusUpdatedAt': new Date(),
+                },
+            }
+        );
+
+        io.to(`order_${orderId}`).emit('tracking_alert_received', {
+            orderId,
+            alertType: 'refund_status',
+            message: `Refund status updated to ${refundStatus.toUpperCase()}`,
+            from: 'admin',
+            timestamp: new Date(),
+        });
+
+        return res.json({ success: true, orderId, refundStatus });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: 'Failed to update refund status', error: err.message });
+    }
+});
+
 // -------------------- Order Routes for Partners --------------------
 
 // Get pending (unaccepted) orders at a bus stop
 // ── FIX 2: Returns in-memory pool (fast) ──
 // In-memory is populated on payment/verify. If server restarts, orders are lost.
 // For production, persist orders to MongoDB and query here instead.
-app.get('/api/orders/pending/:busStop', (req, res) => {
-    const orders = pendingOrdersByStop.get(decodeURIComponent(req.params.busStop)) || [];
-    res.json({ orders });
+app.get('/api/orders/pending/:busStop', async (req, res) => {
+    try {
+        const busStop = decodeURIComponent(req.params.busStop);
+        let orders = pendingOrdersByStop.get(busStop) || [];
+        if (orders.length === 0) {
+            orders = await hydratePendingOrdersFromDb(busStop);
+        }
+        res.json({ orders });
+    } catch (err) {
+        res.status(500).json({ message: 'Failed to load pending orders', error: err.message });
+    }
+});
+
+app.get('/api/orders/partner/:partnerId/active', async (req, res) => {
+    try {
+        const { partnerId } = req.params;
+        const rows = await UserModel.aggregate([
+            { $unwind: '$orders' },
+            {
+                $match: {
+                    'orders.paymentStatus': 'success',
+                    'orders.partnerInfo.partnerId': partnerId,
+                    'orders.orderStatus': { $in: [...ACTIVE_ORDER_STATUSES] },
+                },
+            },
+            {
+                $project: {
+                    _id: 0,
+                    phoneNumber: 1,
+                    name: 1,
+                    order: '$orders',
+                },
+            },
+        ]);
+
+        const orders = rows
+            .map((row) => ({
+                id: row.order.orderId,
+                orderId: row.order.orderId,
+                userId: row.phoneNumber || 'guest',
+                userPhone: row.phoneNumber || '',
+                userName: row.name || 'Customer',
+                items: row.order.items || [],
+                total: row.order.totalAmount || 0,
+                pickupReward: Number(row.order.pickupReward || 0),
+                busStop: row.order.busStop || row.order.partnerInfo?.busStop || '',
+                paymentId: row.order.paymentId || null,
+                status: row.order.orderStatus || 'confirmed',
+                acceptedAt: row.order.lastStatusUpdatedAt || row.order.orderDate || new Date().toISOString(),
+                partnerId: row.order.partnerInfo?.partnerId || partnerId,
+                partnerName: row.order.partnerInfo?.name || 'Delivery Partner',
+                partnerPhone: row.order.partnerInfo?.phone || '',
+                handoverProofImageUrl: row.order.handoverProofImageUrl || '',
+            }))
+            .sort((a, b) => new Date(b.acceptedAt || 0) - new Date(a.acceptedAt || 0));
+
+        orders.forEach((order) => {
+            orderOwnerById.set(order.orderId, { userId: order.userPhone || null, busStop: order.busStop || '' });
+            orderRuntimeStateById.set(order.orderId, {
+                status: order.status,
+                partner: normalizePartnerInfo({
+                    partnerId: order.partnerId,
+                    name: order.partnerName,
+                    phone: order.partnerPhone,
+                    busStop: order.busStop,
+                }, order.busStop),
+                reward: Number(order.pickupReward || 0),
+                handoverProofImageUrl: order.handoverProofImageUrl || '',
+            });
+        });
+
+        res.json({ success: true, orders });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Failed to load active partner orders', error: err.message });
+    }
 });
 
 // Partner accepts an order
-app.post('/api/orders/:orderId/accept', (req, res) => {
+app.post('/api/orders/:orderId/accept', async (req, res) => {
     const { orderId } = req.params;
     const { busStop, partnerInfo } = req.body;
-    const orders = pendingOrdersByStop.get(busStop) || [];
-    const order = orders.find(o => o.orderId === orderId);
-    if (!order) return res.status(404).json({ message: 'Order not found or already accepted' });
-
-    const resolvedPartner = {
-        partnerId: partnerInfo?.partnerId,
-        name: partnerInfo?.name || partnerInfo?.partnerName || 'Delivery Partner',
-        phone: partnerInfo?.phone || '',
-        vehicleType: partnerInfo?.vehicleType || 'Bike',
-        busStop: partnerInfo?.busStop || busStop,
-    };
-
-    orderRuntimeStateById.set(orderId, {
-        status: 'confirmed',
-        partner: resolvedPartner,
-        reward: Number(order?.pickupReward || 0),
-    });
-
-    pendingOrdersByStop.set(busStop, orders.filter(o => o.orderId !== orderId));
-    // Tell all partners at stop: this order is gone
-    io.to(`partners_${busStop}`).emit('order_update', { type: 'order_accepted', orderId, acceptedBy: partnerInfo?.partnerId });
-    // Tell user's tracking room: partner assigned (this is the key real-time event)
-    io.to(`order_${orderId}`).emit('partner_status_update', { orderId, partner: resolvedPartner });
-    // Also emit first status update so tracking progress bar moves
-    io.to(`order_${orderId}`).emit('order_status_updated', { orderId, status: 'confirmed', partner: resolvedPartner });
-
-    const owner = orderOwnerById.get(orderId);
-    sendPushToUser(owner?.userId, {
-        title: 'Delivery Partner Assigned',
-        body: `${resolvedPartner.name || 'A delivery partner'} accepted your order.`,
-        icon: '/vite.svg',
-        badge: '/vite.svg',
-        tag: `partner_assigned_${orderId}`,
-        data: {
-            url: '/tracking',
-            orderId,
-            status: 'confirmed',
-            type: 'partner_assigned'
+    try {
+        let orders = pendingOrdersByStop.get(busStop) || [];
+        if (orders.length === 0 && busStop) {
+            orders = await hydratePendingOrdersFromDb(busStop);
         }
-    }).catch((err) => console.error('Push notify error:', err.message));
+        const pendingOrder = orders.find((o) => o.orderId === orderId);
 
-    console.log(`✅ Order ${orderId} accepted by partner ${partnerInfo?.partnerId} — emitted to room order_${orderId}`);
-    res.json({ success: true, order });
+        const dbDoc = await UserModel.findOne(
+            { 'orders.orderId': orderId },
+            { phoneNumber: 1, name: 1, orders: { $elemMatch: { orderId } } }
+        ).lean();
+        const persistedOrder = dbDoc?.orders?.[0];
+
+        if (!pendingOrder && !persistedOrder) {
+            return res.status(404).json({ message: 'Order not found or already accepted' });
+        }
+
+        const resolvedBusStop = busStop || pendingOrder?.busStop || persistedOrder?.busStop || '';
+        const resolvedPartner = normalizePartnerInfo(partnerInfo, resolvedBusStop);
+        const reward = Number(
+            pendingOrder?.pickupReward ||
+            persistedOrder?.pickupReward ||
+            Math.round((pendingOrder?.total || persistedOrder?.totalAmount || 0) * 0.1)
+        );
+
+        await UserModel.updateOne(
+            { 'orders.orderId': orderId },
+            {
+                $set: {
+                    'orders.$.orderStatus': 'confirmed',
+                    'orders.$.partnerInfo': resolvedPartner,
+                    'orders.$.pickupReward': reward,
+                    'orders.$.lastStatusUpdatedAt': new Date(),
+                },
+            }
+        );
+
+        orderRuntimeStateById.set(orderId, {
+            status: 'confirmed',
+            partner: resolvedPartner,
+            reward,
+        });
+
+        if (resolvedBusStop) {
+            pendingOrdersByStop.set(resolvedBusStop, orders.filter((o) => o.orderId !== orderId));
+            io.to(`partners_${resolvedBusStop}`).emit('order_update', { type: 'order_accepted', orderId, acceptedBy: resolvedPartner.partnerId });
+        }
+
+        orderOwnerById.set(orderId, { userId: dbDoc?.phoneNumber || pendingOrder?.userPhone || null, busStop: resolvedBusStop });
+
+        io.to(`order_${orderId}`).emit('partner_status_update', { orderId, partner: resolvedPartner });
+        io.to(`order_${orderId}`).emit('order_status_updated', { orderId, status: 'confirmed', partner: resolvedPartner });
+
+        sendPushToUser(dbDoc?.phoneNumber || pendingOrder?.userPhone, {
+            title: 'Delivery Partner Assigned',
+            body: `${resolvedPartner.name || 'A delivery partner'} accepted your order.`,
+            icon: '/vite.svg',
+            badge: '/vite.svg',
+            tag: `partner_assigned_${orderId}`,
+            data: {
+                url: '/tracking',
+                orderId,
+                status: 'confirmed',
+                type: 'partner_assigned'
+            }
+        }).catch((err) => console.error('Push notify error:', err.message));
+
+        const responseOrder = pendingOrder || {
+            orderId,
+            userId: dbDoc?.phoneNumber || 'guest',
+            userName: dbDoc?.name || 'Customer',
+            userPhone: dbDoc?.phoneNumber || '',
+            items: persistedOrder?.items || [],
+            total: persistedOrder?.totalAmount || 0,
+            busStop: resolvedBusStop,
+            pickupReward: reward,
+            status: 'confirmed',
+            createdAt: persistedOrder?.orderDate ? new Date(persistedOrder.orderDate).toISOString() : new Date().toISOString(),
+        };
+
+        console.log(`✅ Order ${orderId} accepted by partner ${resolvedPartner.partnerId} — emitted to room order_${orderId}`);
+        res.json({ success: true, order: responseOrder });
+    } catch (err) {
+        res.status(500).json({ message: 'Failed to accept order', error: err.message });
+    }
+});
+
+app.post('/api/orders/:orderId/cancel', async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const { reason, cancelledBy } = req.body || {};
+
+        const dbDoc = await UserModel.findOne(
+            { 'orders.orderId': orderId },
+            { phoneNumber: 1, name: 1, orders: { $elemMatch: { orderId } } }
+        ).lean();
+        const order = dbDoc?.orders?.[0];
+        if (!order) {
+            return res.status(404).json({ success: false, message: 'Order not found' });
+        }
+        if (order.orderStatus === 'handover') {
+            return res.status(400).json({ success: false, message: 'Delivered order cannot be cancelled' });
+        }
+
+        const cancellationReason = String(reason || 'Cancelled by user').trim();
+        await UserModel.updateOne(
+            { 'orders.orderId': orderId },
+            {
+                $set: {
+                    'orders.$.orderStatus': 'cancelled',
+                    'orders.$.cancellationReason': cancellationReason,
+                    'orders.$.cancelledAt': new Date(),
+                    'orders.$.refundStatus': 'pending',
+                    'orders.$.refundRequestedAt': new Date(),
+                    'orders.$.lastStatusUpdatedAt': new Date(),
+                },
+            }
+        );
+
+        const runtime = orderRuntimeStateById.get(orderId) || {};
+        const resolvedBusStop = order.busStop || runtime?.partner?.busStop || '';
+        const resolvedPartner = runtime?.partner || order.partnerInfo || null;
+
+        orderRuntimeStateById.set(orderId, {
+            ...runtime,
+            status: 'cancelled',
+            partner: resolvedPartner,
+            reward: Number(runtime?.reward || order.pickupReward || 0),
+        });
+
+        if (resolvedBusStop) {
+            const queue = pendingOrdersByStop.get(resolvedBusStop) || [];
+            pendingOrdersByStop.set(resolvedBusStop, queue.filter((o) => o.orderId !== orderId));
+            io.to(`partners_${resolvedBusStop}`).emit('order_update', {
+                type: 'order_cancelled',
+                orderId,
+                reason: cancellationReason,
+            });
+        }
+
+        io.to(`order_${orderId}`).emit('order_status_updated', {
+            orderId,
+            status: 'cancelled',
+            reason: cancellationReason,
+            cancelledBy: cancelledBy || 'user',
+            partner: resolvedPartner,
+            timestamp: new Date(),
+        });
+
+        io.to(`order_${orderId}`).emit('tracking_alert_received', {
+            orderId,
+            alertType: 'order_cancelled',
+            message: `Order cancelled: ${cancellationReason}`,
+            from: 'system',
+            timestamp: new Date(),
+        });
+
+        return res.json({
+            success: true,
+            message: 'Order cancelled successfully',
+            order: {
+                orderId,
+                orderStatus: 'cancelled',
+                paymentId: order.paymentId || null,
+                refundStatus: 'pending',
+            },
+        });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: 'Failed to cancel order', error: err.message });
+    }
 });
 
 // Get partner performance + history (for dashboard)
@@ -841,6 +1298,32 @@ app.get('/api/tracking/locations/:orderId', (req, res) => {
     res.json(locations);
 });
 
+app.get('/api/tracking/runtime/:orderId', async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        let runtime = orderRuntimeStateById.get(orderId);
+        if (!runtime) {
+            const recovered = await getRuntimeStateFromDb(orderId);
+            if (recovered) {
+                runtime = {
+                    status: recovered.status,
+                    partner: recovered.partner,
+                    reward: recovered.reward,
+                    handoverProofImageUrl: recovered.handoverProofImageUrl,
+                };
+            }
+        }
+
+        if (!runtime) {
+            return res.status(404).json({ success: false, message: 'No runtime state found for order' });
+        }
+
+        res.json({ success: true, orderId, runtime });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Failed to fetch runtime state', error: err.message });
+    }
+});
+
 // Emergency stop tracking for an order
 app.post('/api/tracking/emergency-stop/:orderId', (req, res) => {
     const { orderId } = req.params;
@@ -870,7 +1353,7 @@ io.on('connection', (socket) => {
     console.log('User connected:', socket.id);
 
     // Join tracking room for an order
-    socket.on('join_tracking', (data) => {
+    socket.on('join_tracking', async (data) => {
         const { orderId, userType, userData } = data;
         const roomName = `order_${orderId}`;
         
@@ -912,7 +1395,18 @@ io.on('connection', (socket) => {
             socket.emit('initial_locations', userLocations.get(orderId));
         }
 
-        const runtimeState = orderRuntimeStateById.get(orderId);
+        let runtimeState = orderRuntimeStateById.get(orderId);
+        if (!runtimeState) {
+            const recovered = await getRuntimeStateFromDb(orderId);
+            if (recovered) {
+                runtimeState = {
+                    status: recovered.status,
+                    partner: recovered.partner,
+                    reward: recovered.reward,
+                    handoverProofImageUrl: recovered.handoverProofImageUrl,
+                };
+            }
+        }
         if (runtimeState) {
             socket.emit('tracking_snapshot', {
                 orderId,
@@ -1137,6 +1631,19 @@ io.on('connection', (socket) => {
             reward: resolvedReward,
             handoverProofImageUrl: resolvedHandoverProof,
         });
+
+        await UserModel.updateOne(
+            { 'orders.orderId': orderId },
+            {
+                $set: {
+                    'orders.$.orderStatus': status,
+                    'orders.$.partnerInfo': partnerFromSocket,
+                    'orders.$.pickupReward': resolvedReward,
+                    'orders.$.handoverProofImageUrl': resolvedHandoverProof,
+                    'orders.$.lastStatusUpdatedAt': new Date(),
+                },
+            }
+        );
         
         // Broadcast status update to all tracking the order
         io.to(orderRoomName).emit('order_status_updated', {
@@ -1605,6 +2112,10 @@ app.post('/api/payment/verify', async (req, res) => {
                             razorpayOrderId: razorpay_order_id,
                             paymentMethod: paymentMethod || 'razorpay',
                             busStop,
+                            orderStatus:   'pending',
+                            pickupReward:  Math.round(totalAmount * 0.1),
+                            refundStatus:  'not_required',
+                            lastStatusUpdatedAt: new Date(),
                         });
                         await user.save();
                         console.log(`✅ Order ${customOrderId} saved for user ${phoneNumber}`);

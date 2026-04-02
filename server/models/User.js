@@ -25,6 +25,47 @@ const OrderSchema = new mongoose.Schema({
     razorpayOrderId: String,
     paymentMethod: String,
     busStop: String,
+    orderStatus: {
+        type: String,
+        enum: ['pending', 'confirmed', 'packed', 'partner_at_stop', 'handover', 'cancelled'],
+        default: 'pending'
+    },
+    partnerInfo: {
+        partnerId: { type: String, default: null },
+        name: { type: String, default: '' },
+        phone: { type: String, default: '' },
+        vehicleType: { type: String, default: 'Bike' },
+        busStop: { type: String, default: '' }
+    },
+    pickupReward: {
+        type: Number,
+        default: 0
+    },
+    handoverProofImageUrl: {
+        type: String,
+        default: ''
+    },
+    cancellationReason: {
+        type: String,
+        default: ''
+    },
+    cancelledAt: {
+        type: Date,
+        default: null
+    },
+    refundStatus: {
+        type: String,
+        enum: ['not_required', 'pending', 'processing', 'completed'],
+        default: 'not_required'
+    },
+    refundRequestedAt: {
+        type: Date,
+        default: null
+    },
+    lastStatusUpdatedAt: {
+        type: Date,
+        default: Date.now
+    },
     orderDate: {
         type: Date,
         default: Date.now
@@ -85,6 +126,15 @@ UserSchema.methods.addOrder = function(orderData) {
         razorpayOrderId: orderData.razorpayOrderId,
         paymentMethod: orderData.paymentMethod,
         busStop:       orderData.busStop,
+        orderStatus:   orderData.orderStatus || 'pending',
+        partnerInfo:   orderData.partnerInfo || null,
+        pickupReward:  Number(orderData.pickupReward || 0),
+        handoverProofImageUrl: orderData.handoverProofImageUrl || '',
+        cancellationReason: orderData.cancellationReason || '',
+        cancelledAt: orderData.cancelledAt || null,
+        refundStatus: orderData.refundStatus || 'not_required',
+        refundRequestedAt: orderData.refundRequestedAt || null,
+        lastStatusUpdatedAt: orderData.lastStatusUpdatedAt || new Date(),
     };
 
     this.orders.push(newOrder);

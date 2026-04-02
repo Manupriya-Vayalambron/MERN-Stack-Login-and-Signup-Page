@@ -1,7 +1,8 @@
 // Socket service for real-time location tracking
 import { io } from 'socket.io-client';
 
-const SOCKET_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, '') || 'http://localhost:3001';
+const SOCKET_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, '')
+  || (typeof window !== 'undefined' ? window.location.origin : '');
 
 class SocketService {
   constructor() {
@@ -270,6 +271,18 @@ class SocketService {
   onTrackingSnapshot(callback) {
     if (this.socket) {
       this.socket.on('tracking_snapshot', callback);
+    }
+  }
+
+  onConnect(callback) {
+    if (this.socket) {
+      this.socket.on('connect', callback);
+    }
+  }
+
+  offConnect(callback) {
+    if (this.socket) {
+      this.socket.off('connect', callback);
     }
   }
 

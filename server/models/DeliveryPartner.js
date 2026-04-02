@@ -5,6 +5,8 @@ const mongoose = require('mongoose');
 const CreditEntrySchema = new mongoose.Schema({
   amount:     { type: Number, required: true },
   note:       { type: String, default: '' },
+  paidToPhone:{ type: String, default: '' },
+  paymentProofImageUrl: { type: String, default: '' },
   creditedBy: { type: String, default: 'admin' },
   creditedAt: { type: Date,   default: Date.now },
 }, { _id: true });
@@ -66,7 +68,6 @@ const DeliveryPartnerSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 DeliveryPartnerSchema.index({ assignedBusStop: 1, isActive: 1, isOnline: 1 });
-DeliveryPartnerSchema.index({ email: 1 });
 
 // Call when partner completes a delivery (from order-complete API)
 DeliveryPartnerSchema.methods.recordCompletedOrder = async function (orderId, reward, meta = {}) {
@@ -82,8 +83,14 @@ DeliveryPartnerSchema.methods.recordCompletedOrder = async function (orderId, re
 };
 
 // Call when admin credits the partner (from admin credit API)
-DeliveryPartnerSchema.methods.creditAmount = async function (amount, note, adminId) {
-  this.creditHistory.push({ amount, note: note || '', creditedBy: adminId || 'admin' });
+DeliveryPartnerSchema.methods.creditAmount = async function (amount, note, adminId, meta = {}) {
+  this.creditHistory.push({
+    amount,
+    note: note || '',
+    paidToPhone: meta.paidToPhone || '',
+    paymentProofImageUrl: meta.paymentProofImageUrl || '',
+    creditedBy: adminId || 'admin',
+  });
   this.totalCredited    += amount;
   this.pendingEarnings   = Math.max(0, this.pendingEarnings - amount);
   this.lastCreditAmount  = amount;

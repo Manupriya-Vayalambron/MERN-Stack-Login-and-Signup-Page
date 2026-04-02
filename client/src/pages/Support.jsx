@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useUser } from '../UserContext';
 import '../index.css';
 
 const Support = () => {
   const [openFAQ, setOpenFAQ] = useState(null);
+  const { user } = useUser();
 
   const faqs = [
     {
@@ -97,10 +99,59 @@ const Support = () => {
           </section>
           
           <section className="support-ticket-section">
-            <h2 className="support-section-title">Raise a Ticket</h2>
-            <button className="support-ticket-button">
-              Submit a Complaint
-            </button>
+            <h2 className="support-section-title">Report a Problem</h2>
+            <form
+              action="https://formsubmit.co/manupriyadhanushvayalambron@gmail.com"
+              method="POST"
+              style={{ display:'flex', flexDirection:'column', gap:10 }}
+            >
+              <input type="hidden" name="_captcha" value="false" />
+              <input type="hidden" name="_subject" value="Yathrika Problem Report" />
+              <input type="hidden" name="source_page" value="/support" />
+              <input
+                type="text"
+                name="name"
+                placeholder="Your name (optional)"
+                defaultValue=""
+                style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(104,249,26,0.2)', borderRadius:10, padding:'10px 12px', color:'#fff', outline:'none' }}
+              />
+              <input
+                type="text"
+                name="phone"
+                placeholder="Phone number (optional)"
+                defaultValue={user?.phoneNumber || ''}
+                style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(104,249,26,0.2)', borderRadius:10, padding:'10px 12px', color:'#fff', outline:'none' }}
+              />
+              <input
+                type="email"
+                name="email"
+                placeholder="Email (optional)"
+                defaultValue=""
+                style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(104,249,26,0.2)', borderRadius:10, padding:'10px 12px', color:'#fff', outline:'none' }}
+              />
+              <input
+                type="text"
+                name="subject"
+                placeholder="Subject *"
+                required
+                defaultValue=""
+                style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(104,249,26,0.2)', borderRadius:10, padding:'10px 12px', color:'#fff', outline:'none' }}
+              />
+              <textarea
+                name="description"
+                placeholder="Describe the issue you faced *"
+                required
+                rows={5}
+                defaultValue=""
+                style={{ resize:'vertical', background:'rgba(255,255,255,0.05)', border:'1px solid rgba(104,249,26,0.2)', borderRadius:10, padding:'10px 12px', color:'#fff', outline:'none' }}
+              />
+              <p style={{ margin:0, color:'rgba(255,255,255,0.6)', fontSize:'0.76rem' }}>
+                This form is submitted via FormSubmit and forwarded to support email.
+              </p>
+              <button className="support-ticket-button" type="submit">
+                Submit Report
+              </button>
+            </form>
           </section>
         </main>
       </div>

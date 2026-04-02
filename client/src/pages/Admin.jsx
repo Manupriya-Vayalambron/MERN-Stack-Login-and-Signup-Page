@@ -7,34 +7,113 @@ const fmt    = (n) => typeof n === 'number' ? n.toLocaleString('en-IN') : '0';
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' }) : '—';
 
 // API helper functions
-const fetchAllPartners = async () => {
-  const response = await fetch('/api/admin/delivery-partners');
-  if (!response.ok) throw new Error('Failed to fetch partners');
+const withAdminAuth = (token, extra = {}) => ({
+  ...extra,
+  headers: {
+    ...(extra.headers || {}),
+    Authorization: `Bearer ${token}`,
+  },
+});
+
+const adminLogin = async (password) => {
+  const response = await fetch('/api/admin/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password })
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data?.message || 'Admin login failed');
+  return data;
+};
+
+const adminLogout = async (token) => {
+  if (!token) return;
+  await fetch('/api/admin/logout', withAdminAuth(token, { method: 'POST' })).catch(() => {});
+};
+
+const fetchAllPartners = async (token) => {
+  const response = await fetch('/api/admin/delivery-partners', withAdminAuth(token));
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data?.message || `Admin API error ${response.status}`);
+  }
   return response.json();
 };
 
-const fetchAdminOverview = async () => {
-  const response = await fetch('/api/admin/overview');
-  if (!response.ok) throw new Error('Failed to fetch admin overview');
+const fetchAdminOverview = async (token) => {
+  const response = await fetch('/api/admin/overview', withAdminAuth(token));
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data?.message || `Admin API error ${response.status}`);
+  }
   return response.json();
 };
 
-const approvePartner = async (id) => {
+const approvePartner = async (id, token) => {
   const response = await fetch(`/api/admin/delivery-partners/${id}/approve`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' }
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    }
   });
-  if (!response.ok) throw new Error('Failed to approve partner');
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data?.message || `Admin API error ${response.status}`);
+  }
   return response.json();
 };
 
-const rejectPartner = async (id, rejectReason) => {
+const rejectPartner = async (id, rejectReason, token) => {
   const response = await fetch(`/api/admin/delivery-partners/${id}/reject`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
     body: JSON.stringify({ rejectReason })
   });
-  if (!response.ok) throw new Error('Failed to reject partner');
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data?.message || `Admin API error ${response.status}`);
+  }
+  return response.json();
+};
+
+const updateRefundStatus = async (orderId, refundStatus, token) => {
+  const response = await fetch(`/api/admin/orders/${encodeURIComponent(orderId)}/refund-status`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ refundStatus }),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data?.message || `Admin API error ${response.status}`);
+  }
+  return response.json();
+};
+
+const creditPartnerWithProof = async ({ partnerId, amount, note, paidToPhone, paymentProofFile, token }) => {
+  const form = new FormData();
+  form.append('amount', String(amount));
+  form.append('note', note || '');
+  form.append('paidToPhone', paidToPhone || '');
+  form.append('paymentProof', paymentProofFile);
+
+  const response = await fetch(`/api/admin/delivery-partners/${partnerId}/credit-proof`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: form,
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data?.message || `Admin API error ${response.status}`);
+  }
   return response.json();
 };
 
@@ -44,30 +123,54 @@ const statusColor = (status) => {
   return '#ffb84d';
 };
 
+const orderStatusColor = (status) => {
+  if (status === 'handover') return '#4CAF50';
+  if (status === 'cancelled') return '#ff5555';
+  return '#4da6ff';
+};
+
 // ─── Sub-component: Partner detail/credit modal ────────────────────────────────
-const PartnerModal = ({ partner, onClose, onUpdate }) => {
+const PartnerModal = ({ partner, adminToken, onClose, onUpdate }) => {
   const [creditAmt,  setCreditAmt]  = useState('');
   const [creditNote, setCreditNote] = useState('');
+  const [paidToPhone, setPaidToPhone] = useState(partner?.phone || '');
+  const [paymentProofFile, setPaymentProofFile] = useState(null);
+  const [isCrediting, setIsCrediting] = useState(false);
   const [msg,        setMsg]        = useState('');
 
-  const handleCredit = () => {
+  useEffect(() => {
+    setPaidToPhone(partner?.phone || '');
+    setPaymentProofFile(null);
+  }, [partner?._id, partner?.phone]);
+
+  const handleCredit = async () => {
     const amount = parseFloat(creditAmt);
     if (!amount || amount <= 0) { setMsg('Enter a valid amount'); return; }
+    if (!paidToPhone.trim()) { setMsg('Enter the paid-to phone number'); return; }
+    if (!paymentProofFile) { setMsg('Upload UPI payment screenshot'); return; }
 
-    const entry = { amount, note: creditNote.trim(), creditedBy:'admin', creditedAt: new Date().toISOString() };
-    const updated = {
-      ...partner,
-      creditHistory:    [...(partner.creditHistory || []), entry],
-      totalCredited:    (partner.totalCredited    || 0) + amount,
-      pendingEarnings:  Math.max(0, (partner.pendingEarnings || 0) - amount),
-      lastCreditAmount: amount,
-      lastCreditDate:   new Date().toISOString(),
-    };
-    onUpdate(updated);
-    setCreditAmt('');
-    setCreditNote('');
-    setMsg(`✓ ₹${fmt(amount)} credited successfully`);
-    setTimeout(() => setMsg(''), 3000);
+    try {
+      setIsCrediting(true);
+      const result = await creditPartnerWithProof({
+        partnerId: partner._id,
+        amount,
+        note: creditNote.trim(),
+        paidToPhone: paidToPhone.trim(),
+        paymentProofFile,
+        token: adminToken,
+      });
+
+      onUpdate(result.partner);
+      setCreditAmt('');
+      setCreditNote('');
+      setPaymentProofFile(null);
+      setMsg(`✓ ₹${fmt(amount)} credited after proof verification`);
+      setTimeout(() => setMsg(''), 3500);
+    } catch (error) {
+      setMsg(error.message || 'Failed to credit partner with proof');
+    } finally {
+      setIsCrediting(false);
+    }
   };
 
   const lastCredit = partner.creditHistory?.slice(-1)[0] || null;
@@ -128,6 +231,11 @@ const PartnerModal = ({ partner, onClose, onUpdate }) => {
                 Last credit: <strong style={{ color:'#4CAF50' }}>₹{fmt(lastCredit.amount)}</strong>
                 {' '}on {fmtDate(lastCredit.creditedAt)}
                 {lastCredit.note && <em style={{ color:'#666' }}> — {lastCredit.note}</em>}
+                {lastCredit.paymentProofImageUrl && (
+                  <>
+                    {' '}· <a href={lastCredit.paymentProofImageUrl} target="_blank" rel="noreferrer" style={{ color:'#68f91a', textDecoration:'underline' }}>proof</a>
+                  </>
+                )}
               </span>
             </div>
           )}
@@ -142,7 +250,15 @@ const PartnerModal = ({ partner, onClose, onUpdate }) => {
                 {[...partner.creditHistory].reverse().map((c, i) => (
                   <div key={i} style={M.histRow}>
                     <span style={{ color:'#4CAF50', fontWeight:700, fontSize:'0.82rem', flexShrink:0 }}>+₹{fmt(c.amount)}</span>
-                    <span style={{ color:'#888', fontSize:'0.78rem', flex:1 }}>{c.note||'—'}</span>
+                    <span style={{ color:'#888', fontSize:'0.78rem', flex:1 }}>
+                      {c.note || '—'}
+                      {c.paidToPhone ? ` · Paid to: ${c.paidToPhone}` : ''}
+                    </span>
+                    {c.paymentProofImageUrl ? (
+                      <a href={c.paymentProofImageUrl} target="_blank" rel="noreferrer" style={{ color:'#68f91a', fontSize:'0.72rem', textDecoration:'underline', marginRight:8, flexShrink:0 }}>
+                        Proof
+                      </a>
+                    ) : null}
                     <span style={{ color:'#555', fontSize:'0.72rem', flexShrink:0 }}>{fmtDate(c.creditedAt)}</span>
                   </div>
                 ))}
@@ -199,9 +315,24 @@ const PartnerModal = ({ partner, onClose, onUpdate }) => {
               style={{ ...M.input, flex:2, backgroundColor:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:10, padding:'0 12px', color:'#fff' }}
             />
           </div>
-          <button style={M.creditBtn} onClick={handleCredit}>
+          <input
+            type="text"
+            placeholder="Paid-to phone"
+            value={paidToPhone}
+            onChange={e => setPaidToPhone(e.target.value)}
+            style={{ ...M.input, width:'100%', backgroundColor:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:10, padding:'0 12px', color:'#fff', marginBottom:8 }}
+          />
+          <input
+            type="file"
+            accept="image/*,.pdf"
+            onChange={e => setPaymentProofFile(e.target.files?.[0] || null)}
+            style={{ width:'100%', marginBottom:8, color:'#aaa', fontSize:'0.78rem' }}
+          />
+          <button style={M.creditBtn} onClick={handleCredit} disabled={isCrediting}>
             <i className="material-icons" style={{ fontSize:18 }}>payments</i>
-            Credit ₹{creditAmt || '0'} to {partner.name.split(' ')[0]}
+            {isCrediting
+              ? 'Verifying Proof...'
+              : `Credit ₹${creditAmt || '0'} to ${partner.name.split(' ')[0]}`}
           </button>
         </div>
       </div>
@@ -211,6 +342,10 @@ const PartnerModal = ({ partner, onClose, onUpdate }) => {
 
 // ─── Main Admin Component ─────────────────────────────────────────────────────
 const Admin = () => {
+  const [adminToken,   setAdminToken]   = useState(() => localStorage.getItem('yathrika_admin_token') || '');
+  const [password,     setPassword]     = useState('');
+  const [authError,    setAuthError]    = useState('');
+  const [isAuthBusy,   setIsAuthBusy]   = useState(false);
   const [activeTab,    setActiveTab]    = useState('dashboard');  // dashboard | partners | pending | data
   const [partners,     setPartners]     = useState([]);
   const [orders,       setOrders]       = useState([]);
@@ -222,19 +357,36 @@ const Admin = () => {
   const [rejectReason, setRejectReason] = useState('');
   const [searchQ,      setSearchQ]      = useState('');
   const [orderSearchQ, setOrderSearchQ] = useState('');
+  const [updatingRefundFor, setUpdatingRefundFor] = useState('');
 
-  const loadAdminData = async () => {
+  const loadAdminData = async (tokenArg) => {
+    const token = tokenArg || adminToken;
+    if (!token) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
-      const data = await fetchAdminOverview();
+      const data = await fetchAdminOverview(token);
       setOverview(data.overview || null);
       setPartners(data.partners || []);
       setUsers(data.users || []);
       setOrders(data.orders || []);
     } catch (error) {
+      const msg = String(error?.message || '').toLowerCase();
+      if (msg.includes('authentication') || msg.includes('session expired') || msg.includes('401')) {
+        localStorage.removeItem('yathrika_admin_token');
+        setAdminToken('');
+        setAuthError('Session expired. Please login again.');
+        setPartners([]);
+        setUsers([]);
+        setOrders([]);
+        setOverview(null);
+        return;
+      }
       console.error('Error loading admin overview:', error);
       try {
-        const allPartners = await fetchAllPartners();
+        const allPartners = await fetchAllPartners(token);
         setPartners(allPartners);
       } catch (partnersError) {
         console.error('Error loading partners fallback:', partnersError);
@@ -245,23 +397,59 @@ const Admin = () => {
   };
 
   useEffect(() => {
-    loadAdminData();
-  }, []);
+    if (adminToken) loadAdminData(adminToken);
+    else setLoading(false);
+  }, [adminToken]);
 
   const reload = async () => {
-    await loadAdminData();
+    await loadAdminData(adminToken);
+  };
+
+  const handleAdminLogin = async (e) => {
+    e.preventDefault();
+    setAuthError('');
+    const rawPassword = String(password || '');
+    if (!rawPassword.trim()) {
+      setAuthError('Password is required.');
+      return;
+    }
+    if (/\s/.test(rawPassword)) {
+      setAuthError('Password must not contain spaces.');
+      return;
+    }
+    try {
+      setIsAuthBusy(true);
+      const data = await adminLogin(rawPassword);
+      localStorage.setItem('yathrika_admin_token', data.token);
+      setAdminToken(data.token);
+      setPassword('');
+    } catch (error) {
+      setAuthError(error.message || 'Invalid admin password');
+    } finally {
+      setIsAuthBusy(false);
+    }
+  };
+
+  const handleAdminLogout = async () => {
+    await adminLogout(adminToken);
+    localStorage.removeItem('yathrika_admin_token');
+    setAdminToken('');
+    setPartners([]);
+    setUsers([]);
+    setOrders([]);
+    setOverview(null);
   };
 
   // Approve
   const handleApprovePartner = async (id) => {
     try {
-      await approvePartner(id);
+      await approvePartner(id, adminToken);
       await reload(); // Refresh the list
       
       // Also update localStorage if partner is currently logged in
       const currentPartner = JSON.parse(localStorage.getItem('deliveryPartner') || 'null');
       if (currentPartner?._id === id) {
-        const updatedPartners = await fetchAllPartners();
+        const updatedPartners = await fetchAllPartners(adminToken);
         const updatedPartner = updatedPartners.find(p => p._id === id);
         if (updatedPartner) {
           localStorage.setItem('deliveryPartner', JSON.stringify(updatedPartner));
@@ -276,7 +464,7 @@ const Admin = () => {
   // Reject
   const handleRejectPartner = async (id) => {
     try {
-      await rejectPartner(id, rejectReason);
+      await rejectPartner(id, rejectReason, adminToken);
       await reload(); // Refresh the list
       setRejectTarget(null);
       setRejectReason('');
@@ -284,7 +472,7 @@ const Admin = () => {
       // Also update localStorage if partner is currently logged in
       const currentPartner = JSON.parse(localStorage.getItem('deliveryPartner') || 'null');
       if (currentPartner?._id === id) {
-        const updatedPartners = await fetchAllPartners();
+        const updatedPartners = await fetchAllPartners(adminToken);
         const updatedPartner = updatedPartners.find(p => p._id === id);
         if (updatedPartner) {
           localStorage.setItem('deliveryPartner', JSON.stringify(updatedPartner));
@@ -299,7 +487,6 @@ const Admin = () => {
   // Update partner (from modal credit action)
   const updatePartner = async (updated) => {
     try {
-      // For now, just update locally - in production you'd have a credit API endpoint
       const next = partners.map(p => p._id === updated._id ? updated : p);
       setPartners(next);
       setSelectedP(updated);
@@ -309,11 +496,21 @@ const Admin = () => {
       if (currentPartner?._id === updated._id) {
         localStorage.setItem('deliveryPartner', JSON.stringify(updated));
       }
-      
-      // TODO: Implement backend API for crediting partners
-      console.log('Credit action - TODO: implement backend API');
     } catch (error) {
       console.error('Error updating partner:', error);
+    }
+  };
+
+  const handleMarkRefundCompleted = async (orderId) => {
+    try {
+      setUpdatingRefundFor(orderId);
+      await updateRefundStatus(orderId, 'completed', adminToken);
+      await reload();
+    } catch (error) {
+      console.error('Error updating refund status:', error);
+      alert(error.message || 'Failed to update refund status. Please try again.');
+    } finally {
+      setUpdatingRefundFor('');
     }
   };
 
@@ -337,11 +534,15 @@ const Admin = () => {
     successOrders: overview?.successOrders ?? orders.filter(o => o.paymentStatus === 'success').length,
     failedOrders: overview?.failedOrders ?? orders.filter(o => o.paymentStatus === 'failed').length,
     pendingOrders: overview?.pendingOrders ?? orders.filter(o => o.paymentStatus === 'pending').length,
+    refundRequests: overview?.refundRequests ?? orders.filter(o => o.orderStatus === 'cancelled' && o.refundStatus === 'pending').length,
     successRevenue: overview?.successRevenue ?? orders.filter(o => o.paymentStatus === 'success').reduce((s, o) => s + (o.totalAmount || 0), 0),
     pendingPoolCount: overview?.pendingPoolCount ?? 0,
   };
 
   const pendingPoolOrders = overview?.pendingPoolOrders || [];
+  const refundRequestOrders = orders
+    .filter((o) => o.orderStatus === 'cancelled' && o.refundStatus === 'pending')
+    .sort((a, b) => new Date(b.cancelledAt || b.orderDate || 0) - new Date(a.cancelledAt || a.orderDate || 0));
   const recentOrders = orders.slice(0, 8);
   const filteredOrders = orders.filter(o => {
     if (!orderSearchQ.trim()) return true;
@@ -350,9 +551,34 @@ const Admin = () => {
       String(o.orderId || '').toLowerCase().includes(q) ||
       String(o.userPhoneNumber || '').toLowerCase().includes(q) ||
       String(o.userName || '').toLowerCase().includes(q) ||
-      String(o.paymentStatus || '').toLowerCase().includes(q)
+      String(o.paymentStatus || '').toLowerCase().includes(q) ||
+      String(o.paymentId || '').toLowerCase().includes(q) ||
+      String(o.orderStatus || '').toLowerCase().includes(q) ||
+      String(o.refundStatus || '').toLowerCase().includes(q)
     );
   });
+
+  if (!adminToken) {
+    return (
+      <div className="admin-page-container" style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', padding:'24px' }}>
+        <form onSubmit={handleAdminLogin} style={{ width:'100%', maxWidth:420, backgroundColor:'rgba(255,255,255,0.04)', border:'1px solid rgba(104,249,26,0.15)', borderRadius:16, padding:20, display:'flex', flexDirection:'column', gap:12 }}>
+          <h2 style={{ margin:0, color:'#fff', fontSize:'1.15rem', fontWeight:800 }}>Admin Login</h2>
+          <p style={{ margin:0, color:'#888', fontSize:'0.82rem' }}>Enter the admin password to access this page.</p>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Enter Password"
+            style={{ backgroundColor:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.12)', borderRadius:10, padding:'11px 12px', color:'#fff', outline:'none', fontSize:'0.9rem' }}
+          />
+          {authError && <p style={{ margin:0, color:'#ff5555', fontSize:'0.8rem' }}>{authError}</p>}
+          <button type="submit" disabled={isAuthBusy} style={{ backgroundColor:'#68f91a', border:'none', borderRadius:10, padding:'11px 0', color:'#16230f', fontWeight:800, fontSize:'0.9rem', cursor:'pointer' }}>
+            {isAuthBusy ? 'Checking...' : 'Login'}
+          </button>
+        </form>
+      </div>
+    );
+  }
 
   return (
     <div className="admin-page-container">
@@ -366,6 +592,9 @@ const Admin = () => {
             <div className="admin-settings-container">
               <button onClick={reload} className="admin-settings-button" title="Refresh data">
                 <i className="material-icons" style={{ fontSize:22 }}>refresh</i>
+              </button>
+              <button onClick={handleAdminLogout} className="admin-settings-button" title="Logout admin" style={{ marginLeft:8 }}>
+                <i className="material-icons" style={{ fontSize:22 }}>logout</i>
               </button>
             </div>
           </div>
@@ -407,12 +636,55 @@ const Admin = () => {
                   { label:'Total Credited',   value:`₹${fmt(totalCredited)}`, icon:'payments',          color:'#4CAF50' },
                   { label:'Pending Payout',   value:`₹${fmt(totalPending)}`,  icon:'pending',           color:'#ffb84d' },
                   { label:'Pending Approval', value: pending.length,          icon:'hourglass_top',     color:'#ffb84d' },
+                  { label:'Refund Requests',  value: summary.refundRequests,  icon:'currency_exchange',color:'#ff5555' },
                   { label:'Verified Users',   value: fmt(summary.verifiedUsers), icon:'verified_user',  color:'#4da6ff' },
                 ].map(s => (
                   <div key={s.label} style={A.statCard}>
                     <i className="material-icons" style={{ color:s.color, fontSize:24 }}>{s.icon}</i>
                     <p style={{ ...A.statVal, color:s.color }}>{s.value}</p>
                     <p style={A.statLbl}>{s.label}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="admin-live-orders-section">
+              <h2 className="admin-section-title">Refund Requests ({refundRequestOrders.length})</h2>
+              <div className="admin-orders-list">
+                {refundRequestOrders.length === 0 ? (
+                  <div style={A.emptyBox}>
+                    <i className="material-icons" style={{ fontSize:36, color:'#444' }}>payments</i>
+                    <p style={{ color:'#666', marginTop:8 }}>No refund requests pending</p>
+                  </div>
+                ) : refundRequestOrders.map(order => (
+                  <div key={`${order.userPhoneNumber}_${order.orderId}_refund`} className="admin-order-card">
+                    <div className="admin-order-details">
+                      <div className="admin-order-info">
+                        <p className="admin-order-number">Order #{order.orderId}</p>
+                        <p className="admin-bus-stop">Payment ID: {order.paymentId || 'N/A'}</p>
+                        <p className="admin-bus-stop">{order.userName || 'User'} · {order.userPhoneNumber}</p>
+                        <p className="admin-bus-stop">Refund: {String(order.refundStatus || 'pending').toUpperCase()}</p>
+                      </div>
+                      <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:8 }}>
+                        <span style={{ ...A.pillRed, border:'1px solid rgba(255,85,85,0.35)' }}>CANCELLED</span>
+                        <button
+                          onClick={() => handleMarkRefundCompleted(order.orderId)}
+                          disabled={updatingRefundFor === order.orderId}
+                          style={{
+                            border:'1px solid rgba(76,175,80,0.4)',
+                            background:'rgba(76,175,80,0.15)',
+                            color:'#9ef6a2',
+                            borderRadius:8,
+                            padding:'6px 10px',
+                            fontSize:'0.72rem',
+                            fontWeight:700,
+                            cursor:updatingRefundFor === order.orderId ? 'default' : 'pointer',
+                          }}
+                        >
+                          {updatingRefundFor === order.orderId ? 'Updating...' : 'Mark Refund Completed'}
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -710,6 +982,7 @@ const Admin = () => {
                         <p style={{ color:'#fff', fontWeight:700, margin:0, fontSize:'0.88rem' }}>#{order.orderId}</p>
                         <p style={{ color:'#888', margin:'2px 0 0', fontSize:'0.75rem' }}>{order.userName || 'User'} · {order.userPhoneNumber}</p>
                         <p style={{ color:'#888', margin:'3px 0 0', fontSize:'0.73rem' }}>{fmtDate(order.orderDate)} · ₹{fmt(order.totalAmount)} · {order.itemCount} items · {order.paymentMethod || '—'}</p>
+                        <p style={{ color:'#888', margin:'3px 0 0', fontSize:'0.72rem' }}>Order: <span style={{ color:orderStatusColor(order.orderStatus) }}>{String(order.orderStatus || 'pending').toUpperCase()}</span> · Refund: {String(order.refundStatus || 'not_required').toUpperCase()} · Payment ID: {order.paymentId || 'N/A'}</p>
                       </div>
                       <span style={{ ...A.pillGreen, color: statusColor(order.paymentStatus), border:`1px solid ${statusColor(order.paymentStatus)}33`, background:'transparent' }}>
                         {String(order.paymentStatus || 'pending').toUpperCase()}
@@ -759,6 +1032,7 @@ const Admin = () => {
       {selectedP && (
         <PartnerModal
           partner={selectedP}
+          adminToken={adminToken}
           onClose={() => setSelectedP(null)}
           onUpdate={updatePartner}
         />

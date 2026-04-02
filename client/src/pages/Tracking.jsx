@@ -17,6 +17,7 @@ const T = {
     waitingDesc:"We're finding an available delivery partner near your bus stop. This usually takes under a minute.",
     cancelIn:'Auto-cancel in', cancelledTitle:'Order Cancelled',
     cancelledDesc:'No delivery partner was available within 2 minutes. A full refund has been initiated to your original payment method.',
+    cancelledByUserDesc:'You cancelled this order. Refund request has been sent for processing.',
     refundNote:'Refund will be credited within 5–7 business days.', goHome:'Go to Home',
     orderId:'Order ID', paymentId:'Payment ID', total:'Total', deliveryStop:'Delivery Stop',
     items:'Items', paymentMethod:'Payment', partnerAssigned:'Delivery Partner Assigned!',
@@ -41,12 +42,14 @@ const T = {
     msgArrived:'You have arrived at the bus stop. Look for your delivery partner.',
     trackingInfo:'Live Tracking Information', yourLocation:'Your Location',
     busLocation:'Bus Location', deliveryStopLegend:'Delivery Stop', partnerLegend:'Delivery Partner',
+    cancelOrder:'Cancel Order', cancelConfirm:'Are you sure you want to cancel this order?', cancelling:'Cancelling...',
   },
   ml: {
     pageTitle:'ഓർഡർ ട്രാക്കിംഗ്', waitingTitle:'ഡെലിവറി പാർട്ണറെ കണ്ടെത്തുന്നു',
     waitingDesc:'നിങ്ങളുടെ ബസ് സ്റ്റോപ്പിനടുത്ത് ലഭ്യമായ ഡെലിവറി പാർട്ണറെ തിരയുന്നു. ഇത് സാധാരണ ഒരു മിനിറ്റിൽ താഴെ എടുക്കും.',
     cancelIn:'റദ്ദാക്കൽ', cancelledTitle:'ഓർഡർ റദ്ദാക്കി',
     cancelledDesc:'2 മിനിറ്റിനുള്ളിൽ ഡെലിവറി പാർട്ണർ ലഭ്യമായില്ല. നിങ്ങളുടെ യഥാർത്ഥ പേയ്‌മെന്റ് രീതിയിലേക്ക് പൂർണ്ണ റീഫണ്ട് ആരംഭിച്ചു.',
+    cancelledByUserDesc:'നിങ്ങൾ ഈ ഓർഡർ റദ്ദാക്കി. റീഫണ്ട് പ്രോസസിനായി അയച്ചിട്ടുണ്ട്.',
     refundNote:'5–7 ബിസിനസ് ദിവസങ്ങൾക്കുള്ളിൽ റീഫണ്ട് ലഭിക്കും.',
     goHome:'ഹോമിലേക്ക് പോകുക', orderId:'ഓർഡർ ഐഡി', paymentId:'പേയ്‌മെന്റ് ഐഡി',
     total:'ആകെ', deliveryStop:'ഡെലിവറി സ്റ്റോപ്പ്', items:'ഉൽപ്പന്നങ്ങൾ',
@@ -76,6 +79,7 @@ const T = {
     trackingInfo:'തത്സമയ ട്രാക്കിംഗ് വിവരങ്ങൾ', yourLocation:'നിങ്ങളുടെ ലൊക്കേഷൻ',
     busLocation:'ബസ് ലൊക്കേഷൻ', deliveryStopLegend:'ഡെലിവറി സ്റ്റോപ്പ്',
     partnerLegend:'ഡെലിവറി പാർട്ണർ',
+    cancelOrder:'ഓർഡർ റദ്ദാക്കുക', cancelConfirm:'ഈ ഓർഡർ റദ്ദാക്കണമോ?', cancelling:'റദ്ദാക്കുന്നു...',
   },
 };
 
@@ -105,6 +109,8 @@ const Tracking = () => {
   const [notifications,           setNotifications]           = useState([]);
   const [assignedPartner,         setAssignedPartner]         = useState(null);
   const [orderStatus,             setOrderStatus]             = useState('pending');
+  const [cancelledByUser,         setCancelledByUser]         = useState(false);
+  const [isCancelling,            setIsCancelling]            = useState(false);
 
   const cancelRef    = useRef(null);
   const deliveryRef  = useRef(null);
@@ -152,8 +158,7 @@ const Tracking = () => {
 
       if (remainingSecs <= 0) {
         clearInterval(cancelRef.current);
-        setOrderCancelled(true);
-        setOrderStatus('cancelled');
+        autoCancelOrder();
       }
     };
 
@@ -182,6 +187,13 @@ const Tracking = () => {
     if (!orderData) return;
     socketService.connect();
     socketService.joinTrackingRoom(orderData.orderId, 'user', { userId: orderData.userId || 'user', orderId: orderData.orderId });
+    syncRuntimeState(orderData.orderId);
+
+    const reconnectHandler = () => {
+      socketService.joinTrackingRoom(orderData.orderId, 'user', { userId: orderData.userId || 'user', orderId: orderData.orderId });
+      syncRuntimeState(orderData.orderId);
+    };
+
     initLoc();
     socketService.onLocationUpdate(onLocUpdate);
     socketService.onDeliveryStatusUpdate(onDeliveryStatus);
@@ -189,9 +201,11 @@ const Tracking = () => {
     socketService.onPartnerStatusUpdate(onPartnerStatus);
     socketService.onOrderStatusUpdate(onOrderStatus);
     socketService.onTrackingSnapshot(onTrackingSnapshot);
+    socketService.onConnect(reconnectHandler);
     return () => {
       if (watchId) stopWatchingLocation(watchId);
       socketService.leaveTrackingRoom(orderData.orderId);
+      socketService.offConnect(reconnectHandler);
       socketService.removeAllListeners();
       clearInterval(cancelRef.current);
       clearInterval(deliveryRef.current);
@@ -263,9 +277,39 @@ const Tracking = () => {
 
     if (data.status && data.status !== 'pending') {
       setOrderStatus(data.status);
-      setPartnerAccepted(true);
+      if (data.status === 'cancelled') {
+        setOrderCancelled(true);
+      } else {
+        setPartnerAccepted(true);
+      }
       clearInterval(cancelRef.current);
     }
+  };
+
+  const syncRuntimeState = async (orderId) => {
+    if (!orderId) return;
+    try {
+      const res = await fetch(`/api/tracking/runtime/${encodeURIComponent(orderId)}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data?.success || !data.runtime) return;
+
+      const { status, partner } = data.runtime;
+      if (partner) {
+        setAssignedPartner(partner);
+        setPartnerAccepted(true);
+        clearInterval(cancelRef.current);
+      }
+      if (status && status !== 'pending') {
+        setOrderStatus(status);
+        if (status === 'cancelled') {
+          setOrderCancelled(true);
+        } else {
+          setPartnerAccepted(true);
+        }
+        clearInterval(cancelRef.current);
+      }
+    } catch (_) {}
   };
 
   const onOrderStatus = (data) => {
@@ -279,6 +323,12 @@ const Tracking = () => {
     }
 
     setOrderStatus(data.status);
+    if (data.status === 'cancelled') {
+      setOrderCancelled(true);
+      setCancelledByUser(data.cancelledBy === 'user');
+      clearInterval(cancelRef.current);
+      localStorage.removeItem('yathrika_current_order');
+    }
     if (['confirmed', 'packed', 'partner_at_stop', 'handover'].includes(data.status)) {
       setPartnerAccepted(true);
       clearInterval(cancelRef.current);
@@ -315,6 +365,50 @@ const Tracking = () => {
         navigate('/yathrika-home');
       }, 2500);
     }
+  };
+
+  const submitCancellation = async ({ reason, cancelledBy }) => {
+    if (!orderData?.orderId || isCancelling) return false;
+    try {
+      setIsCancelling(true);
+      const res = await fetch(`/api/orders/${encodeURIComponent(orderData.orderId)}/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason, cancelledBy }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.success) {
+        throw new Error(data?.message || 'Unable to cancel order');
+      }
+
+      setCancelledByUser(cancelledBy === 'user');
+      setOrderCancelled(true);
+      setOrderStatus('cancelled');
+      localStorage.removeItem('yathrika_current_order');
+      toast({ type:'info', message:t.cancelledTitle });
+      return true;
+    } catch (err) {
+      toast({ type:'error', message: err.message || 'Unable to cancel order' });
+      return false;
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
+  const cancelOrder = async () => {
+    if (!orderData?.orderId || isCancelling) return;
+    if (!window.confirm(t.cancelConfirm)) return;
+    await submitCancellation({ reason: 'Cancelled by user from tracking page', cancelledBy: 'user' });
+  };
+
+  const autoCancelOrder = async () => {
+    if (isCancelling || orderCancelled) return;
+    if (!orderData?.orderId) {
+      setOrderCancelled(true);
+      setOrderStatus('cancelled');
+      return;
+    }
+    await submitCancellation({ reason: 'No delivery partner was available within 2 minutes', cancelledBy: 'system' });
   };
 
   const toast = (n) => {
@@ -361,7 +455,9 @@ const Tracking = () => {
       <div style={S.centre}>
         <div style={{ fontSize:56, marginBottom:16 }}>😔</div>
         <h2 style={{ color:'#ff4d4d', fontWeight:800, margin:'0 0 12px', fontSize:'1.3rem', textAlign:'center' }}>{t.cancelledTitle}</h2>
-        <p style={{ color:'#aaa', textAlign:'center', lineHeight:1.65, margin:'0 0 8px', fontSize:'0.88rem', maxWidth:320 }}>{t.cancelledDesc}</p>
+        <p style={{ color:'#aaa', textAlign:'center', lineHeight:1.65, margin:'0 0 8px', fontSize:'0.88rem', maxWidth:320 }}>
+          {cancelledByUser ? t.cancelledByUserDesc : t.cancelledDesc}
+        </p>
         <p style={{ color:'#68f91a', fontSize:'0.78rem', textAlign:'center', marginBottom:32 }}>{t.refundNote}</p>
         {orderData && (
           <div style={S.miniCard}>
@@ -404,6 +500,13 @@ const Tracking = () => {
             )}
           </div>
         )}
+        <button
+          style={{ ...S.btn, backgroundColor:'rgba(255,85,85,0.18)', color:'#ffd5d5', border:'1px solid rgba(255,85,85,0.35)', marginTop:6 }}
+          onClick={cancelOrder}
+          disabled={isCancelling}
+        >
+          {isCancelling ? t.cancelling : t.cancelOrder}
+        </button>
       </div>
       <style>{`@keyframes ripple{0%{transform:scale(1);opacity:.7}100%{transform:scale(2.5);opacity:0}}`}</style>
     </div>
@@ -557,6 +660,18 @@ const Tracking = () => {
               <div className="tracking-detail-row"><p className="tracking-detail-label">{t.deliveryLocation}</p><p className="tracking-detail-value">{stopName}</p></div>
             </div>
           </div>
+
+            {orderStatus !== 'handover' && orderStatus !== 'cancelled' && (
+              <div style={{ marginTop: 12 }}>
+                <button
+                  onClick={cancelOrder}
+                  disabled={isCancelling}
+                  style={{ width:'100%', border:'1px solid rgba(255,85,85,0.35)', background:'rgba(255,85,85,0.14)', color:'#ffd5d5', borderRadius:12, padding:'12px 14px', fontWeight:700, cursor:isCancelling?'default':'pointer' }}
+                >
+                  {isCancelling ? t.cancelling : t.cancelOrder}
+                </button>
+              </div>
+            )}
         </main>
       </div>
 
