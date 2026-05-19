@@ -37,7 +37,7 @@ const Payment = () => {
   const delivery   = 5;
   const discount   = 0;
   const totalAmount = subtotal > 0 ? subtotal + delivery - discount
-                                   : (location.state?.amount || 599);
+                                   : (location.state?.amount || 10);
 
   const getSelectedBusStopName = () => {
     if (location.state?.busStop?.name) return location.state.busStop.name;

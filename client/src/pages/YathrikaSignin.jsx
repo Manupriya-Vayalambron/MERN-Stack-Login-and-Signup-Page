@@ -29,6 +29,12 @@ const toFriendlyError = (err) => {
     return 'Verification check failed. Please try again.';
   if (code === 'auth/web-storage-unsupported')
     return 'Please enable cookies in your browser settings and try again.';
+  if (code === 'auth/billing-not-enabled')
+    return 'Phone OTP is not enabled for this Firebase project yet. Enable billing (Blaze plan) and Phone Authentication in Firebase Console, then try again.';
+  if (code === 'auth/operation-not-allowed')
+    return 'Phone sign-in is disabled in Firebase Console. Enable Phone provider under Authentication -> Sign-in method.';
+  if (code === 'auth/unauthorized-domain')
+    return 'This website domain is not authorized in Firebase. Add your domain in Authentication -> Settings -> Authorized domains.';
   if (code === 'auth/network-request-failed' || msg.includes('network') || msg.includes('failed to fetch'))
     return 'Connection issue. Please check your internet and try again.';
   if (code === 'auth/missing-phone-number')

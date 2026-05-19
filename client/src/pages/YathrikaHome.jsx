@@ -290,7 +290,7 @@ const YathrikaHome = () => {
           </div>
         </div>
 
-        {/* ── DELIVERY PARTNER CTA ── */}
+        {/* ── DELIVERY PARTNER Call To Action ── */}
         <div style={S.partnerCard} onClick={() => navigate('/delivery-partner-auth')}>
           <div style={S.partnerGlowOrb} />
           <div style={S.partnerTopRow}>

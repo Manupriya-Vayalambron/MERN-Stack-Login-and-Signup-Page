@@ -215,33 +215,54 @@ const UserProfile = () => {
         </main>
       </div>
 
-      <footer className="settings-footer-nav">
-        <div className="settings-nav-container">
-          <Link className="settings-nav-item" to="/yathrika-home">
-            <svg fill="currentColor" height="24" viewBox="0 0 256 256" width="24" xmlns="http://www.w3.org/2000/svg">
-              <path d="M218.83,103.77l-80-75.48a1.14,1.14,0,0,1-.11-.11,16,16,0,0,0-21.53,0l-.11.11L37.17,103.77A16,16,0,0,0,32,115.55V208a16,16,0,0,0,16,16H96a16,16,0,0,0,16-16V160h32v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V115.55A16,16,0,0,0,218.83,103.77Z"></path>
-            </svg>
-            <span className="settings-nav-text">{t('Home', 'ഹോം')}</span>
+      <footer
+        style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          display: 'flex',
+          backgroundColor: '#0d1808',
+          borderTop: '1px solid rgba(104,249,26,0.08)',
+          padding: '8px 0 10px',
+          zIndex: 100,
+        }}
+      >
+        {[
+          { to: '/yathrika-home', icon: 'home', label: t('Home', 'ഹോം'), active: false },
+          { to: '/order-history', icon: 'receipt_long', label: t('Orders', 'ഓർഡറുകൾ'), active: false },
+          { to: '/user-profile', icon: 'person', label: t('Profile', 'പ്രൊഫൈൽ'), active: true },
+        ].map((item) => (
+          <Link
+            key={item.to}
+            to={item.to}
+            style={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 2,
+              textDecoration: 'none',
+              padding: '4px 0',
+            }}
+          >
+            <span
+              className="material-symbols-outlined"
+              style={{ fontSize: 24, color: item.active ? '#68f91a' : '#555' }}
+            >
+              {item.icon}
+            </span>
+            <span
+              style={{
+                fontSize: '0.63rem',
+                fontWeight: 600,
+                color: item.active ? '#68f91a' : '#555',
+              }}
+            >
+              {item.label}
+            </span>
           </Link>
-          <Link className="settings-nav-item" to="/order-history">
-            <svg fill="currentColor" height="24" viewBox="0 0 256 256" width="24" xmlns="http://www.w3.org/2000/svg">
-              <path d="M247.42,117l-14-35A15.93,15.93,0,0,0,218.58,72H184V64a8,8,0,0,0-8-8H24A16,16,0,0,0,8,72V184a16,16,0,0,0,16,16H41a32,32,0,0,0,62,0h50a32,32,0,0,0,62,0h17a16,16,0,0,0,16-16V120A7.94,7.94,0,0,0,247.42,117Z"></path>
-            </svg>
-            <span className="settings-nav-text">{t('Orders', 'ഓർഡറുകൾ')}</span>
-          </Link>
-          <Link className="settings-nav-item settings-nav-active" to="/user-profile">
-            <div className="settings-nav-profile-container">
-              <div className="settings-nav-profile-indicator"></div>
-              <div className="settings-nav-profile-button">
-                <svg fill="currentColor" height="24" viewBox="0 0 256 256" width="24" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M230.93,220a8,8,0,0,1-6.93,4H32a8,8,0,0,1-6.92-12c15.23-26.33,38.7-45.21,66.09-54.16a72,72,0,1,1,73.66,0c27.39,8.95,50.86,27.83,66.09,54.16A8,8,0,0,1,230.93,220Z"></path>
-                </svg>
-              </div>
-            </div>
-            <span className="settings-nav-text settings-nav-text-active">{t('Profile', 'പ്രൊഫൈൽ')}</span>
-          </Link>
-        </div>
-        <div className="settings-nav-spacer"></div>
+        ))}
       </footer>
     </div>
   );
