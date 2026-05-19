@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useNotification } from '../NotificationContext';
 import { useLanguage } from '../LanguageContext';
@@ -11,9 +11,6 @@ const TEXT = {
     support: 'Support',
     language: 'Language',
     languageHint: 'Tap to switch language',
-    darkMode: 'Dark Mode',
-    darkModeHintOn: 'Dark theme is active',
-    darkModeHintOff: 'Light theme is active',
     notifications: 'Notifications',
     notificationsEnabled: 'Enabled for this browser',
     notificationsDenied: 'Blocked by browser settings',
@@ -35,9 +32,6 @@ const TEXT = {
     support: 'പിന്തുണ',
     language: 'ഭാഷ',
     languageHint: 'ഭാഷ മാറ്റാൻ അമർത്തുക',
-    darkMode: 'ഡാർക് മോഡ്',
-    darkModeHintOn: 'ഡാർക് തീം സജീവമാണ്',
-    darkModeHintOff: 'ലൈറ്റ് തീം സജീവമാണ്',
     notifications: 'അറിയിപ്പുകൾ',
     notificationsEnabled: 'ഈ ബ്രൗസറിൽ സജീവമാണ്',
     notificationsDenied: 'ബ്രൗസർ ക്രമീകരണത്തിൽ തടഞ്ഞിരിക്കുന്നു',
@@ -55,32 +49,11 @@ const TEXT = {
   },
 };
 
-const DARK_MODE_KEY = 'yathrika_dark_mode';
-
-const getInitialDarkMode = () => {
-  try {
-    const saved = localStorage.getItem(DARK_MODE_KEY);
-    if (saved === 'true') return true;
-    if (saved === 'false') return false;
-  } catch (_) {}
-
-  return document.documentElement.classList.contains('dark');
-};
-
 const Settings = () => {
   const navigate = useNavigate();
   const { browserPermission, requestBrowserPermission, subscribeForPush } = useNotification();
   const { language, toggleLanguage } = useLanguage();
   const t = TEXT[language] || TEXT.en;
-
-  const [isDarkMode, setIsDarkMode] = useState(getInitialDarkMode);
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', isDarkMode);
-    try {
-      localStorage.setItem(DARK_MODE_KEY, String(isDarkMode));
-    } catch (_) {}
-  }, [isDarkMode]);
 
   const handleEnableNotifications = async () => {
     const permission = await requestBrowserPermission();
@@ -153,27 +126,6 @@ const Settings = () => {
               >
                 {browserPermission === 'granted' ? t.enabled : t.enable}
               </button>
-            </div>
-
-            <div style={S.itemRow}>
-              <div style={S.itemIcon}>
-                <span className="material-symbols-outlined" style={S.iconGlyph}>dark_mode</span>
-              </div>
-              <div style={S.itemTextWrap}>
-                <p style={S.itemTitle}>{t.darkMode}</p>
-                <p style={S.itemSubtitle}>{isDarkMode ? t.darkModeHintOn : t.darkModeHintOff}</p>
-              </div>
-              <label style={S.toggleWrap}>
-                <input
-                  type="checkbox"
-                  checked={isDarkMode}
-                  onChange={(e) => setIsDarkMode(e.target.checked)}
-                  style={S.toggleInput}
-                />
-                <span style={{ ...S.toggleTrack, ...(isDarkMode ? S.toggleTrackOn : {}) }}>
-                  <span style={{ ...S.toggleThumb, ...(isDarkMode ? S.toggleThumbOn : {}) }} />
-                </span>
-              </label>
             </div>
           </div>
         </section>
@@ -351,42 +303,6 @@ const S = {
   pillButtonActive: {
     background: 'rgba(104,249,26,0.18)',
     color: '#68f91a',
-  },
-  toggleWrap: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    cursor: 'pointer',
-  },
-  toggleInput: {
-    position: 'absolute',
-    opacity: 0,
-    pointerEvents: 'none',
-  },
-  toggleTrack: {
-    width: 44,
-    height: 26,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    border: '1px solid rgba(255,255,255,0.16)',
-    display: 'inline-flex',
-    alignItems: 'center',
-    padding: 2,
-    transition: 'all 0.2s ease',
-  },
-  toggleTrackOn: {
-    backgroundColor: 'rgba(104,249,26,0.25)',
-    border: '1px solid rgba(104,249,26,0.45)',
-  },
-  toggleThumb: {
-    width: 20,
-    height: 20,
-    borderRadius: '50%',
-    backgroundColor: '#f3f4f6',
-    transition: 'transform 0.2s ease',
-  },
-  toggleThumbOn: {
-    transform: 'translateX(18px)',
-    backgroundColor: '#68f91a',
   },
   footer: {
     position: 'fixed',
