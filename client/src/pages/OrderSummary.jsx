@@ -60,7 +60,10 @@ const OrderSummary = () => {
     return () => { cancelled = true; };
   }, [orderId, userPhoneNumber]);
 
-  const orderItems   = dbOrder?.items?.length ? dbOrder.items : (paidItems?.length ? paidItems : contextItems);
+  // While we are syncing latest order from server, avoid showing stale cart contents
+  const orderItems   = dbOrder?.items?.length
+    ? dbOrder.items
+    : (paidItems?.length ? paidItems : (isFetchingOrder ? [] : contextItems));
   const displayItems = orderItems.length ? orderItems : [
     { name: 'Order Item', quantity: 1, price: amount || 0, image: '' },
   ];
@@ -95,21 +98,25 @@ const OrderSummary = () => {
     const existing = (() => { try { return JSON.parse(localStorage.getItem('yathrika_current_order') || 'null'); } catch(_) { return null; } })();
     // If existing record already has a YATH- orderId, trust it — don't overwrite
     if (existing?.orderId?.startsWith('YATH-')) return;
-    // Otherwise write a best-effort record (e.g. user refreshed the page)
-    if (!finalOrderId && !paidItems) return;
+    // Only write and clear the cart when we have authoritative order data:
+    // either the server-provided `dbOrder` (preferred) or immediate `paidItems`
+    if (!dbOrder && !paidItems) return;
+
+    const resolvedOrderId = dbOrder?.orderId || finalOrderId || ('ORD' + Date.now().toString().slice(-8));
     const orderData = {
-      orderId:       finalOrderId || ('ORD' + Date.now().toString().slice(-8)),
-      paymentId:     finalPaymentId || null,
-      amount:        total,
-      cartItems:     displayItems,
+      orderId:       resolvedOrderId,
+      paymentId:     dbOrder?.paymentId || finalPaymentId || null,
+      amount:        dbOrder?.totalAmount || total,
+      cartItems:     dbOrder?.items?.length ? dbOrder.items : displayItems,
       paymentMethod: dbOrder?.paymentMethod || paymentMethod || 'upi',
       busStop,
       createdAt:     new Date().toISOString(),
     };
     localStorage.setItem('yathrika_current_order', JSON.stringify(orderData));
-    localStorage.setItem('yathrika_cart', JSON.stringify(displayItems));
-    clearCart();
-  }, [finalOrderId, finalPaymentId, dbOrder]);
+    localStorage.setItem('yathrika_cart', JSON.stringify(orderData.cartItems || []));
+    // Clear the cart only after we've saved authoritative order data
+    try { clearCart(); } catch (_) {}
+  }, [dbOrder, paidItems]);
 
   // ── Generate invoice text for download / share ────────────────────────────
   const buildInvoiceText = () => {
