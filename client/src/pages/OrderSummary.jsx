@@ -37,6 +37,12 @@ const OrderSummary = () => {
     }
   }, [user?.phoneNumber]);
 
+  // If we have an orderId and a phone number available synchronously,
+  // we should treat the page as about to sync with the server. Use this
+  // flag to avoid rendering stale `contextItems` on the very first render
+  // (which caused the brief flash where the old cart showed then vanished).
+  const shouldSyncFromServer = Boolean(orderId && userPhoneNumber);
+
   useEffect(() => {
     if (!orderId || !userPhoneNumber) return;
     let cancelled = false;
@@ -63,7 +69,7 @@ const OrderSummary = () => {
   // While we are syncing latest order from server, avoid showing stale cart contents
   const orderItems   = dbOrder?.items?.length
     ? dbOrder.items
-    : (paidItems?.length ? paidItems : (isFetchingOrder ? [] : contextItems));
+    : (paidItems?.length ? paidItems : ((shouldSyncFromServer || isFetchingOrder) ? [] : contextItems));
   const displayItems = orderItems.length ? orderItems : [
     { name: 'Order Item', quantity: 1, price: amount || 0, image: '' },
   ];
