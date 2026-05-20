@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../CartContext';
 import { useUser } from '../UserContext';
@@ -12,18 +12,19 @@ const OrderSummary = () => {
   const [dbOrder, setDbOrder] = useState(null);
   const [isFetchingOrder, setIsFetchingOrder] = useState(false);
 
+  // Guard: ensure localStorage write + clearCart run exactly ONCE.
+  const hasSaved = useRef(false);
+
   // Real payment data passed from Payment.jsx after success
   const {
     paymentId,
-    orderId:       razorpayOrderId,   // Razorpay's order_xxx — for display only
-    customOrderId,                     // YATH-xxx — the real tracking/partner ID
+    orderId:       razorpayOrderId,
+    customOrderId,
     amount,
     cartItems:     paidItems,
     paymentMethod,
   } = location.state || {};
 
-  // customOrderId is the ID everything (Tracking, partner dashboard, socket rooms) uses.
-  // Fall back to reading it from localStorage in case state was lost on refresh.
   const orderId = customOrderId
     || (() => { try { return JSON.parse(localStorage.getItem('yathrika_current_order') || 'null')?.orderId; } catch(_) { return null; } })()
     || razorpayOrderId;
@@ -37,10 +38,11 @@ const OrderSummary = () => {
     }
   }, [user?.phoneNumber]);
 
-  // If we have an orderId and a phone number available synchronously,
-  // we should treat the page as about to sync with the server. Use this
-  // flag to avoid rendering stale `contextItems` on the very first render
-  // (which caused the brief flash where the old cart showed then vanished).
+  // Stable busStop — read once, memoised so it never causes re-renders.
+  const busStop = useMemo(() => {
+    try { return JSON.parse(localStorage.getItem('yathrika_bus_stop') || 'null'); } catch(_) { return null; }
+  }, []);
+
   const shouldSyncFromServer = Boolean(orderId && userPhoneNumber);
 
   useEffect(() => {
@@ -66,7 +68,6 @@ const OrderSummary = () => {
     return () => { cancelled = true; };
   }, [orderId, userPhoneNumber]);
 
-  // While we are syncing latest order from server, avoid showing stale cart contents
   const orderItems   = dbOrder?.items?.length
     ? dbOrder.items
     : (paidItems?.length ? paidItems : ((shouldSyncFromServer || isFetchingOrder) ? [] : contextItems));
@@ -86,45 +87,48 @@ const OrderSummary = () => {
     wallet:     'Wallet',
   }[dbOrder?.paymentMethod || paymentMethod] || 'Online Payment';
 
-  const finalOrderId = dbOrder?.orderId || orderId;
+  const finalOrderId   = dbOrder?.orderId || orderId;
   const finalPaymentId = dbOrder?.paymentId || paymentId || razorpayOrderId;
-  const shortOrderId   = finalOrderId ? String(finalOrderId).slice(-10).toUpperCase() : '—';
+  const shortOrderId   = finalOrderId  ? String(finalOrderId).slice(-10).toUpperCase()  : '—';
   const shortPaymentId = finalPaymentId ? String(finalPaymentId).slice(-12).toUpperCase() : '—';
 
-  // ── Bus stop from localStorage ─────────────────────────────────────────────
-  let busStop = null;
-  try { busStop = JSON.parse(localStorage.getItem('yathrika_bus_stop') || 'null'); } catch(_) {}
   const stopName = dbOrder?.busStop || busStop?.name || 'Not selected';
 
-  // ── Write order data to localStorage so Tracking.jsx can read it ──────────
-  // IMPORTANT: Payment.jsx already saved yathrika_current_order with the correct
-  // customOrderId (YATH-xxx) before navigating here. We must NOT overwrite it
-  // with the Razorpay order ID. Only write if nothing was saved yet (e.g. refresh).
+  // ── Write to localStorage exactly ONCE ────────────────────────────────────
+  // hasSaved.current prevents re-running on every render triggered by
+  // clearCart() or any other state change.
   useEffect(() => {
-    const existing = (() => { try { return JSON.parse(localStorage.getItem('yathrika_current_order') || 'null'); } catch(_) { return null; } })();
-    // If existing record already has a YATH- orderId, trust it — don't overwrite
-    if (existing?.orderId?.startsWith('YATH-')) return;
-    // Only write and clear the cart when we have authoritative order data:
-    // either the server-provided `dbOrder` (preferred) or immediate `paidItems`
-    if (!dbOrder && !paidItems) return;
+    if (hasSaved.current) return;                 // ← only ever run once
+    if (!dbOrder && !paidItems) return;           // wait for real data
+
+    const existing = (() => {
+      try { return JSON.parse(localStorage.getItem('yathrika_current_order') || 'null'); } catch(_) { return null; }
+    })();
+    if (existing?.orderId?.startsWith('YATH-')) {
+      hasSaved.current = true;
+      return;
+    }
 
     const resolvedOrderId = dbOrder?.orderId || finalOrderId || ('ORD' + Date.now().toString().slice(-8));
+    const items = dbOrder?.items?.length ? dbOrder.items : (paidItems?.length ? paidItems : displayItems);
     const orderData = {
       orderId:       resolvedOrderId,
       paymentId:     dbOrder?.paymentId || finalPaymentId || null,
       amount:        dbOrder?.totalAmount || total,
-      cartItems:     dbOrder?.items?.length ? dbOrder.items : displayItems,
+      cartItems:     items,
       paymentMethod: dbOrder?.paymentMethod || paymentMethod || 'upi',
       busStop,
       createdAt:     new Date().toISOString(),
     };
+
     localStorage.setItem('yathrika_current_order', JSON.stringify(orderData));
     localStorage.setItem('yathrika_cart', JSON.stringify(orderData.cartItems || []));
-    // Clear the cart only after we've saved authoritative order data
-    try { clearCart(); } catch (_) {}
-  }, [dbOrder, paidItems]);
 
-  // ── Generate invoice text for download / share ────────────────────────────
+    hasSaved.current = true;   // mark done BEFORE clearCart to block any re-entry
+    try { clearCart(); } catch (_) {}
+  }, [dbOrder, paidItems, finalOrderId]);  // only stable, meaningful deps
+
+  // ── Invoice helpers ───────────────────────────────────────────────────────
   const buildInvoiceText = () => {
     const line = '─'.repeat(40);
     const rows = displayItems.map(i =>
@@ -151,11 +155,10 @@ const OrderSummary = () => {
       line,
       '',
       'Thank you for travelling with Yathrika!',
-      'Kerala\'s first on-route bus delivery service.',
+      "Kerala's first on-route bus delivery service.",
     ].join('\n');
   };
 
-  // ── Download as .txt invoice (works on all browsers without libraries) ────
   const handleDownload = () => {
     const text = buildInvoiceText();
     const blob  = new Blob([text], { type: 'text/plain;charset=utf-8' });
@@ -169,25 +172,18 @@ const OrderSummary = () => {
     URL.revokeObjectURL(url);
   };
 
-  // ── Web Share API (mobile native share sheet) ─────────────────────────────
   const handleShare = async () => {
     const text = buildInvoiceText();
-    const shareData = {
-      title: `Yathrika Order #${shortOrderId}`,
-      text,
-    };
-
+    const shareData = { title: `Yathrika Order #${shortOrderId}`, text };
     try {
       if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
         await navigator.share(shareData);
       } else {
-        // Fallback: copy to clipboard
         await navigator.clipboard.writeText(text);
         alert('Invoice copied to clipboard!');
       }
     } catch (err) {
       if (err.name !== 'AbortError') {
-        // Last resort: open in new tab
         const blob = new Blob([text], { type: 'text/plain' });
         window.open(URL.createObjectURL(blob), '_blank');
       }
@@ -209,7 +205,6 @@ const OrderSummary = () => {
 
         <main className="order-main-content">
 
-          {/* Payment confirmed banner */}
           <div style={{
             display:'flex', alignItems:'center', gap:'0.75rem',
             background:'rgba(104,249,26,0.08)', border:'1px solid rgba(104,249,26,0.3)',
@@ -230,7 +225,6 @@ const OrderSummary = () => {
             </p>
           )}
 
-          {/* IDs */}
           <div style={{
             background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.07)',
             borderRadius:'10px', padding:'0.75rem 1rem', marginBottom:'1rem',
@@ -246,7 +240,6 @@ const OrderSummary = () => {
             </div>
           </div>
 
-          {/* Order items */}
           <h2 className="order-id-title">Items Ordered</h2>
           <div className="order-items-section">
             {displayItems.map((item, i) => (
@@ -267,7 +260,6 @@ const OrderSummary = () => {
             ))}
           </div>
 
-          {/* Price breakdown */}
           <div style={{
             background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.07)',
             borderRadius:'12px', padding:'1rem', marginBottom:'1rem',
@@ -287,7 +279,6 @@ const OrderSummary = () => {
             </div>
           </div>
 
-          {/* Delivery details */}
           <h3 className="delivery-section-title">Delivery Details</h3>
           <div className="delivery-details-section">
             <div className="delivery-detail-item">
@@ -310,7 +301,6 @@ const OrderSummary = () => {
             </div>
           </div>
 
-          {/* Actions */}
           <div className="order-action-buttons">
             <button className="order-secondary-button" onClick={handleDownload}>
               <span className="material-icons" style={{ fontSize:16, verticalAlign:'middle', marginRight:4 }}>download</span>
