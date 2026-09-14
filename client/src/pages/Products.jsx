@@ -25,7 +25,7 @@ const ALL_PRODUCTS = [
   { id: 14, category: 'groceries',  price: 28,  name: 'Eggs (6 pcs)',        malayalamName: 'മുട്ട (6 എണ്ണം)',         image: 'https://media.istockphoto.com/id/1698895776/photo/organic-brown-eggs.jpg?s=612x612&w=0&k=20&c=wQ_BwWfa7VCbI1hi_OShrCNuD89Erj7TtxAJgSJLGrc=' },
 
   // HEALTH ESSENTIALS
-  { id: 15, category: 'health_essentials',  price: 18,  name: 'Paracetamol 500mg',   malayalamName: 'പാരസെറ്റമോൾ 500mg',     image: 'https://www.doctrislifesciences.com/wp-content/uploads/2024/01/DSC00181.png' },
+  { id: 15, category: 'health_essentials',  price: 18,  name: 'Paracetamol 500mg',   malayalamName: 'പാരസെറ്റമോൾ 500mg',     image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRUTgzynB6ikwI5wDG86GIM2xhvURgchul4cE_Wv4SgaUDNjw6E_7h7WuVN&s=10' },
   { id: 16, category: 'health_essentials',  price: 35,  name: 'Volini Spray',     malayalamName: 'വോലിനി സ്പ്രേ',       image: 'https://m.media-amazon.com/images/I/51a6-va-ZqL.jpg' },
   { id: 17, category: 'health_essentials',  price: 85,  name: 'Tiger Balm',     malayalamName: 'ടൈഗർ ബാലം',      image: 'https://www.tigerbalm.com/sg/wp-content/uploads/sites/7/2023/07/TB-whiteR-1.jpg' },
   { id: 18, category: 'health_essentials',  price: 40,  name: 'ORS Sachets (5 pcs)', malayalamName: 'ORS സഷേ (5 എണ്ണം)',       image: 'https://5.imimg.com/data5/SELLER/Default/2024/2/385188402/XU/LE/VE/24119759/ors-powder-sachet.jpg' },
