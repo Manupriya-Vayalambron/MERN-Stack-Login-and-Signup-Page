@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import LiveMap from '../components/LiveMap';
+import { Html5Qrcode } from 'html5-qrcode';
 import socketService from '../services/socketService';
 import { calculateDistance, formatDistance, calculateETA, getBusStopCoordinates } from '../utils/locationUtils';
 import '../index.css';
@@ -34,7 +35,9 @@ const DeliveryPartnerDashboard = () => {
   const [selectedOrder,  setSelectedOrder]  = useState(null);
   const [partnerLocation,setPartnerLocation]= useState(null);
   const [userLocations,  setUserLocations]  = useState({});
-  const [handoverProofFiles, setHandoverProofFiles] = useState({});
+  const [handoverCodes, setHandoverCodes] = useState({});
+  const [scannerOrderId, setScannerOrderId] = useState(null);
+  const scannerRef = useRef(null);
   const [isOnline,       setIsOnline]       = useState(false);
   const [notifications,  setNotifications]  = useState([]);
   const acceptedOrdersRef = useRef([]);
@@ -210,23 +213,40 @@ const DeliveryPartnerDashboard = () => {
     toast({ type:'error', message: message || 'Unable to update order status' });
   };
 
-  const uploadHandoverProof = async (orderId, file) => {
-    const payload = new FormData();
-    payload.append('partnerId', partner._id);
-    payload.append('busPhoto', file);
-
-    const res = await fetch(`/api/orders/${orderId}/handover-proof`, {
-      method: 'POST',
-      body: payload,
+  useEffect(() => {
+    if (!scannerOrderId) return undefined;
+    const elementId = `handover-qr-reader-${scannerOrderId.replace(/[^a-zA-Z0-9]/g, '')}`;
+    const scanner = new Html5Qrcode(elementId);
+    scannerRef.current = scanner;
+    scanner.start(
+      { facingMode: 'environment' },
+      { fps: 10, qrbox: { width: 220, height: 220 } },
+      (decodedText) => {
+        const parts = decodedText.split(':');
+        const scannedOrderId = parts[1];
+        const code = parts[2] || decodedText;
+        if (scannedOrderId && scannedOrderId !== String(scannerOrderId)) {
+          toast({ type:'error', message:'This QR code belongs to a different order' });
+          return;
+        }
+        setHandoverCodes(prev => ({ ...prev, [scannerOrderId]: code.trim().toUpperCase() }));
+        scanner.stop().catch(() => {});
+        scanner.clear().catch(() => {});
+        scannerRef.current = null;
+        setScannerOrderId(null);
+        toast({ type:'success', message:'Handover QR scanned. You can now complete delivery.' });
+      },
+      () => {}
+    ).catch(() => {
+      toast({ type:'error', message:'Camera access is unavailable. Enter the QR code manually.' });
     });
 
-    const data = await res.json();
-    if (!res.ok || !data.success) {
-      throw new Error(data.message || 'Failed to upload handover proof');
-    }
-
-    return data.handoverProofImageUrl;
-  };
+    return () => {
+      scanner.stop().catch(() => {});
+      scanner.clear().catch(() => {});
+      scannerRef.current = null;
+    };
+  }, [scannerOrderId]);
 
   // ── Accept order — calls backend, broadcasts via socket ─────────────────────
   const acceptOrder = async (order) => {
@@ -283,18 +303,10 @@ const DeliveryPartnerDashboard = () => {
     const normalizedOrderId = String(orderId);
     const order = acceptedOrders.find(o => getOrderId(o) === normalizedOrderId);
     const reward = Number(order?.pickupReward || 0);
-    let handoverProofImageUrl = '';
-
     if (newStatus === 'handover') {
-      const proofFile = handoverProofFiles[normalizedOrderId];
-      if (!proofFile) {
-        toast({ type:'error', message:'Upload a bus handover photo before marking HANDOVER' });
-        return;
-      }
-      try {
-        handoverProofImageUrl = await uploadHandoverProof(normalizedOrderId, proofFile);
-      } catch (err) {
-        toast({ type:'error', message: err.message || 'Failed to upload handover proof' });
+      const handoverCode = handoverCodes[normalizedOrderId];
+      if (!handoverCode) {
+        toast({ type:'error', message:'Scan or enter the customer QR code before marking HANDOVER' });
         return;
       }
     }
@@ -303,7 +315,7 @@ const DeliveryPartnerDashboard = () => {
     socketService.updateOrderStatus(orderId, newStatus, {
       partnerId:partner._id,
       reward,
-      handoverProofImageUrl,
+      handoverCode: handoverCodes[normalizedOrderId] || '',
     });
 
     if (newStatus === 'handover') {
@@ -543,15 +555,19 @@ const DeliveryPartnerDashboard = () => {
                       {userLocations[getOrderId(order)] && <div className="order-tracking-info"><i className="material-icons">near_me</i><span>Customer approaching</span></div>}
                     </div>
                     <div className="partner-auth-field" style={{ marginTop:8 }}>
-                      <label style={{ color:'#ffb84d' }}>Bus Photo Proof (required for HANDOVER)</label>
-                      <input
-                        type="file"
-                        accept="image/*,.pdf"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0] || null;
-                          setHandoverProofFiles(prev => ({ ...prev, [getOrderId(order)]: file }));
-                        }}
-                      />
+                      <label style={{ color:'#68f91a' }}>Customer QR for HANDOVER</label>
+                      <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
+                        <button type="button" className="partner-action-button secondary" onClick={() => setScannerOrderId(getOrderId(order))}>
+                          <i className="material-icons">qr_code_scanner</i> Scan QR
+                        </button>
+                        <input
+                          type="text"
+                          placeholder="Paste scanned code"
+                          value={handoverCodes[getOrderId(order)] || ''}
+                          onChange={(e) => setHandoverCodes(prev => ({ ...prev, [getOrderId(order)]: e.target.value.trim().toUpperCase() }))}
+                        />
+                      </div>
+                      {scannerOrderId === getOrderId(order) && <div id={`handover-qr-reader-${getOrderId(order).replace(/[^a-zA-Z0-9]/g, '')}`} style={{ maxWidth:280, marginTop:10 }} />}
                     </div>
                     <div className="order-status-buttons">
                       {statusButtons.map(({ status, label, color }) => (

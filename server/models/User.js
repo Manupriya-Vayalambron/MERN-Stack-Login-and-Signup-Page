@@ -45,6 +45,14 @@ const OrderSchema = new mongoose.Schema({
         type: String,
         default: ''
     },
+    handoverCode: {
+        type: String,
+        default: ''
+    },
+    handoverConfirmedAt: {
+        type: Date,
+        default: null
+    },
     cancellationReason: {
         type: String,
         default: ''
@@ -130,6 +138,8 @@ UserSchema.methods.addOrder = function(orderData) {
         partnerInfo:   orderData.partnerInfo || null,
         pickupReward:  Number(orderData.pickupReward || 0),
         handoverProofImageUrl: orderData.handoverProofImageUrl || '',
+        handoverCode: orderData.handoverCode || '',
+        handoverConfirmedAt: orderData.handoverConfirmedAt || null,
         cancellationReason: orderData.cancellationReason || '',
         cancelledAt: orderData.cancelledAt || null,
         refundStatus: orderData.refundStatus || 'not_required',

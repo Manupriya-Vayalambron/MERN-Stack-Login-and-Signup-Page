@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../CartContext';
 import { useUser } from '../UserContext';
+import QRCode from 'qrcode';
 import '../index.css';
 
 const OrderSummary = () => {
@@ -11,6 +12,7 @@ const OrderSummary = () => {
   const { user } = useUser();
   const [dbOrder, setDbOrder] = useState(null);
   const [isFetchingOrder, setIsFetchingOrder] = useState(false);
+  const [handoverQrUrl, setHandoverQrUrl] = useState('');
 
   // Guard: ensure localStorage write + clearCart run exactly ONCE.
   const hasSaved = useRef(false);
@@ -23,6 +25,7 @@ const OrderSummary = () => {
     amount,
     cartItems:     paidItems,
     paymentMethod,
+    handoverCode: paidHandoverCode,
   } = location.state || {};
 
   const orderId = customOrderId
@@ -89,10 +92,20 @@ const OrderSummary = () => {
 
   const finalOrderId   = dbOrder?.orderId || orderId;
   const finalPaymentId = dbOrder?.paymentId || paymentId || razorpayOrderId;
+  const handoverCode = dbOrder?.handoverCode || paidHandoverCode || (() => {
+    try { return JSON.parse(localStorage.getItem('yathrika_current_order') || 'null')?.handoverCode || ''; } catch (_) { return ''; }
+  })();
   const shortOrderId   = finalOrderId  ? String(finalOrderId).slice(-10).toUpperCase()  : '—';
   const shortPaymentId = finalPaymentId ? String(finalPaymentId).slice(-12).toUpperCase() : '—';
 
   const stopName = dbOrder?.busStop || busStop?.name || 'Not selected';
+
+  useEffect(() => {
+    if (!handoverCode || !finalOrderId) return;
+    QRCode.toDataURL(`YATHRIKA-HANDOVER:${finalOrderId}:${handoverCode}`, {
+      margin: 2, width: 220, errorCorrectionLevel: 'H',
+    }).then(setHandoverQrUrl).catch(() => setHandoverQrUrl(''));
+  }, [handoverCode, finalOrderId]);
 
   // ── Write to localStorage exactly ONCE ────────────────────────────────────
   // hasSaved.current prevents re-running on every render triggered by
@@ -300,6 +313,15 @@ const OrderSummary = () => {
               </div>
             </div>
           </div>
+
+          {handoverQrUrl && (
+            <div style={{ background:'rgba(104,249,26,0.06)', border:'1px solid rgba(104,249,26,0.28)', borderRadius:'12px', padding:'1rem', marginTop:'1rem', textAlign:'center' }}>
+              <h3 className="delivery-section-title" style={{ marginTop:0 }}>Delivery Handover QR</h3>
+              <img src={handoverQrUrl} alt="QR code for delivery handover" width="220" height="220" style={{ display:'block', margin:'0 auto', background:'#fff', padding:8, borderRadius:8 }} />
+              <p style={{ color:'rgba(255,255,255,0.65)', fontSize:'0.76rem', margin:'0.75rem 0 0' }}>Show this QR code to your delivery partner at the bus stop.</p>
+              <p style={{ color:'#68f91a', fontFamily:'monospace', fontSize:'0.72rem', wordBreak:'break-all', margin:'0.4rem 0 0' }}>{handoverCode}</p>
+            </div>
+          )}
 
           <div className="order-action-buttons">
             <button className="order-secondary-button" onClick={handleDownload}>

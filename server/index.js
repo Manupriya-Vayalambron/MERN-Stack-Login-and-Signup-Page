@@ -547,7 +547,7 @@ const getRuntimeStateFromDb = async (orderId) => {
     const handoverProofImageUrl = order.handoverProofImageUrl || '';
 
     orderOwnerById.set(orderId, { userId: doc.phoneNumber || null, busStop: order.busStop || '' });
-    orderRuntimeStateById.set(orderId, { status, partner, reward, handoverProofImageUrl });
+    orderRuntimeStateById.set(orderId, { status, partner, reward, handoverProofImageUrl, handoverCode: order.handoverCode || '' });
     if (handoverProofImageUrl) {
         orderHandoverProofById.set(orderId, handoverProofImageUrl);
     }
@@ -557,6 +557,7 @@ const getRuntimeStateFromDb = async (orderId) => {
         partner,
         reward,
         handoverProofImageUrl,
+        handoverCode: order.handoverCode || '',
         userPhone: doc.phoneNumber || '',
         userName: doc.name || 'Customer',
         busStop: order.busStop || '',
@@ -1605,7 +1606,7 @@ io.on('connection', (socket) => {
         const { orderId, status } = data;
         const orderRoomName = `order_${orderId}`;
 
-        const existingState = orderRuntimeStateById.get(orderId) || { status: 'pending', partner: null, reward: 0, handoverProofImageUrl: '' };
+        const existingState = orderRuntimeStateById.get(orderId) || { status: 'pending', partner: null, reward: 0, handoverProofImageUrl: '', handoverCode: '' };
         const partnerFromSocket = existingState.partner || {
             partnerId: socket.partnerId,
             name: socket.userData?.partnerName || socket.userData?.name || 'Delivery Partner',
@@ -1616,13 +1617,20 @@ io.on('connection', (socket) => {
         const resolvedReward = Number(data.reward ?? existingState.reward ?? 0);
         const resolvedHandoverProof = data.handoverProofImageUrl || existingState.handoverProofImageUrl || orderHandoverProofById.get(orderId) || '';
 
-        if (status === 'handover' && !resolvedHandoverProof) {
-            socket.emit('order_status_error', {
-                orderId,
-                status,
-                message: 'Bus handover photo proof is required before completing delivery',
-            });
-            return;
+        let resolvedHandoverCode = existingState.handoverCode || '';
+        if (status === 'handover') {
+            if (!resolvedHandoverCode) {
+                const recovered = await getRuntimeStateFromDb(orderId);
+                resolvedHandoverCode = recovered?.handoverCode || '';
+            }
+            if (!resolvedHandoverCode || String(data.handoverCode || '').trim().toUpperCase() !== resolvedHandoverCode) {
+                socket.emit('order_status_error', {
+                    orderId,
+                    status,
+                    message: 'Scan the valid customer QR code before completing delivery',
+                });
+                return;
+            }
         }
 
         orderRuntimeStateById.set(orderId, {
@@ -1630,6 +1638,7 @@ io.on('connection', (socket) => {
             partner: partnerFromSocket,
             reward: resolvedReward,
             handoverProofImageUrl: resolvedHandoverProof,
+            handoverCode: resolvedHandoverCode,
         });
 
         await UserModel.updateOne(
@@ -1640,6 +1649,7 @@ io.on('connection', (socket) => {
                     'orders.$.partnerInfo': partnerFromSocket,
                     'orders.$.pickupReward': resolvedReward,
                     'orders.$.handoverProofImageUrl': resolvedHandoverProof,
+                    ...(status === 'handover' ? { 'orders.$.handoverConfirmedAt': new Date() } : {}),
                     'orders.$.lastStatusUpdatedAt': new Date(),
                 },
             }
@@ -2055,6 +2065,7 @@ app.post('/api/payment/verify', async (req, res) => {
             // payment. If this is null, the user joins room "order_null" and never
             // receives the partner_status_update. Always generate it here.
             const customOrderId = `YATH-${Date.now()}-${Math.random().toString(36).slice(2,7).toUpperCase()}`;
+            const handoverCode = crypto.randomBytes(18).toString('hex').toUpperCase();
 
             // ── Broadcast new order to delivery partners at the bus stop ──
             // Done here (outside user block) so guest users also get delivery service.
@@ -2114,6 +2125,7 @@ app.post('/api/payment/verify', async (req, res) => {
                             busStop,
                             orderStatus:   'pending',
                             pickupReward:  Math.round(totalAmount * 0.1),
+                            handoverCode,
                             refundStatus:  'not_required',
                             lastStatusUpdatedAt: new Date(),
                         });
@@ -2167,7 +2179,8 @@ app.post('/api/payment/verify', async (req, res) => {
             res.json({ 
                 success: true, 
                 paymentId: razorpay_payment_id,
-                customOrderId: customOrderId
+                customOrderId: customOrderId,
+                handoverCode,
             });
         } else {
             // Save failed payment to user's record

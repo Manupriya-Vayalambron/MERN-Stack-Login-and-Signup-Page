@@ -149,6 +149,7 @@ const Payment = () => {
                 amount:      totalAmount,
                 cartItems,
                 paymentMethod: selectedMethod,
+                handoverCode: verifyData.handoverCode,
                 busStop:     busStopData,
                 userId:      user?.phoneNumber || 'guest',
                 createdAt:   new Date().toISOString(),
@@ -165,6 +166,7 @@ const Payment = () => {
                   amount:      totalAmount,
                   cartItems:   cartItems,
                   paymentMethod: selectedMethod,
+                  handoverCode: verifyData.handoverCode,
                   user:        user,
                 }
               }), 2500);
