@@ -490,6 +490,8 @@ const hydratePendingOrdersFromDb = async (busStop) => {
         {
             $match: {
                 'orders.paymentStatus': 'success',
+                'orders.paymentId': { $exists: true, $nin: [null, ''] },
+                'orders.orderId': { $regex: /^YATH-/ },
                 'orders.busStop': normalizedBusStop,
                 $or: [
                     { 'orders.orderStatus': { $exists: false } },
@@ -2078,6 +2080,7 @@ app.post('/api/payment/verify', async (req, res) => {
                     userId:         phoneNumber || 'guest',
                     userName:       'Customer',
                     userPhone:      phoneNumber || '',
+                    paymentId:      razorpay_payment_id,
                     items:          cartItems,
                     total:          totalAmount,
                     busStop,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../LanguageContext';
 import { useUser } from '../UserContext';
@@ -10,16 +10,24 @@ const OrderHistory = () => {
   const [activeTab, setActiveTab] = useState('Food');
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const refreshUserRef = useRef(refreshUser);
+  const getUserOrdersRef = useRef(getUserOrders);
+
+  refreshUserRef.current = refreshUser;
+  getUserOrdersRef.current = getUserOrders;
   
   useEffect(() => {
     const loadOrders = async () => {
       setLoading(true);
       try {
         // Refresh user data to get latest orders
-        await refreshUser();
+        const refreshResult = await refreshUserRef.current();
         
-        // Get user orders
-        const userOrders = getUserOrders();
+        // Use the response returned by refreshUser so this render does not
+        // depend on a context update completing before orders are read.
+        const userOrders = refreshResult.success
+          ? (refreshResult.user?.orders || [])
+          : getUserOrdersRef.current();
         
         // Transform orders to match the display format
         const transformedOrders = userOrders.map((order) => ({
@@ -43,13 +51,13 @@ const OrderHistory = () => {
       }
     };
     
-    if (user) {
+    if (user?.phoneNumber) {
       loadOrders();
     } else {
       setOrders([]);
       setLoading(false);
     }
-  }, [user, refreshUser, getUserOrders, language]);
+  }, [user?.phoneNumber, language]);
 
   const tabs = [
     { key: 'Food', label: language === 'en' ? 'Food' : 'ഭക്ഷണം' },
